@@ -1,0 +1,785 @@
+# Copyright (C) 2024 AuthDocs Plugin
+# This file is distributed under the same license as the AuthDocs – Opt-In Document Sharing package.
+msgid ""
+msgstr ""
+"Project-Id-Version: AuthDocs – Opt-In Document Sharing 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/authdocs\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2024-01-01T00:00:00+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.8.1\n"
+"X-Domain: authdocs\n"
+
+#: includes/Plugin.php:45
+msgid "Document Requests"
+msgstr ""
+
+#: includes/Plugin.php:46
+msgid "Requests"
+msgstr ""
+
+#: includes/Plugin.php:75
+msgid "Request sent successfully!"
+msgstr ""
+
+#: includes/Plugin.php:76
+msgid "An error occurred. Please try again."
+msgstr ""
+
+#: includes/Plugin.php:85
+msgid "Security check failed"
+msgstr ""
+
+#: includes/Plugin.php:95
+msgid "Missing required fields"
+msgstr ""
+
+#: includes/Plugin.php:100
+msgid "Request submitted successfully"
+msgstr ""
+
+#: includes/Plugin.php:102
+msgid "Failed to submit request"
+msgstr ""
+
+#: includes/Plugin.php:110
+msgid "Insufficient permissions"
+msgstr ""
+
+#: includes/Plugin.php:115
+msgid "Invalid request"
+msgstr ""
+
+#: includes/Plugin.php:123
+msgid "Request updated successfully"
+msgstr ""
+
+#: includes/Plugin.php:125
+msgid "Failed to update request"
+msgstr ""
+
+#: includes/CustomPostType.php:12
+msgid "Documents"
+msgstr ""
+
+#: includes/CustomPostType.php:13
+msgid "Document"
+msgstr ""
+
+#: includes/CustomPostType.php:14
+msgid "Add New Document"
+msgstr ""
+
+#: includes/CustomPostType.php:15
+msgid "Add New Document"
+msgstr ""
+
+#: includes/CustomPostType.php:16
+msgid "Edit Document"
+msgstr ""
+
+#: includes/CustomPostType.php:17
+msgid "New Document"
+msgstr ""
+
+#: includes/CustomPostType.php:18
+msgid "View Document"
+msgstr ""
+
+#: includes/CustomPostType.php:19
+msgid "Search Documents"
+msgstr ""
+
+#: includes/CustomPostType.php:20
+msgid "No documents found"
+msgstr ""
+
+#: includes/CustomPostType.php:21
+msgid "No documents found in trash"
+msgstr ""
+
+#: includes/CustomPostType.php:50
+msgid "Document Settings"
+msgstr ""
+
+#: includes/CustomPostType.php:58
+msgid "Shortcode"
+msgstr ""
+
+#: includes/CustomPostType.php:67
+msgid "Document File"
+msgstr ""
+
+#: includes/CustomPostType.php:72
+msgid "Select Document"
+msgstr ""
+
+#: includes/CustomPostType.php:82
+msgid "Require Opt-in"
+msgstr ""
+
+#: includes/CustomPostType.php:85
+msgid "Require opt-in form before access"
+msgstr ""
+
+#: includes/CustomPostType.php:95
+msgid "Use this document"
+msgstr ""
+
+#: includes/CustomPostType.php:120
+msgid "Shortcode:"
+msgstr ""
+
+#: includes/CustomPostType.php:122
+msgid "Copy this shortcode to display the document on your pages."
+msgstr ""
+
+#: includes/CustomPostType.php:127
+msgid "Publish the document to generate the shortcode."
+msgstr ""
+
+#: includes/CustomPostType.php:140
+msgid "Document Shortcode:"
+msgstr ""
+
+#: includes/Shortcode.php:20
+msgid "Invalid document ID"
+msgstr ""
+
+#: includes/Shortcode.php:25
+msgid "Document not found"
+msgstr ""
+
+#: includes/Shortcode.php:30
+msgid "No file attached to this document"
+msgstr ""
+
+#: includes/Shortcode.php:45
+msgid "Request Access"
+msgstr ""
+
+#: includes/Shortcode.php:48
+msgid "Download Document"
+msgstr ""
+
+#: includes/Shortcode.php:60
+msgid "Invalid or expired download link"
+msgstr ""
+
+#: includes/Shortcode.php:61
+msgid "Access Denied"
+msgstr ""
+
+#: includes/Shortcode.php:66
+msgid "File not found"
+msgstr ""
+
+#: includes/Shortcode.php:67
+msgid "Error"
+msgstr ""
+
+#: includes/Shortcode.php:72
+msgid "File not found on server"
+msgstr ""
+
+#: templates/admin/requests-page.php:4
+msgid "Document Requests"
+msgstr ""
+
+#: templates/admin/requests-page.php:8
+msgid "No document requests found."
+msgstr ""
+
+#: templates/admin/requests-page.php:15
+msgid "ID"
+msgstr ""
+
+#: templates/admin/requests-page.php:16
+msgid "Requester Name"
+msgstr ""
+
+#: templates/admin/requests-page.php:17
+msgid "Email"
+msgstr ""
+
+#: templates/admin/requests-page.php:18
+msgid "Document"
+msgstr ""
+
+#: templates/admin/requests-page.php:19
+msgid "File Link"
+msgstr ""
+
+#: templates/admin/requests-page.php:20
+msgid "Status"
+msgstr ""
+
+#: templates/admin/requests-page.php:20
+msgid "Date"
+msgstr ""
+
+#: templates/admin/requests-page.php:21
+msgid "Actions"
+msgstr ""
+
+#: templates/admin/requests-page.php:28
+msgid "Document not found"
+msgstr ""
+
+#: templates/admin/requests-page.php:35
+msgid "No file"
+msgstr ""
+
+#: templates/admin/requests-page.php:35
+msgid "Error loading file"
+msgstr ""
+
+#: templates/admin/requests-page.php:40
+msgid "Accept"
+msgstr ""
+
+#: templates/admin/requests-page.php:43
+msgid "Decline"
+msgstr ""
+
+#: templates/admin/requests-page.php:46
+msgid "Deactivate"
+msgstr ""
+
+#: templates/admin/requests-page.php:49
+msgid "Revoke Access"
+msgstr ""
+
+#: templates/admin/requests-page.php:71
+msgid "Re-accept"
+msgstr ""
+
+#: templates/admin/requests-page.php:76
+msgid "Re-decline"
+msgstr ""
+
+#: templates/admin/requests-page.php:81
+msgid "Keep Inactive"
+msgstr ""
+
+#: includes/Shortcode.php:80
+msgid "Access denied. Valid authorization required."
+msgstr ""
+
+#: includes/Shortcode.php:180
+msgid "Access denied. This file requires authorization through the document sharing system."
+msgstr ""
+
+#: includes/Shortcode.php:89
+msgid "Access denied. This file requires authorization through the document sharing system."
+msgstr ""
+
+#: includes/Shortcode.php:89
+msgid "Access Denied"
+msgstr ""
+
+#: includes/Plugin.php:45
+msgid "Email Settings"
+msgstr ""
+
+#: includes/Plugin.php:46
+msgid "Settings"
+msgstr ""
+
+#: includes/Settings.php:42
+msgid "Email Template Settings"
+msgstr ""
+
+#: includes/Settings.php:43
+msgid "Configure the email template that will be sent when document access is granted. Use the variables below to personalize your emails."
+msgstr ""
+
+#: includes/Settings.php:49
+msgid "Email Subject"
+msgstr ""
+
+#: includes/Settings.php:50
+msgid "Subject line for the access granted email. You can use variables like {{name}}."
+msgstr ""
+
+#: includes/Settings.php:56
+msgid "Email Body (HTML)"
+msgstr ""
+
+#: includes/Settings.php:57
+msgid "HTML email body. Use the variables below to personalize your emails. You can use the rich editor above or switch to HTML mode for advanced customization."
+msgstr ""
+
+#: includes/Settings.php:63
+msgid "Available Variables"
+msgstr ""
+
+#: includes/Settings.php:67
+msgid "Requester's name"
+msgstr ""
+
+#: includes/Settings.php:68
+msgid "Requester's email address"
+msgstr ""
+
+#: includes/Settings.php:69
+msgid "Generated secure download/view link"
+msgstr ""
+
+#: includes/Settings.php:71
+msgid "Note:"
+msgstr ""
+
+#: includes/Settings.php:72
+msgid "If a variable is missing, it will be replaced with an empty string."
+msgstr ""
+
+#: templates/admin/settings-page.php:27
+msgid "Save Email Template"
+msgstr ""
+
+#: templates/admin/settings-page.php:33
+msgid "Email Template Preview"
+msgstr ""
+
+#: templates/admin/settings-page.php:34
+msgid "Preview how your email will look with sample data:"
+msgstr ""
+
+#: templates/admin/settings-page.php:36
+msgid "Preview Email"
+msgstr ""
+
+#: templates/admin/settings-page.php:41
+msgid "Template Tips"
+msgstr ""
+
+#: templates/admin/settings-page.php:42
+msgid "Use HTML for rich formatting"
+msgstr ""
+
+#: templates/admin/settings-page.php:43
+msgid "Variables are automatically replaced"
+msgstr ""
+
+#: templates/admin/settings-page.php:44
+msgid "Test with different email clients"
+msgstr ""
+
+#: templates/admin/settings-page.php:45
+msgid "Keep subject lines under 60 characters"
+msgstr ""
+
+#: templates/admin/settings-page.php:50
+msgid "Test Email"
+msgstr ""
+
+#: templates/admin/settings-page.php:51
+msgid "Send a test email to verify your template works correctly:"
+msgstr ""
+
+#: templates/admin/settings-page.php:53
+msgid "Send Test Email"
+msgstr ""
+
+#: templates/admin/settings-page.php:67
+msgid "Email Preview"
+msgstr ""
+
+#: templates/admin/settings-page.php:70
+msgid "HTML"
+msgstr ""
+
+#: templates/admin/settings-page.php:71
+msgid "Preview"
+msgstr ""
+
+#: templates/admin/settings-page.php:75
+msgid "Subject:"
+msgstr ""
+
+#: includes/Settings.php:78
+msgid "Your document access has been granted"
+msgstr ""
+
+#: includes/Plugin.php:395
+msgid "Test email sent successfully! Check your admin email."
+msgstr ""
+
+#: includes/Plugin.php:397
+msgid "Failed to send test email. Check your WordPress email configuration."
+msgstr ""
+
+#: includes/Settings.php:67
+msgid "Recipient Settings"
+msgstr ""
+
+#: includes/Settings.php:68
+msgid "Configure email addresses that will receive notifications when document access is requested or granted. Leave empty to use the site admin email."
+msgstr ""
+
+#: includes/Settings.php:73
+msgid "Recipient Email Addresses"
+msgstr ""
+
+#: includes/Settings.php:74
+msgid "Enter email addresses separated by commas or semicolons. Invalid addresses will be automatically removed."
+msgstr ""
+
+#: includes/Settings.php:79
+msgid "Autoresponder Template"
+msgstr ""
+
+#: includes/Settings.php:80
+msgid "Configure an automatic response email that will be sent to users when they request document access. This email is sent immediately upon request submission."
+msgstr ""
+
+#: includes/Settings.php:85
+msgid "Enable Autoresponder"
+msgstr ""
+
+#: includes/Settings.php:86
+msgid "Enable autoresponder emails"
+msgstr ""
+
+#: includes/Settings.php:87
+msgid "When enabled, users will automatically receive a confirmation email after submitting a document access request."
+msgstr ""
+
+#: includes/Settings.php:92
+msgid "Autoresponder Subject"
+msgstr ""
+
+#: includes/Settings.php:93
+msgid "Subject line for the autoresponder email. You can use variables like {name} and {document_title}."
+msgstr ""
+
+#: includes/Settings.php:98
+msgid "Autoresponder Body (HTML)"
+msgstr ""
+
+#: includes/Settings.php:99
+msgid "HTML email body for the autoresponder. Use the variables below to personalize your emails. You can use the rich editor above or switch to HTML mode for advanced customization."
+msgstr ""
+
+#: includes/Settings.php:104
+msgid "Requester's name"
+msgstr ""
+
+#: includes/Settings.php:105
+msgid "Requester's email address"
+msgstr ""
+
+#: includes/Settings.php:106
+msgid "Title of the requested document"
+msgstr ""
+
+#: includes/Settings.php:107
+msgid "Name of your website"
+msgstr ""
+
+#: includes/Settings.php:109
+msgid "Unknown placeholders will remain unchanged in the email."
+msgstr ""
+
+#: includes/Settings.php:78
+msgid "Document Access Request Received"
+msgstr ""
+
+#: includes/Plugin.php:410
+msgid "Test autoresponder email sent successfully! Check your admin email."
+msgstr ""
+
+#: includes/Plugin.php:412
+msgid "Failed to send test autoresponder email. Make sure autoresponder is enabled and check your WordPress email configuration."
+msgstr ""
+
+#: includes/Email.php:82
+msgid "New Document Access Request: %s"
+msgstr ""
+
+#: templates/admin/settings-page.php:50
+msgid "Test Autoresponder"
+msgstr ""
+
+#: templates/admin/settings-page.php:51
+msgid "Send a test autoresponder email to verify your template works correctly:"
+msgstr ""
+
+#: templates/admin/settings-page.php:53
+msgid "Send Test Autoresponder"
+msgstr ""
+
+#: includes/Settings.php:73
+msgid "Recipient Email"
+msgstr ""
+
+#: includes/Settings.php:74
+msgid "Email address or placeholder for autoresponder recipient. Use {{requester_email}} to send to the person requesting access."
+msgstr ""
+
+#: includes/Settings.php:79
+msgid "Email address or placeholder for access granted notifications. Use {{requester_email}} to send to the person who requested access."
+msgstr ""
+
+#: includes/Settings.php:67
+msgid "Invalid recipient email \"%s\". Must be a valid email address or a supported placeholder (e.g., {{requester_email}})."
+msgstr ""
+
+#: includes/Email.php:158
+msgid "Quick Actions"
+msgstr ""
+
+#: includes/Email.php:159
+msgid "Click one of the links below to immediately grant access:"
+msgstr ""
+
+#: includes/Email.php:161
+msgid "Accept Request"
+msgstr ""
+
+#: includes/Email.php:162
+msgid "Re-accept Request"
+msgstr ""
+
+#: includes/Email.php:164
+msgid "These links are secure and will expire in 48 hours. Each link can only be used once."
+msgstr ""
+
+#: includes/LinkHandler.php:127
+msgid "Access Granted"
+msgstr ""
+
+#: includes/LinkHandler.php:128
+msgid "The document access request has been %s successfully."
+msgstr ""
+
+#: includes/LinkHandler.php:129
+msgid "The access granted email has been sent to the requester."
+msgstr ""
+
+#: includes/LinkHandler.php:131
+msgid "Back to Home"
+msgstr ""
+
+#: includes/LinkHandler.php:147
+msgid "Action Failed"
+msgstr ""
+
+#: includes/LinkHandler.php:150
+msgid "Back to Home"
+msgstr ""
+
+#: includes/Logs.php:28
+msgid "Email Logs"
+msgstr ""
+
+#: includes/Logs.php:52
+msgid "View all email send attempts and autorespond activities."
+msgstr ""
+
+#: includes/Logs.php:59
+msgid "No email logs found."
+msgstr ""
+
+#: includes/Logs.php:75
+msgid "All Types"
+msgstr ""
+
+#: includes/Logs.php:76
+msgid "Email Logs"
+msgstr ""
+
+#: includes/Logs.php:77
+msgid "Link Action Logs"
+msgstr ""
+
+#: includes/Logs.php:80
+msgid "All Statuses"
+msgstr ""
+
+#: includes/Logs.php:81
+msgid "Success"
+msgstr ""
+
+#: includes/Logs.php:82
+msgid "Error"
+msgstr ""
+
+#: includes/Logs.php:85
+msgid "Filter"
+msgstr ""
+
+#: includes/Logs.php:86
+msgid "Clear"
+msgstr ""
+
+#: includes/Logs.php:95
+msgid "Date/Time"
+msgstr ""
+
+#: includes/Logs.php:96
+msgid "Type"
+msgstr ""
+
+#: includes/Logs.php:97
+msgid "Request ID"
+msgstr ""
+
+#: includes/Logs.php:98
+msgid "Template"
+msgstr ""
+
+#: includes/Logs.php:99
+msgid "Recipient"
+msgstr ""
+
+#: includes/Logs.php:100
+msgid "Status"
+msgstr ""
+
+#: includes/Logs.php:101
+msgid "Details"
+msgstr ""
+
+#: includes/Logs.php:108
+msgid "Email"
+msgstr ""
+
+#: includes/Logs.php:109
+msgid "Link Action"
+msgstr ""
+
+#: includes/Logs.php:118
+msgid "Success"
+msgstr ""
+
+#: includes/Logs.php:119
+msgid "Error"
+msgstr ""
+
+#: includes/Logs.php:140
+msgid "Showing %1$d-%2$d of %3$d items"
+msgstr ""
+
+#: includes/Logs.php:147
+msgid "Previous"
+msgstr ""
+
+#: includes/Logs.php:152
+msgid "Next"
+msgstr ""
+
+#: templates/admin/requests-page.php:58
+msgid "Click to view document"
+msgstr ""
+
+#: templates/admin/requests-page.php:68
+msgid "Request not accepted yet"
+msgstr ""
+
+#: templates/admin/requests-page.php:134
+msgid "Request updated successfully!"
+msgstr ""
+
+#: templates/admin/requests-page.php:158
+msgid "Confirm Action"
+msgstr ""
+
+#: templates/admin/requests-page.php:164
+msgid "Cancel"
+msgstr ""
+
+#: templates/admin/requests-page.php:165
+msgid "OK"
+msgstr ""
+
+#: templates/admin/requests-page.php:108
+msgid "Showing %1$d-%2$d of %3$d requests"
+msgstr ""
+
+#: templates/admin/requests-page.php:115
+msgid "Previous"
+msgstr ""
+
+#: templates/admin/requests-page.php:130
+msgid "Next"
+msgstr ""
+
+
+
+#: templates/admin/requests-page.php:55
+msgid "Reactivate"
+msgstr ""
+
+#: templates/admin/requests-page.php:62
+msgid "Are you sure you want to perform this action?"
+msgstr ""
+
+#: templates/admin/requests-page.php:75
+msgid "Error:"
+msgstr ""
+
+#: templates/admin/requests-page.php:75
+msgid "Unknown error"
+msgstr ""
+
+#: templates/admin/requests-page.php:80
+msgid "Network error. Please try again."
+msgstr ""
+
+#: templates/admin/requests-page.php:95
+msgid "Copied!"
+msgstr ""
+
+#: assets/js/frontend.js:25
+msgid "Request Document Access"
+msgstr ""
+
+#: assets/js/frontend.js:30
+msgid "Full Name"
+msgstr ""
+
+#: assets/js/frontend.js:33
+msgid "Email Address"
+msgstr ""
+
+#: assets/js/frontend.js:40
+msgid "Cancel"
+msgstr ""
+
+#: assets/js/frontend.js:42
+msgid "Submit Request"
+msgstr ""
+
+#: assets/js/frontend.js:50
+msgid "Please fill in all required fields."
+msgstr ""
+
+#: assets/js/frontend.js:55
+msgid "Please enter a valid email address."
+msgstr ""
+
+#: assets/js/frontend.js:62
+msgid "Submitting..."
+msgstr ""
+
+#: assets/js/frontend.js:75
+msgid "Request sent successfully!"
+msgstr ""
+
+#: assets/js/frontend.js:77
+msgid "An error occurred. Please try again."
+msgstr ""
+
+#: assets/js/frontend.js:81
+msgid "Network error. Please try again."
+msgstr ""
+
+#: assets/js/frontend.js:87
+msgid "Submit Request"
+msgstr ""

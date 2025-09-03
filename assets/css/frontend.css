@@ -1,0 +1,275 @@
+/* AuthDocs Frontend Styles */
+.authdocs-document {
+  background: #fff;
+  border: 1px solid #e1e1e1;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.authdocs-document:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.authdocs-document-header {
+  margin-bottom: 15px;
+}
+
+.authdocs-document-title {
+  margin: 0 0 10px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.authdocs-document-description {
+  color: #666;
+  line-height: 1.5;
+}
+
+.authdocs-document-actions {
+  text-align: center;
+}
+
+.authdocs-request-access-btn,
+.authdocs-download-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #0073aa;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.authdocs-request-access-btn:hover,
+.authdocs-download-btn:hover {
+  background: #005a87;
+  color: #fff;
+  text-decoration: none;
+}
+
+.authdocs-download-btn {
+  background: #00a32a;
+}
+
+.authdocs-download-btn:hover {
+  background: #007a1f;
+}
+
+/* Modal Styles */
+.authdocs-modal {
+  display: none;
+  position: fixed;
+  z-index: 100000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.3s ease;
+}
+
+.authdocs-modal-content {
+  background-color: #fff;
+  margin: 5% auto;
+  padding: 0;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+.authdocs-modal-header {
+  padding: 20px 20px 0 20px;
+  border-bottom: 1px solid #e1e1e1;
+}
+
+.authdocs-modal-title {
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.authdocs-modal-body {
+  padding: 20px;
+}
+
+.authdocs-modal-footer {
+  padding: 0 20px 20px 20px;
+  text-align: right;
+}
+
+.authdocs-form-group {
+  margin-bottom: 20px;
+}
+
+.authdocs-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+}
+
+.authdocs-form-group input[type="text"],
+.authdocs-form-group input[type="email"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.authdocs-form-group input[type="text"]:focus,
+.authdocs-form-group input[type="email"]:focus {
+  outline: none;
+  border-color: #0073aa;
+  box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}
+
+.authdocs-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-left: 10px;
+}
+
+.authdocs-btn-primary {
+  background: #0073aa;
+  color: #fff;
+}
+
+.authdocs-btn-primary:hover {
+  background: #005a87;
+}
+
+.authdocs-btn-secondary {
+  background: #f0f0f1;
+  color: #50575e;
+}
+
+.authdocs-btn-secondary:hover {
+  background: #e0e0e1;
+}
+
+.authdocs-close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.authdocs-close:hover {
+  color: #000;
+}
+
+/* Loading State */
+.authdocs-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.authdocs-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0073aa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .authdocs-modal-content {
+    margin: 10% auto;
+    width: 95%;
+  }
+
+  .authdocs-document {
+    padding: 15px;
+  }
+
+  .authdocs-document-title {
+    font-size: 1.1rem;
+  }
+
+  .authdocs-request-access-btn,
+  .authdocs-download-btn {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .authdocs-modal-content {
+    margin: 5% auto;
+    width: 98%;
+  }
+
+  .authdocs-modal-header,
+  .authdocs-modal-body,
+  .authdocs-modal-footer {
+    padding: 15px;
+  }
+
+  .authdocs-document {
+    padding: 12px;
+  }
+
+  .authdocs-btn {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+  }
+}

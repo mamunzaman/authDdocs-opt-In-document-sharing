@@ -1,0 +1,22 @@
+# AuthDocs - Document Protection
+
+# This file provides additional server-level protection for document files
+
+# Block direct access to AuthDocs document files
+
+<FilesMatch "\.(pdf|doc|docx|txt|rtf)$">
+    # Allow access only through WordPress admin or with valid hash
+    RewriteEngine On
+    RewriteCond %{QUERY_STRING} !authdocs_download=
+    RewriteCond %{QUERY_STRING} !hash=
+    RewriteRule ^(.*)$ - [F,L]
+</FilesMatch>
+
+# Additional security headers
+
+<IfModule mod_headers.c>
+    # Prevent direct access to uploaded files without proper authorization
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
