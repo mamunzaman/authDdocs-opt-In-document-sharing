@@ -37,42 +37,79 @@ jQuery(document).ready(function ($) {
   function showRequestAccessModal(documentId) {
     const modalHtml = `
             <div class="authdocs-modal" id="authdocs-request-modal">
-                <div class="authdocs-modal-content">
-                    <div class="authdocs-modal-header">
-                        <span class="authdocs-close">&times;</span>
-                        <h2 class="authdocs-modal-title">${
-                          authdocs_frontend.request_access_title ||
-                          "Request Document Access"
-                        }</h2>
-                    </div>
-                    <div class="authdocs-modal-body">
-                        <form id="authdocs-request-form">
-                            <div class="authdocs-form-group">
-                                <label for="authdocs-name">${
-                                  authdocs_frontend.name_label || "Full Name"
-                                }</label>
-                                <input type="text" id="authdocs-name" name="name" required>
+                <div class="authdocs-modal-backdrop"></div>
+                <div class="authdocs-modal-container">
+                    <div class="authdocs-modal-card">
+                        <div class="authdocs-modal-header">
+                            <div class="authdocs-modal-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                                </svg>
                             </div>
-                            <div class="authdocs-form-group">
-                                <label for="authdocs-email">${
-                                  authdocs_frontend.email_label ||
-                                  "Email Address"
-                                }</label>
-                                <input type="email" id="authdocs-email" name="email" required>
-                            </div>
-                            <input type="hidden" name="document_id" value="${documentId}">
-                            <input type="hidden" name="nonce" value="${
-                              authdocs_frontend.nonce
-                            }">
-                        </form>
-                    </div>
-                    <div class="authdocs-modal-footer">
-                        <button type="button" class="authdocs-btn authdocs-btn-secondary authdocs-close">${
-                          authdocs_frontend.cancel_label || "Cancel"
-                        }</button>
-                        <button type="button" class="authdocs-btn authdocs-btn-primary" id="authdocs-submit-request">${
-                          authdocs_frontend.submit_label || "Submit Request"
-                        }</button>
+                            <h2 class="authdocs-modal-title">${
+                              authdocs_frontend.request_access_title ||
+                              "Request Document Access"
+                            }</h2>
+                            <button type="button" class="authdocs-modal-close" aria-label="Close">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="authdocs-modal-body">
+                            <p class="authdocs-modal-description">
+                                Please provide your details to request access to this document.
+                            </p>
+                            
+                            <form id="authdocs-request-form" class="authdocs-form">
+                                <div class="authdocs-form-group">
+                                    <label for="authdocs-name" class="authdocs-form-label">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                        ${
+                                          authdocs_frontend.name_label ||
+                                          "Full Name"
+                                        }
+                                    </label>
+                                    <input type="text" id="authdocs-name" name="name" class="authdocs-form-input" placeholder="Enter your full name" required>
+                                </div>
+                                
+                                <div class="authdocs-form-group">
+                                    <label for="authdocs-email" class="authdocs-form-label">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                                        </svg>
+                                        ${
+                                          authdocs_frontend.email_label ||
+                                          "Email Address"
+                                        }
+                                    </label>
+                                    <input type="email" id="authdocs-email" name="email" class="authdocs-form-input" placeholder="Enter your email address" required>
+                                </div>
+                                
+                                <input type="hidden" name="document_id" value="${documentId}">
+                                <input type="hidden" name="nonce" value="${
+                                  authdocs_frontend.nonce
+                                }">
+                            </form>
+                        </div>
+                        
+                        <div class="authdocs-modal-footer">
+                            <button type="button" class="authdocs-btn authdocs-btn-outline authdocs-modal-close">
+                                ${authdocs_frontend.cancel_label || "Cancel"}
+                            </button>
+                            <button type="button" class="authdocs-btn authdocs-btn-primary" id="authdocs-submit-request">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                </svg>
+                                ${
+                                  authdocs_frontend.submit_label ||
+                                  "Submit Request"
+                                }
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -84,8 +121,18 @@ jQuery(document).ready(function ($) {
     // Focus on first input
     $("#authdocs-name").focus();
 
-    // Handle close button and overlay clicks
-    $("#authdocs-request-modal .authdocs-close, #authdocs-request-modal").on(
+    // Handle close button clicks
+    $("#authdocs-request-modal .authdocs-modal-close").on(
+      "click",
+      function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeRequestModal();
+      }
+    );
+
+    // Handle backdrop clicks
+    $("#authdocs-request-modal .authdocs-modal-backdrop").on(
       "click",
       function (e) {
         if (e.target === this) {
@@ -94,18 +141,113 @@ jQuery(document).ready(function ($) {
       }
     );
 
+    // Initialize form validation
+    initializeFormValidation();
+
     // Handle form submission
     $("#authdocs-submit-request").on("click", function () {
-      submitAccessRequest();
+      if (validateForm()) {
+        submitAccessRequest();
+      }
     });
 
     // Handle Enter key in form
     $("#authdocs-request-form").on("keypress", function (e) {
       if (e.which === 13) {
         e.preventDefault();
-        submitAccessRequest();
+        if (validateForm()) {
+          submitAccessRequest();
+        }
       }
     });
+  }
+
+  // Initialize form validation
+  function initializeFormValidation() {
+    const $nameInput = $("#authdocs-name");
+    const $emailInput = $("#authdocs-email");
+    const $submitBtn = $("#authdocs-submit-request");
+
+    // Real-time validation on input
+    $nameInput.on("input blur", function () {
+      validateNameField($(this));
+      updateSubmitButton();
+    });
+
+    $emailInput.on("input blur", function () {
+      validateEmailField($(this));
+      updateSubmitButton();
+    });
+
+    function updateSubmitButton() {
+      const isNameValid = validateNameField($nameInput, false);
+      const isEmailValid = validateEmailField($emailInput, false);
+      $submitBtn.prop("disabled", !(isNameValid && isEmailValid));
+    }
+  }
+
+  // Validate name field
+  function validateNameField($field, showError = true) {
+    const value = $field.val().trim();
+    const isValid = value.length >= 2;
+
+    if (showError) {
+      if (isValid) {
+        clearFieldError($field);
+      } else {
+        showFieldError($field, "Name must be at least 2 characters long");
+      }
+    }
+
+    return isValid;
+  }
+
+  // Validate email field
+  function validateEmailField($field, showError = true) {
+    const value = $field.val().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValid = emailRegex.test(value);
+
+    if (showError) {
+      if (isValid) {
+        clearFieldError($field);
+      } else if (value.length === 0) {
+        showFieldError($field, "Email address is required");
+      } else {
+        showFieldError($field, "Please enter a valid email address");
+      }
+    }
+
+    return isValid;
+  }
+
+  // Show field error
+  function showFieldError($field, message) {
+    clearFieldError($field);
+
+    $field.addClass("authdocs-field-error");
+
+    const $errorDiv = $(
+      "<div class='authdocs-field-error-message'></div>"
+    ).text(message);
+    $field.after($errorDiv);
+  }
+
+  // Clear field error
+  function clearFieldError($field) {
+    $field.removeClass("authdocs-field-error");
+    $field.siblings(".authdocs-field-error-message").remove();
+  }
+
+  // Validate entire form
+  function validateForm() {
+    const $nameInput = $("#authdocs-name");
+    const $emailInput = $("#authdocs-email");
+
+    const isNameValid = validateNameField($nameInput);
+    const isEmailValid = validateEmailField($emailInput);
+
+    return isNameValid && isEmailValid;
   }
 
   // Close request modal
@@ -276,25 +418,39 @@ jQuery(document).ready(function ($) {
   // Show success message
   function showSuccessMessage(message) {
     const messageHtml = `
-            <div class="authdocs-message authdocs-message-success">
-                <span>${message}</span>
-                <button type="button" class="authdocs-message-close">&times;</button>
+            <div class="authdocs-notification authdocs-notification-success">
+                <div class="authdocs-notification-content">
+                    <div class="authdocs-notification-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                    </div>
+                    <div class="authdocs-notification-text">
+                        <div class="authdocs-notification-title">Success!</div>
+                        <div class="authdocs-notification-message">${message}</div>
+                    </div>
+                    <button type="button" class="authdocs-notification-close" aria-label="Close notification">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         `;
 
     $("body").append(messageHtml);
 
-    // Auto-hide after 5 seconds
+    // Auto-hide after 6 seconds
     setTimeout(function () {
-      $(".authdocs-message-success").fadeOut(300, function () {
+      $(".authdocs-notification-success").fadeOut(300, function () {
         $(this).remove();
       });
-    }, 5000);
+    }, 6000);
 
     // Handle close button
-    $(".authdocs-message-close").on("click", function () {
+    $(".authdocs-notification-close").on("click", function () {
       $(this)
-        .closest(".authdocs-message")
+        .closest(".authdocs-notification")
         .fadeOut(300, function () {
           $(this).remove();
         });
@@ -329,58 +485,6 @@ jQuery(document).ready(function ($) {
     });
   }
 
-  // Add message styles dynamically
-  if (!$("#authdocs-message-styles").length) {
-    const messageStyles = `
-            <style id="authdocs-message-styles">
-                .authdocs-message {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 15px 20px;
-                    border-radius: 4px;
-                    color: #fff;
-                    font-weight: 500;
-                    z-index: 100001;
-                    max-width: 400px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                    animation: slideInRight 0.3s ease;
-                }
-                
-                .authdocs-message-success {
-                    background: #00a32a;
-                }
-                
-                .authdocs-message-error {
-                    background: #d63638;
-                }
-                
-                .authdocs-message-close {
-                    background: none;
-                    border: none;
-                    color: #fff;
-                    font-size: 18px;
-                    cursor: pointer;
-                    margin-left: 10px;
-                    opacity: 0.8;
-                }
-                
-                .authdocs-message-close:hover {
-                    opacity: 1;
-                }
-                
-                @keyframes slideInRight {
-                    from {
-                        transform: translateX(100%);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                }
-            </style>
-        `;
-    $("head").append(messageStyles);
-  }
+  // Modern message styles are now handled in CSS file
+  // No need for dynamic styles injection
 });

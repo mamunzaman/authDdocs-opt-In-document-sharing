@@ -1,6 +1,20 @@
 jQuery(document).ready(function ($) {
   "use strict";
 
+  console.log("AuthDocs: Admin JavaScript loaded successfully");
+  console.log(
+    "AuthDocs: Available actions:",
+    $(".authdocs-action-link").length
+  );
+  console.log("AuthDocs: AJAX URL available:", typeof ajaxurl !== "undefined");
+  console.log(
+    "AuthDocs: Admin object available:",
+    typeof authdocs_admin !== "undefined"
+  );
+  if (typeof authdocs_admin !== "undefined") {
+    console.log("AuthDocs: Admin object:", authdocs_admin);
+  }
+
   // Handle copy link button clicks
   $(document).on("click", ".authdocs-copy-link", function (e) {
     e.preventDefault();
@@ -120,6 +134,122 @@ jQuery(document).ready(function ($) {
     }, 3000);
   }
 
+  // Table sorting, filtering, and pagination functionality
+  var currentSort = { column: null, direction: "asc" };
+  var allRows = [];
+  var filteredRows = [];
+  var currentPage = 1;
+  var rowsPerPage = 20;
+
+  // Initialize table functionality
+  function initTableFeatures() {
+    // Store all rows for sorting/filtering
+    allRows = $(".authdocs-requests-table-wrapper tbody tr").toArray();
+    filteredRows = allRows.slice();
+
+    // Initialize sortable headers
+    $(".authdocs-sortable").on("click", function () {
+      var column = $(this).data("sort");
+      var direction = "asc";
+
+      if (currentSort.column === column && currentSort.direction === "asc") {
+        direction = "desc";
+      }
+
+      currentSort = { column: column, direction: direction };
+      sortTable(column, direction);
+      updateSortIcons();
+    });
+
+    // Initialize filter
+    $("#authdocs-requests-filter").on("input", function () {
+      var filterText = $(this).val().toLowerCase();
+      filterTable(filterText);
+    });
+  }
+
+  // Sort table by column
+  function sortTable(column, direction) {
+    filteredRows.sort(function (a, b) {
+      var aVal = $(a).data(column);
+      var bVal = $(b).data(column);
+
+      // Handle different data types
+      if (column === "date") {
+        aVal = new Date(aVal);
+        bVal = new Date(bVal);
+      } else if (typeof aVal === "string") {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+
+      if (direction === "asc") {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    renderTable();
+  }
+
+  // Filter table by text
+  function filterTable(filterText) {
+    if (filterText.length < 3) {
+      filteredRows = allRows.slice();
+    } else {
+      filteredRows = allRows.filter(function (row) {
+        var searchData = $(row).data("search");
+        return searchData.indexOf(filterText) !== -1;
+      });
+    }
+
+    currentPage = 1;
+    renderTable();
+  }
+
+  // Render table with current sort/filter
+  function renderTable() {
+    var tbody = $(".authdocs-requests-table-wrapper tbody");
+    tbody.empty();
+
+    var startIndex = (currentPage - 1) * rowsPerPage;
+    var endIndex = startIndex + rowsPerPage;
+    var pageRows = filteredRows.slice(startIndex, endIndex);
+
+    tbody.append(pageRows);
+    updatePaginationInfo();
+  }
+
+  // Update sort icons
+  function updateSortIcons() {
+    $(".authdocs-sortable").removeClass("sorted sorted-desc");
+    if (currentSort.column) {
+      var $header = $(
+        '.authdocs-sortable[data-sort="' + currentSort.column + '"]'
+      );
+      $header.addClass(
+        currentSort.direction === "desc" ? "sorted-desc" : "sorted"
+      );
+    }
+  }
+
+  // Update pagination info
+  function updatePaginationInfo() {
+    var total = filteredRows.length;
+    var start = total === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+    var end = Math.min(currentPage * rowsPerPage, total);
+
+    $("#authdocs-pagination-info").text(
+      "Showing " + start + "-" + end + " of " + total + " requests"
+    );
+  }
+
+  // Initialize on document ready
+  $(document).ready(function () {
+    initTableFeatures();
+  });
+
   // Handle request management actions
   $(document).on("click", ".authdocs-action-link", function (e) {
     e.preventDefault();
@@ -128,6 +258,8 @@ jQuery(document).ready(function ($) {
     var $btn = $(this);
 
     console.log("AuthDocs: Action link clicked", $btn);
+    console.log("AuthDocs: Button classes:", $btn.attr("class"));
+    console.log("AuthDocs: Button data attributes:", $btn.data());
 
     // Prevent action if button is disabled
     if ($btn.hasClass("disabled") || $btn.prop("disabled")) {
@@ -167,6 +299,7 @@ jQuery(document).ready(function ($) {
       "AuthDocs: Showing confirmation dialog with message:",
       confirmMessage
     );
+    console.log("AuthDocs: About to call showConfirmDialog");
     showConfirmDialog(confirmMessage, function () {
       // User confirmed, proceed with action
       console.log(
@@ -176,6 +309,7 @@ jQuery(document).ready(function ($) {
       );
       proceedWithAction($btn, action, requestId);
     });
+    console.log("AuthDocs: showConfirmDialog called, returning");
     return;
   });
 
@@ -205,10 +339,7 @@ jQuery(document).ready(function ($) {
     // Add notice to the top of the page
     $(".wrap h1").after($notice);
 
-    // Auto-dismiss after 5 seconds
-    setTimeout(function () {
-      $notice.fadeOut();
-    }, 5000);
+    // Notifications are now persistent - they stay until manually dismissed or page reload
 
     // Make dismissible
     $notice.on("click", ".notice-dismiss", function () {
@@ -248,10 +379,13 @@ jQuery(document).ready(function ($) {
     $("body").append($overlay);
 
     console.log("AuthDocs: Confirmation dialog created and appended to body");
+    console.log("AuthDocs: Overlay element:", $overlay);
+    console.log("AuthDocs: Dialog element:", $dialog);
 
     // Trigger reflow and add show class for animation
     $overlay[0].offsetHeight;
     $overlay.addClass("show");
+    console.log("AuthDocs: Show class added to overlay");
 
     // Handle button clicks using event delegation
     $overlay.on("click", ".authdocs-confirm-ok", function () {
@@ -311,20 +445,42 @@ jQuery(document).ready(function ($) {
           var request = response.data;
           console.log("Request data:", request);
 
-          // Update status column
+          // Update status column with modern design
           var $statusCell = $row.find("td[data-label='Status']");
           if ($statusCell.length) {
-            var statusClass =
-              "authdocs-status authdocs-status-" + request.status;
+            var statusIcons = {
+              pending: "dashicons-clock",
+              accepted: "dashicons-yes-alt",
+              declined: "dashicons-no-alt",
+              inactive: "dashicons-hidden",
+            };
+            var statusColors = {
+              pending: "#ffc107",
+              accepted: "#28a745",
+              declined: "#dc3545",
+              inactive: "#6c757d",
+            };
+            var icon = statusIcons[request.status] || "dashicons-info";
+            var color = statusColors[request.status] || "#6c757d";
+
             $statusCell.html(
-              '<span class="' +
-                statusClass +
+              '<div class="authdocs-status-modern authdocs-status-' +
+                request.status +
                 '">' +
+                '<span class="authdocs-status-icon" style="color: ' +
+                color +
+                '">' +
+                '<span class="dashicons ' +
+                icon +
+                '"></span>' +
+                "</span>" +
+                '<span class="authdocs-status-text">' +
                 request.status.charAt(0).toUpperCase() +
                 request.status.slice(1) +
-                "</span>"
+                "</span>" +
+                "</div>"
             );
-            console.log("Updated status cell");
+            console.log("Updated status cell with modern design");
           }
 
           // Update file link column
@@ -342,21 +498,18 @@ jQuery(document).ready(function ($) {
                 "&request_id=" +
                 request.id;
               $fileLinkCell.html(
-                '<a href="' +
+                '<div class="authdocs-link-container">' +
+                  '<a href="' +
                   downloadUrl +
                   '" target="_blank" class="authdocs-download-link" title="Click to view document">' +
-                  (request.document_file.filename ||
-                    request.document_file.title) +
-                  "</a><br>" +
-                  '<div class="authdocs-link-container">' +
+                  "View Document" +
+                  "</a>" +
                   '<button type="button" class="authdocs-copy-link" title="Copy link" data-link="' +
                   downloadUrl +
                   '">' +
                   '<span class="dashicons dashicons-admin-page"></span>' +
                   "</button>" +
-                  '<small class="authdocs-link-preview">' +
-                  downloadUrl.substring(0, 50) +
-                  "...</small></div>"
+                  "</div>"
               );
               console.log("Updated file link cell with download link");
             } else {
@@ -385,14 +538,16 @@ jQuery(document).ready(function ($) {
               }
 
               $fileLinkCell.html(
-                '<a href="' +
+                '<div class="authdocs-link-container">' +
+                  '<span class="dashicons dashicons-lock authdocs-link-lock"></span>' +
+                  '<a href="' +
                   request.document_file.url +
                   '" target="_blank" class="' +
                   linkClass +
                   '">' +
-                  (request.document_file.filename ||
-                    request.document_file.title) +
-                  "</a><br>" +
+                  "View File" +
+                  "</a>" +
+                  "</div><br>" +
                   '<small class="authdocs-status-note ' +
                   request.status +
                   '">' +
@@ -406,47 +561,94 @@ jQuery(document).ready(function ($) {
             }
           }
 
-          // Update action buttons
+          // Update action buttons with proper disabled states
           var $acceptBtn = $row.find(".authdocs-action-accept");
           var $declineBtn = $row.find(".authdocs-action-decline");
           var $inactiveBtn = $row.find(".authdocs-action-inactive");
+          var $deleteBtn = $row.find(".authdocs-action-delete");
 
+          // Determine button states based on current status
+          var acceptDisabled =
+            request.status === "accepted" || request.status === "inactive";
+          var declineDisabled =
+            request.status === "declined" || request.status === "inactive";
+          // Toggle button should always be enabled to allow switching between states
+          var toggleDisabled = false;
+
+          // Update Accept button
           if ($acceptBtn.length) {
-            var acceptText =
-              request.status === "accepted" ? "Re-accept" : "Accept";
+            var acceptText;
+            if (request.status === "accepted") {
+              acceptText = "Already accepted";
+            } else if (request.status === "inactive") {
+              acceptText = "Link is hidden - Show link first";
+            } else {
+              acceptText = "Accept";
+            }
             $acceptBtn.attr("title", acceptText);
-            console.log("Updated accept button tooltip");
+
+            if (acceptDisabled) {
+              $acceptBtn.addClass("disabled").prop("disabled", true);
+            } else {
+              $acceptBtn.removeClass("disabled").prop("disabled", false);
+            }
+            console.log("Updated accept button - disabled:", acceptDisabled);
           }
 
+          // Update Decline button
           if ($declineBtn.length) {
-            var declineText =
-              request.status === "declined" ? "Re-decline" : "Decline";
+            var declineText;
+            if (request.status === "declined") {
+              declineText = "Already declined";
+            } else if (request.status === "inactive") {
+              declineText = "Link is hidden - Show link first";
+            } else {
+              declineText = "Decline";
+            }
             $declineBtn.attr("title", declineText);
-            console.log("Updated decline button tooltip");
+
+            if (declineDisabled) {
+              $declineBtn.addClass("disabled").prop("disabled", true);
+            } else {
+              $declineBtn.removeClass("disabled").prop("disabled", false);
+            }
+            console.log("Updated decline button - disabled:", declineDisabled);
           }
 
+          // Update Toggle Link Visibility button
           if ($inactiveBtn.length) {
-            var inactiveText =
-              request.status === "inactive" ? "Activate" : "Deactivate";
-            $inactiveBtn.attr("title", inactiveText);
-            console.log("Updated inactive button tooltip");
-          }
+            var toggleText =
+              request.status === "inactive"
+                ? "Link is hidden - Click to show"
+                : "Link is visible - Click to hide";
+            $inactiveBtn.attr("title", toggleText);
 
-          // Enable/disable Accept and Decline buttons based on status
-          if (request.status === "inactive") {
-            $acceptBtn.addClass("disabled").prop("disabled", true);
-            $declineBtn.addClass("disabled").prop("disabled", true);
+            // Update icon based on current state
+            var $icon = $inactiveBtn.find(".dashicons");
+            if (request.status === "inactive") {
+              $icon
+                .removeClass("dashicons-hidden")
+                .addClass("dashicons-visibility");
+            } else {
+              $icon
+                .removeClass("dashicons-visibility")
+                .addClass("dashicons-hidden");
+            }
+
+            // Toggle button should always be enabled
+            $inactiveBtn.removeClass("disabled").prop("disabled", false);
+
             console.log(
-              "Disabled Accept and Decline buttons for inactive status"
-            );
-          } else {
-            // Enable buttons for pending, accepted, or declined status
-            $acceptBtn.removeClass("disabled").prop("disabled", false);
-            $declineBtn.removeClass("disabled").prop("disabled", false);
-            console.log(
-              "Enabled Accept and Decline buttons for status:",
+              "Updated toggle link visibility button - status:",
               request.status
             );
+          }
+
+          // Update Delete button (always enabled)
+          if ($deleteBtn.length) {
+            $deleteBtn.attr("title", "Delete request");
+            $deleteBtn.removeClass("disabled").prop("disabled", false);
+            console.log("Updated delete button");
           }
 
           // Remove loading class and re-enable button
@@ -479,18 +681,42 @@ jQuery(document).ready(function ($) {
       action_type: action,
       nonce: authdocs_admin.nonce,
     });
+    var ajaxUrl =
+      typeof ajaxurl !== "undefined"
+        ? ajaxurl
+        : typeof authdocs_admin !== "undefined"
+        ? authdocs_admin.ajax_url
+        : "/wp-admin/admin-ajax.php";
+    var nonce =
+      typeof authdocs_admin !== "undefined" ? authdocs_admin.nonce : "";
+    console.log("AuthDocs: AJAX URL:", ajaxUrl);
+    console.log("AuthDocs: Nonce value:", nonce);
+
+    if (!nonce) {
+      console.error(
+        "AuthDocs: No nonce available, cannot proceed with AJAX request"
+      );
+      showNotice("Security error: No nonce available.", "error");
+      $btn.removeClass("loading").prop("disabled", false);
+      return;
+    }
 
     $.ajax({
-      url: ajaxurl,
+      url: ajaxUrl,
       type: "POST",
       data: {
         action: "authdocs_manage_request",
         request_id: requestId,
         action_type: action,
-        nonce: authdocs_admin.nonce,
+        nonce: nonce,
       },
       success: function (response) {
         console.log("Main AJAX response:", response);
+        console.log("AuthDocs: AJAX success - response type:", typeof response);
+        console.log(
+          "AuthDocs: AJAX success - response.success:",
+          response.success
+        );
         if (response.success) {
           var $row = $btn.closest("tr");
           var $table = $row.closest("table");
@@ -523,13 +749,38 @@ jQuery(document).ready(function ($) {
 
           showNotice(actionMessage, messageType);
 
+          // Handle delete action - remove row completely
+          if (action === "delete" && response.data && response.data.deleted) {
+            $row.fadeOut(300, function () {
+              $(this).remove();
+            });
+            return;
+          }
+
           if (shouldRemoveRow) {
-            // Add completed class for simple highlight
-            $row.addClass("completed");
+            // Add highlighting class for visual feedback
+            $row.addClass("authdocs-row-updated");
+            console.log(
+              "AuthDocs: Added row highlighting for request ID:",
+              requestId
+            );
 
             // Remove highlight after 5 seconds with fade effect
             setTimeout(function () {
-              $row.removeClass("completed fade-out");
+              $row.addClass("fade-out");
+              console.log(
+                "AuthDocs: Starting fade-out for request ID:",
+                requestId
+              );
+
+              // Remove classes after fade transition completes
+              setTimeout(function () {
+                $row.removeClass("authdocs-row-updated fade-out");
+                console.log(
+                  "AuthDocs: Removed highlighting classes for request ID:",
+                  requestId
+                );
+              }, 300); // Match CSS transition duration
             }, 5000);
 
             // Refresh the row data to show updated status and file link
@@ -539,7 +790,31 @@ jQuery(document).ready(function ($) {
             );
             refreshRowData($row, requestId);
           } else {
-            // For inactive status, refresh the row data to show updated status and disabled buttons
+            // For inactive status, add highlighting and refresh the row data
+            $row.addClass("authdocs-row-updated");
+            console.log(
+              "AuthDocs: Added row highlighting for inactive status, request ID:",
+              requestId
+            );
+
+            // Remove highlight after 5 seconds with fade effect
+            setTimeout(function () {
+              $row.addClass("fade-out");
+              console.log(
+                "AuthDocs: Starting fade-out for inactive status, request ID:",
+                requestId
+              );
+
+              // Remove classes after fade transition completes
+              setTimeout(function () {
+                $row.removeClass("authdocs-row-updated fade-out");
+                console.log(
+                  "AuthDocs: Removed highlighting classes for inactive status, request ID:",
+                  requestId
+                );
+              }, 300); // Match CSS transition duration
+            }, 5000);
+
             refreshRowData($row, requestId);
           }
         } else {
@@ -553,6 +828,8 @@ jQuery(document).ready(function ($) {
       error: function (xhr, status, error) {
         console.error("AuthDocs: AJAX error:", status, error);
         console.error("AuthDocs: Response text:", xhr.responseText);
+        console.error("AuthDocs: XHR status:", xhr.status);
+        console.error("AuthDocs: XHR readyState:", xhr.readyState);
         showNotice("Network error. Please try again.", "error");
         $btn.removeClass("loading").prop("disabled", false);
       },

@@ -1,1614 +1,78 @@
-/* AuthDocs Admin Styles */
-.authdocs-requests-table-wrapper {
-  margin-top: 20px;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table {
-  border: 1px solid #c3c4c7;
-  border-radius: 4px;
-}
-
-.authdocs-requests-table-wrapper th {
-  background: #f6f7f7;
-  font-weight: 600;
-}
-
-.authdocs-status {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 3px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.authdocs-status-pending {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.authdocs-status-accepted {
-  background: #d1edff;
-  color: #0c5460;
-  border: 1px solid #74c0fc;
-}
-
-.authdocs-status-declined {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.authdocs-status-inactive {
-  background: #e2e3e5;
-  color: #383d41;
-  border: 1px solid #d6d8db;
-}
-
-.authdocs-request-actions {
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-  max-width: 400px;
-}
-
-.authdocs-request-actions .button {
-  font-size: 11px;
-  padding: 3px 6px;
-  height: auto;
-  line-height: 1.3;
-  min-width: 60px;
-  text-align: center;
-}
-
-.authdocs-action-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Document Meta Box Styles */
-#authdocs_document_settings .form-table th {
-  width: 150px;
-}
-
-#authdocs_file_preview {
-  margin-top: 10px;
-}
-
-#authdocs_file_preview img {
-  max-width: 150px;
-  height: auto;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-#authdocs_file_preview p {
-  margin: 5px 0;
-}
-
-#authdocs_upload_button {
-  margin-bottom: 10px;
-}
-
-/* Shortcode Display */
-#authdocs_shortcode_display input[type="text"] {
-  font-family: monospace;
-  background: #f1f1f1;
-  border: 1px solid #ddd;
-  padding: 8px;
-  width: 100%;
-  font-size: 13px;
-}
-
-/* Responsive Admin */
-@media (max-width: 782px) {
-  .authdocs-request-actions {
-    flex-direction: column;
-    max-width: 100%;
-  }
-
-  .authdocs-request-actions .button {
-    width: 100%;
-    margin: 1px 0;
-    font-size: 10px;
-    padding: 4px 6px;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table {
-    font-size: 14px;
-  }
-
-  .authdocs-requests-table-wrapper th,
-  .authdocs-requests-table-wrapper td {
-    padding: 8px 4px;
-  }
-
-  /* Hide File Link column on mobile for better readability */
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(4),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(4) {
-    display: none;
-  }
-}
-
-/* Loading States */
-.authdocs-loading-overlay {
-  position: relative;
-}
-
-.authdocs-loading-overlay::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-
-/* Success/Error Messages */
-.authdocs-message {
-  padding: 12px;
-  margin: 15px 0;
-  border-radius: 4px;
-  border-left: 4px solid;
-}
-
-.authdocs-message-success {
-  background: #d1edff;
-  border-left-color: #00a32a;
-  color: #0c5460;
-}
-
-.authdocs-message-error {
-  background: #f8d7da;
-  border-left-color: #d63384;
-  color: #721c24;
-}
-
-/* Confirmation Popup Styles */
-.authdocs-confirm-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
-  z-index: 100000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
-  /* Ensure overlay is above everything */
-  pointer-events: none;
-}
-
-.authdocs-confirm-overlay.show {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.authdocs-confirm-dialog {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.1);
-  max-width: 450px;
-  width: 90%;
-  overflow: hidden;
-  transform: scale(0.9) translateY(20px);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.authdocs-confirm-overlay.show .authdocs-confirm-dialog {
-  transform: scale(1) translateY(0);
-}
-
-.authdocs-confirm-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px 24px 20px;
-  border-bottom: none;
-  position: relative;
-}
-
-.authdocs-confirm-header::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
-}
-
-.authdocs-confirm-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #fff;
-  text-align: center;
-  letter-spacing: 0.5px;
-}
-
-.authdocs-confirm-body {
-  padding: 28px 24px;
-  color: #374151;
-  line-height: 1.6;
-  background: #fff;
-}
-
-.authdocs-confirm-body p {
-  margin: 0;
-  font-size: 15px;
-  text-align: center;
-  font-weight: 500;
-}
-
-.authdocs-confirm-footer {
-  padding: 20px 24px 24px;
-  text-align: center;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-.authdocs-confirm-footer .button {
-  min-width: 100px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.authdocs-confirm-footer .button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.authdocs-confirm-footer .button-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-}
-
-.authdocs-confirm-footer .button-primary:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-}
-
-.authdocs-confirm-footer .button-secondary {
-  background: #fff;
-  color: #6b7280;
-  border: 1px solid #d1d5db;
-}
-
-.authdocs-confirm-footer .button-secondary:hover {
-  background: #f9fafb;
-  color: #374151;
-  border-color: #9ca3af;
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-  .authdocs-confirm-dialog {
-    max-width: 95%;
-    margin: 20px;
-    border-radius: 12px;
-  }
-
-  .authdocs-confirm-header {
-    padding: 20px 20px 16px;
-  }
-
-  .authdocs-confirm-header h3 {
-    font-size: 16px;
-  }
-
-  .authdocs-confirm-body {
-    padding: 24px 20px;
-  }
-
-  .authdocs-confirm-body p {
-    font-size: 14px;
-  }
-
-  .authdocs-confirm-footer {
-    padding: 16px 20px 20px;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .authdocs-confirm-footer .button {
-    min-width: auto;
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* Modern Table Layout */
-.authdocs-requests-table-wrapper {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  margin-top: 20px;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table {
-  border: none;
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-  table-layout: fixed;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table thead th {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  font-weight: 600;
-  padding: 16px 12px;
-  border: none;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table thead th:first-child {
-  border-top-left-radius: 12px;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table thead th:last-child {
-  border-top-right-radius: 12px;
-}
-
-/* Column Width Controls */
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(1),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(1) {
-  width: 60px; /* ID column - smaller */
-}
-
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(2),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(2) {
-  width: 120px; /* Requester Name column */
-}
-
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(3),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(3) {
-  width: 180px; /* Email column */
-}
-
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(4),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(4) {
-  width: 150px; /* Document column */
-}
-
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(5),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(5) {
-  width: 250px; /* File Link column - bigger */
-}
-
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(6),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(6) {
-  width: 80px; /* Status column - smaller */
-}
-
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(7),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(7) {
-  width: 100px; /* Date column - optimized for two-line layout */
-}
-
-.authdocs-requests-table-wrapper .wp-list-table th:nth-child(8),
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(8) {
-  width: 120px; /* Actions column - smaller */
-}
-
-/* Date & Time Column Styling */
-.authdocs-date-time {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: center;
-}
-
-.authdocs-date {
-  font-weight: 500;
-  color: #374151;
-  font-size: 13px;
-}
-
-.authdocs-time {
-  font-size: 11px;
-  color: #6b7280;
-  font-weight: 400;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table tbody tr {
-  border: none;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table tbody tr:nth-child(even) {
-  background: #f8fafc;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table tbody tr:hover {
-  background: #f1f5f9;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.authdocs-requests-table-wrapper .wp-list-table td {
-  padding: 16px 12px;
-  border: none;
-  border-bottom: 1px solid #e2e8f0;
-  vertical-align: middle;
-  font-size: 14px;
-  color: #374151;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Allow specific columns to wrap text */
-.authdocs-requests-table-wrapper .wp-list-table td:nth-child(5) {
-  white-space: normal;
-  word-wrap: break-word;
-  min-width: 250px;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* Action Links Styling */
-.authdocs-request-actions {
-  display: flex;
-  flex-direction: row;
-  gap: 6px;
-  justify-content: center;
-  align-items: center;
-}
-
-.authdocs-action-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-  color: #6b7280;
-  background: #f9fafb;
-  min-width: 32px;
-  height: 32px;
-  position: relative;
-}
-
-.authdocs-action-link:hover {
-  text-decoration: none;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.authdocs-action-link .dashicons {
-  font-size: 14px;
-  width: 14px;
-  height: 14px;
-  margin: 0;
-}
-
-.authdocs-action-accept {
-  color: #059669;
-  background: #ecfdf5;
-  border-color: #a7f3d0;
-}
-
-.authdocs-action-accept:hover {
-  background: #d1fae5;
-  color: #047857;
-}
-
-.authdocs-action-decline {
-  color: #dc2626;
-  background: #fef2f2;
-  border-color: #fecaca;
-}
-
-.authdocs-action-decline:hover {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.authdocs-action-inactive {
-  color: #7c3aed;
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-.authdocs-action-inactive:hover {
-  background: #e5e7eb;
-  color: #5b21b6;
-}
-
-.authdocs-action-link.loading {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.authdocs-action-link.loading .action-text::after {
-  content: "...";
-}
-
-/* Disabled action link styling */
-.authdocs-action-link.disabled {
-  opacity: 0.4;
-  pointer-events: none;
-  cursor: not-allowed;
-  background: #f3f4f6 !important;
-  color: #9ca3af !important;
-  border-color: #d1d5db !important;
-}
-
-.authdocs-action-link.disabled:hover {
-  background: #f3f4f6 !important;
-  color: #9ca3af !important;
-  border-color: #d1d5db !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.authdocs-action-link.disabled .dashicons {
-  color: #9ca3af !important;
-}
-
-
-
-/* Simple row highlight styles */
-.authdocs-requests-table-wrapper .wp-list-table tr {
-  transition: background-color 0.3s ease;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table tr.completed {
-  background-color: #e8f5e8 !important;
-}
-
-.authdocs-requests-table-wrapper .wp-list-table tr.completed.fade-out {
-  background-color: transparent !important;
-}
-
-/* Success message styling */
-.notice-success {
-  border-left-color: #46b450;
-}
-
-.notice-success p {
-  color: #46b450;
-  font-weight: 500;
-}
-
-/* Status styling */
-.authdocs-status-inactive {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: #f3f4f6;
-  color: #7c3aed;
-  border: 1px solid #d1d5db;
-}
-
-
-
-/* Pagination Styling */
-.authdocs-pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px;
-  background: #fff;
-  border-top: 1px solid #e2e8f0;
-  border-radius: 0 0 12px 12px;
-}
-
-.authdocs-pagination-info {
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.authdocs-pagination-links {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.authdocs-pagination-links .page-numbers {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border: 1px solid #d1d5db;
-  color: #6b7280;
-  background: #fff;
-  min-width: 36px;
-  justify-content: center;
-}
-
-.authdocs-pagination-links .page-numbers:hover {
-  background: #f3f4f6;
-  color: #374151;
-  border-color: #9ca3af;
-  text-decoration: none;
-}
-
-.authdocs-pagination-links .page-numbers.current {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  border-color: transparent;
-}
-
-.authdocs-pagination-links .page-numbers.prev,
-.authdocs-pagination-links .page-numbers.next {
-  min-width: auto;
-  padding: 8px 16px;
-}
-
-.authdocs-pagination-links .page-numbers.dots {
-  border: none;
-  background: transparent;
-  min-width: auto;
-  padding: 8px 4px;
-}
-
-.authdocs-pagination-links .page-numbers.dots:hover {
-  background: transparent;
-  color: #6b7280;
-}
-
-/* Responsive Design for All Devices */
-
-/* Responsive List View for Tablet and Below */
-@media (max-width: 1024px) {
-  .authdocs-requests-table-wrapper .wp-list-table tbody tr:nth-child(even) {
-    background: #ffffff;
-  }
-
-  .authdocs-requests-table-wrapper {
-    margin: 15px -5px;
-    border-radius: 10px;
-  }
-
-  /* Hide table headers and convert to list view */
-  .authdocs-requests-table-wrapper .wp-list-table thead {
-    display: none;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table,
-  .authdocs-requests-table-wrapper .wp-list-table tbody,
-  .authdocs-requests-table-wrapper .wp-list-table tr {
-    display: block;
-    width: 100%;
-  }
-
-  /* Override table layout for responsive view */
-  .authdocs-requests-table-wrapper .wp-list-table {
-    table-layout: auto !important;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table tr {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    /*margin-bottom: 16px;*/
-    padding: 16px;
-    /*box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);*/
-    border-bottom: 2px solid #000000 !important;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td {
-    display: block;
-    width: 100%;
-    padding: 8px 0;
-    border: none;
-    border-bottom: 1px solid #f1f5f9 !important;
-    text-align: left;
-    white-space: normal;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:last-child {
-    border-bottom: none;
-  }
-
-  /* Remove all column width constraints in responsive view */
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(1),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(1),
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(2),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(2),
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(3),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(3),
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(4),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(4),
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(5),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(5),
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(6),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(6),
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(7),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(7),
-  .authdocs-requests-table-wrapper .wp-list-table th:nth-child(8),
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(8) {
-    width: 100% !important;
-    min-width: auto !important;
-    max-width: none !important;
-  }
-
-  /* Add labels for each field */
-  .authdocs-requests-table-wrapper .wp-list-table td::before {
-    content: attr(data-label);
-    display: block;
-    font-weight: 600;
-    color: #000000;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
-
-  /* Special styling for specific columns */
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(1)::before {
-    content: "Request ID";
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(2)::before {
-    content: "Requester Name";
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(3)::before {
-    content: "Email";
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(4)::before {
-    content: "Document";
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(5)::before {
-    content: "File Link";
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(6)::before {
-    content: "Status";
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(7)::before {
-    content: "Date & Time";
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(8)::before {
-    content: "Actions";
-  }
-
-  /* Status styling in list view */
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(6) {
-    text-align: left;
-  }
-
-  .authdocs-requests-table-wrapper
-    .wp-list-table
-    td:nth-child(6)
-    .authdocs-status {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  /* Actions in list view */
-  .authdocs-requests-table-wrapper .wp-list-table td:nth-child(8) {
-    text-align: left;
-    padding-top: 16px;
-  }
-
-  .authdocs-requests-table-wrapper
-    .wp-list-table
-    td:nth-child(8)
-    .authdocs-request-actions {
-    flex-direction: row;
-    justify-content: center;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .authdocs-requests-table-wrapper
-    .wp-list-table
-    td:nth-child(8)
-    .authdocs-action-link {
-    min-width: 30px;
-    height: 30px;
-    justify-content: center;
-  }
-
-  .authdocs-date-time {
-    text-align: left;
-  }
-}
-
-/* Mobile Devices */
-@media (max-width: 768px) {
-  .authdocs-requests-table-wrapper {
-    margin: 10px 0;
-    border-radius: 8px;
-    overflow-x: hidden; /* Remove horizontal scroll */
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table {
-    table-layout: auto;
-    min-width: auto; /* Remove min-width constraint */
-    width: 100%;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table thead th,
-  .authdocs-requests-table-wrapper .wp-list-table td {
-    padding: 12px 8px;
-    font-size: 12px;
-    width: 100%;
-    min-width: auto;
-    white-space: normal; /* Allow text wrapping */
-  }
-
-  .authdocs-request-actions {
-    gap: 4px;
-    flex-direction: row;
-    justify-content: center;
-  }
-
-  .authdocs-action-link {
-    padding: 6px;
-    font-size: 11px;
-    min-width: 28px;
-    height: 28px;
-  }
-
-  .authdocs-action-link .dashicons {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
-  }
-
-  .authdocs-pagination {
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
-  }
-
-  .authdocs-pagination-links {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  .authdocs-pagination-links .page-numbers {
-    padding: 6px 10px;
-    font-size: 13px;
-    min-width: 32px;
-  }
-}
-
-/* Medium Desktop and Tablet Landscape - Horizontal Scroll */
-@media (min-width: 1025px) and (max-width: 1279px) {
-  .authdocs-requests-table-wrapper {
-    margin: 15px 0;
-    overflow-x: auto; /* Enable horizontal scroll */
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table {
-    min-width: 1000px; /* Ensure table maintains minimum width */
-    table-layout: fixed;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table thead th,
-  .authdocs-requests-table-wrapper .wp-list-table td {
-    padding: 14px 10px;
-    font-size: 13px;
-    white-space: nowrap; /* Prevent text wrapping */
-  }
-
-  .authdocs-request-actions {
-    gap: 8px;
-  }
-
-  .authdocs-action-link {
-    padding: 8px 12px;
-    font-size: 12px;
-  }
-
-  .authdocs-action-link .dashicons {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
-  }
-
-  .authdocs-pagination {
-    padding: 25px;
-  }
-
-  .authdocs-pagination-info {
-    font-size: 14px;
-  }
-
-  .authdocs-pagination-links .page-numbers {
-    padding: 10px 14px;
-  }
-}
-
-/* Email Logs Page Styles */
-.authdocs-logs-container {
-  margin: 20px 0;
-}
-
-.authdocs-logs-filters {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* AuthDocs Admin Styles - Clean Black & White Design */
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+  border-bottom: 2px solid #000000;
   margin-bottom: 20px;
 }
 
-.authdocs-filter-form {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.authdocs-filter-select,
-.authdocs-filter-date {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  min-width: 150px;
-}
-
-.authdocs-filter-date {
-  min-width: 140px;
-}
-
-.authdocs-logs-table {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.authdocs-logs-table th {
-  background: #f8f9fa;
-  font-weight: 600;
-  color: #495057;
-  padding: 15px 12px;
-  border-bottom: 2px solid #dee2e6;
-}
-
-.authdocs-logs-table td {
-  padding: 12px;
-  vertical-align: top;
-  border-bottom: 1px solid #f1f3f4;
-}
-
-.authdocs-log-type {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.authdocs-log-type-email {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.authdocs-log-type-link_action {
-  background: #f3e5f5;
-  color: #7b1fa2;
-}
-
-.authdocs-log-status {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.authdocs-log-status-success {
-  background: #e8f5e8;
-  color: #2e7d32;
-}
-
-.authdocs-log-status-error {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.authdocs-log-message {
-  display: block;
-  font-size: 12px;
-  color: #666;
-  font-style: italic;
-  margin-top: 4px;
-}
-
-.authdocs-request-link {
-  color: #007cba;
+.nav-tab {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
+  border-bottom: none;
+  margin-right: 5px;
+  padding: 10px 20px;
   text-decoration: none;
   font-weight: 500;
-}
-
-.authdocs-request-link:hover {
-  text-decoration: underline;
-}
-
-.authdocs-pagination {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.authdocs-pagination-info {
-  color: #666;
-  font-size: 14px;
-}
-
-.authdocs-pagination-links {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.authdocs-pagination-links .button {
-  padding: 6px 12px;
-  font-size: 13px;
-  min-width: 32px;
-  text-align: center;
-}
-
-.authdocs-pagination-current {
-  display: inline-block;
-  padding: 6px 12px;
-  background: #007cba;
-  color: #fff;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  min-width: 32px;
-  text-align: center;
-}
-
-/* Responsive design for logs page */
-@media (max-width: 782px) {
-  .authdocs-filter-form {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .authdocs-filter-select,
-  .authdocs-filter-date {
-    min-width: auto;
-    width: 100%;
-  }
-  
-  .authdocs-logs-table {
-    font-size: 13px;
-  }
-  
-  .authdocs-logs-table th,
-  .authdocs-logs-table td {
-    padding: 8px 6px;
-  }
-  
-  .authdocs-pagination {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .authdocs-pagination-links {
-    justify-content: center;
-  }
-}
-    font-size: 14px;
-    min-width: 38px;
-  }
-}
-
-/* Small Mobile Devices */
-@media (max-width: 480px) {
-  .authdocs-requests-table-wrapper {
-    margin: 5px -15px;
-    border-radius: 6px;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table {
-    min-width: 700px;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table thead th,
-  .authdocs-requests-table-wrapper .wp-list-table td {
-    padding: 10px 6px;
-    font-size: 11px;
-  }
-
-  .authdocs-request-actions {
-    gap: 3px;
-    flex-direction: row;
-    justify-content: center;
-  }
-
-  .authdocs-action-link {
-    padding: 5px;
-    font-size: 10px;
-    min-width: 24px;
-    height: 24px;
-  }
-
-  .authdocs-action-link .dashicons {
-    font-size: 10px;
-    width: 10px;
-    height: 10px;
-  }
-
-  .authdocs-pagination {
-    padding: 16px;
-  }
-
-  .authdocs-pagination-info {
-    font-size: 12px;
-    text-align: center;
-  }
-
-  .authdocs-pagination-links .page-numbers {
-    padding: 5px 8px;
-    font-size: 12px;
-    min-width: 28px;
-  }
-}
-
-/* Landscape Mobile */
-@media (max-width: 768px) and (orientation: landscape) {
-  .authdocs-requests-table-wrapper .wp-list-table {
-    min-width: 900px;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table thead th,
-  .authdocs-requests-table-wrapper .wp-list-table td {
-    padding: 10px 8px;
-    font-size: 12px;
-  }
-}
-
-/* Large Desktop - Fluid Layout */
-@media (min-width: 1280px) {
-  .authdocs-requests-table-wrapper {
-    width: 100%;
-    max-width: none;
-    margin: 20px 0;
-    overflow-x: auto; /* Enable horizontal scroll for very wide tables */
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table {
-    width: 100%;
-    min-width: 1200px; /* Ensure minimum width for very large screens */
-    table-layout: fixed;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table thead th,
-  .authdocs-requests-table-wrapper .wp-list-table td {
-    padding: 18px 16px;
-    font-size: 15px;
-    white-space: nowrap; /* Prevent text wrapping */
-  }
-
-  .authdocs-action-link {
-    padding: 10px 14px;
-    font-size: 14px;
-  }
-
-  .authdocs-action-link .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-  }
-}
-
-/* Extra Small Mobile Devices */
-@media (max-width: 360px) {
-  .authdocs-requests-table-wrapper {
-    margin: 0 -20px;
-    border-radius: 0;
-    overflow-x: hidden;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table {
-    min-width: auto;
-    width: 100%;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table thead th,
-  .authdocs-requests-table-wrapper .wp-list-table td {
-    padding: 8px 4px;
-    font-size: 10px;
-    width: 100%;
-  }
-
-  .authdocs-action-link {
-    padding: 4px;
-    font-size: 9px;
-    min-width: 20px;
-    height: 20px;
-    justify-content: center;
-  }
-
-  .authdocs-action-link .dashicons {
-    font-size: 8px;
-    width: 8px;
-    height: 8px;
-  }
-
-  .authdocs-pagination {
-    padding: 12px;
-  }
-
-  .authdocs-pagination-info {
-    font-size: 11px;
-  }
-
-  .authdocs-pagination-links .page-numbers {
-    padding: 4px 6px;
-    font-size: 11px;
-    min-width: 24px;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .authdocs-requests-table-wrapper {
-    box-shadow: none;
-    border: 1px solid #ccc;
-  }
-
-  .authdocs-requests-table-wrapper .wp-list-table thead th {
-    background: #f0f0f0 !important;
-    color: #000 !important;
-  }
-
-  .authdocs-action-link {
-    border: 1px solid #ccc;
-    background: #f9f9f9 !important;
-    color: #000 !important;
-  }
-
-  .authdocs-pagination {
-    display: none;
-  }
-}
-
-/* File Link Column Styles */
-.authdocs-file-link {
-  color: #0073aa;
-  text-decoration: none;
-  font-weight: 500;
-  padding: 4px 8px;
-  background: #f0f6fc;
-  border-radius: 3px;
-  display: inline-block;
-  font-size: 12px;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.authdocs-file-link:hover {
-  background: #d0e7ff;
-  color: #005a87;
-  text-decoration: none;
-}
-
-/* Declined file link styling */
-.authdocs-file-link.authdocs-declined {
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-}
-
-.authdocs-file-link.authdocs-declined:hover {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-/* Inactive file link styling */
-.authdocs-file-link.authdocs-inactive {
-  color: #7c3aed;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-}
-
-.authdocs-file-link.authdocs-inactive:hover {
-  background: #e5e7eb;
-  color: #5b21b6;
-}
-
-.authdocs-no-file {
-  color: #666;
-  font-style: italic;
-  font-size: 12px;
-}
-
-/* View Link Styles */
-.authdocs-download-link {
-  color: #0073aa;
-  text-decoration: none;
-  font-weight: 500;
-  padding: 4px 8px;
-  background: #e7f3ff;
-  border-radius: 3px;
-  display: inline-block;
-  font-size: 12px;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border: 1px solid #c3c4c7;
-}
-
-.authdocs-download-link:hover {
-  background: #d0e7ff;
-  color: #005a87;
-  text-decoration: none;
-  border-color: #0073aa;
-}
-
-.authdocs-link-container {
-  display: flex;
-  align-items: center;
-  margin-top: 2px;
-  gap: 5px;
-}
-
-.authdocs-copy-link {
-  background: none;
-  border: none;
-  padding: 2px 4px;
-  cursor: pointer;
-  color: #666;
-  font-size: 12px;
-  border-radius: 3px;
   transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
 }
 
-.authdocs-copy-link:hover {
-  background-color: #f0f0f1;
-  color: #0073aa;
+.nav-tab:hover {
+  background: #f5f5f5;
+  color: #000000;
+  text-decoration: none;
 }
 
-.authdocs-copy-link:active {
-  background-color: #0073aa;
-  color: #fff;
+.nav-tab-active {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000;
 }
 
-.authdocs-copy-link .dashicons {
-  font-size: 12px;
-  width: 12px;
-  height: 12px;
-}
-
-.authdocs-copy-link.copied {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.authdocs-copy-link.copy-error {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.authdocs-link-preview {
-  color: #666;
-  font-size: 10px;
-  font-family: monospace;
-  display: block;
-  word-break: break-all;
-  flex: 1;
-}
-
-/* Access Revoked Message */
-.authdocs-access-revoked {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
-  border: 1px solid #feb2b2;
-  border-radius: 8px;
-  margin: 8px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.authdocs-revoked-icon {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  background: #e53e3e;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 2px;
-}
-
-.authdocs-revoked-icon .dashicons {
-  color: #fff;
-  font-size: 14px;
-  width: 14px;
-  height: 14px;
-}
-
-.authdocs-revoked-content {
-  flex: 1;
-}
-
-.authdocs-revoked-content strong {
-  display: block;
-  color: #c53030;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.authdocs-revoked-content p {
-  margin: 0;
-  color: #742a2a;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.authdocs-status-note {
-  color: #856404;
-  font-size: 10px;
-  font-style: italic;
-  display: block;
-  margin-top: 2px;
-}
-
-/* Status note styling for different states */
-.authdocs-status-note.declined {
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.authdocs-status-note.inactive {
-  color: #7c3aed;
-  font-weight: 500;
-}
-
-.authdocs-status-note.pending {
-  color: #d97706;
-  font-weight: 500;
-}
-
-.authdocs-status-note.accepted {
-  color: #059669;
-  font-weight: 500;
-}
-
-/* Revoke Access Button */
-.authdocs-action-btn[data-action="decline"] {
-  background: #dc3232 !important;
-  border-color: #dc3232 !important;
-  color: #fff !important;
-}
-
-.authdocs-action-btn[data-action="decline"]:hover {
-  background: #a00 !important;
-  border-color: #a00 !important;
-}
-
-/* Action Button States */
-.authdocs-action-btn.loading {
-  position: relative;
-  color: transparent;
-}
-
-.authdocs-action-btn.loading::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 16px;
-  height: 16px;
-  margin: -8px 0 0 -8px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #007cba;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-/* Settings Page Styles */
+/* Settings Container */
 .authdocs-settings-container {
+  margin-top: 20px;
+}
+
+/* Two-column layout for all tabs */
+.authdocs-settings-layout {
   display: flex;
   gap: 30px;
-  margin-top: 20px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 4px;
 }
 
-.authdocs-settings-container form {
-  flex: 1;
-  max-width: 800px;
+.authdocs-settings-main {
+  flex: 2;
+  min-width: 0;
 }
 
 .authdocs-settings-sidebar {
-  width: 300px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 300px;
+  flex-direction: column;
 }
 
+/* Settings Cards */
 .authdocs-settings-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 4px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .authdocs-settings-card h3 {
   margin-top: 0;
-  color: #1e293b;
+  color: #000000;
   font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid #000000;
+  padding-bottom: 10px;
 }
 
 .authdocs-settings-card ul {
@@ -1618,32 +82,152 @@
 
 .authdocs-settings-card li {
   margin-bottom: 8px;
-  color: #64748b;
+  color: #333333;
 }
 
-.authdocs-variables-help {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 15px;
-  margin-top: 10px;
+/* Form Elements */
+.form-table th {
+  color: #000000;
+  font-weight: 600;
+  padding: 15px 10px 15px 0;
+  width: 200px;
 }
 
-.authdocs-variables-help h4 {
-  margin-top: 0;
-  color: #1e293b;
-  font-size: 14px;
+.form-table td {
+  padding: 15px 10px;
 }
 
-.authdocs-variables-help code {
-  background: #e2e8f0;
-  padding: 2px 6px;
+.form-table input[type="text"],
+.form-table input[type="email"],
+.form-table textarea,
+.form-table select {
+  border: 2px solid #000000;
   border-radius: 4px;
-  font-family: monospace;
-  color: #1e293b;
+  padding: 8px 12px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #000000;
+  width: 100%;
+  max-width: 500px;
 }
 
-/* Email Preview Modal */
+.form-table input[type="text"]:focus,
+.form-table input[type="email"]:focus,
+.form-table textarea:focus,
+.form-table select:focus {
+  border-color: #333333;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Radio Buttons */
+fieldset {
+  border: 2px solid #000000;
+  border-radius: 4px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+fieldset legend {
+  color: #000000;
+  font-weight: 600;
+  padding: 0 10px;
+}
+
+fieldset label {
+  display: block;
+  margin-bottom: 15px;
+  color: #000000;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+fieldset input[type="radio"] {
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+fieldset input[type="radio"]:checked {
+  accent-color: #000000;
+}
+
+/* Color Preview */
+.authdocs-color-preview {
+  margin-top: 8px;
+}
+
+.authdocs-color-swatch {
+  display: inline-block;
+  padding: 6px 12px;
+  margin: 0 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #000000;
+}
+
+/* Buttons */
+.button {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: #ffffff;
+  color: #000000;
+  border-color: #000000;
+  text-decoration: none;
+}
+
+.button-secondary {
+  background: #ffffff;
+  color: #000000;
+  border-color: #000000;
+}
+
+.button-secondary:hover {
+  background: #000000;
+  color: #ffffff;
+}
+
+.button-primary {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+  font-weight: 600;
+}
+
+.button-primary:hover {
+  background: #333333;
+  color: #ffffff;
+}
+
+/* Submit Button */
+.submit {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 4px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submit:hover {
+  background: #333333;
+  color: #ffffff;
+}
+
+/* Modal Styles */
 .authdocs-modal {
   position: fixed;
   z-index: 100000;
@@ -1651,21 +235,21 @@
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(4px);
 }
 
 .authdocs-modal-content {
-  background-color: #fff;
+  background-color: #ffffff;
   margin: 5% auto;
   padding: 0;
-  border-radius: 8px;
+  border: 2px solid #000000;
+  border-radius: 4px;
   width: 90%;
   max-width: 800px;
   max-height: 80vh;
   overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .authdocs-modal-header {
@@ -1673,35 +257,37 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-bottom: 2px solid #000000;
+  background: #ffffff;
 }
 
 .authdocs-modal-header h3 {
   margin: 0;
-  color: #1e293b;
+  color: #000000;
   font-size: 18px;
+  font-weight: 600;
 }
 
 .authdocs-modal-close {
   background: none;
-  border: none;
-  font-size: 24px;
+  border: 2px solid #000000;
+  font-size: 18px;
   cursor: pointer;
-  color: #64748b;
-  padding: 0;
-  width: 30px;
-  height: 30px;
+  color: #000000;
+  padding: 8px 12px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
   transition: all 0.2s ease;
+  font-weight: 600;
 }
 
 .authdocs-modal-close:hover {
-  background: #e2e8f0;
-  color: #1e293b;
+  background: #000000;
+  color: #ffffff;
 }
 
 .authdocs-modal-body {
@@ -1710,32 +296,43 @@
   overflow-y: auto;
 }
 
+/* Tab Content */
+.authdocs-tab-content {
+  display: none;
+}
+
+.authdocs-tab-content.active {
+  display: block;
+}
+
 .authdocs-preview-tabs {
   display: flex;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 2px solid #000000;
   margin-bottom: 20px;
 }
 
 .authdocs-tab-button {
-  background: none;
-  border: none;
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-bottom: none;
   padding: 12px 20px;
   cursor: pointer;
-  color: #64748b;
-  border-bottom: 2px solid transparent;
+  color: #000000;
   transition: all 0.2s ease;
   font-size: 14px;
   font-weight: 500;
+  margin-right: 5px;
 }
 
 .authdocs-tab-button:hover {
-  color: #1e293b;
-  background: #f8fafc;
+  background: #f5f5f5;
+  color: #000000;
 }
 
 .authdocs-tab-button.active {
-  color: #007cba;
-  border-bottom-color: #007cba;
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
 }
 
 .authdocs-tab-content {
@@ -1746,172 +343,828 @@
   display: block;
 }
 
+/* Preview Content */
 .authdocs-preview-subject {
   margin-bottom: 15px;
-  padding: 10px;
-  background: #f8fafc;
+  padding: 15px;
+  background: #f5f5f5;
+  border: 2px solid #000000;
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
 }
 
 .authdocs-preview-subject strong {
-  color: #1e293b;
+  color: #000000;
   margin-right: 10px;
+  font-weight: 600;
 }
 
 #preview-body-display {
-  border: 1px solid #e2e8f0;
+  border: 2px solid #000000;
   border-radius: 4px;
   padding: 20px;
-  background: #fff;
+  background: #ffffff;
   min-height: 400px;
   overflow: auto;
 }
 
-/* Validation Messages */
-.authdocs-validation-message {
-  margin-top: 8px;
-  padding: 8px 12px;
+/* Textarea Styling */
+.large-text {
+  border: 2px solid #000000;
   border-radius: 4px;
-  font-size: 12px;
-  display: none;
-}
-
-.authdocs-validation-message.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  display: block;
-}
-
-.authdocs-validation-message.success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #16a34a;
-  display: block;
-}
-
-/* Recipient Field Styling */
-#recipient_emails {
+  padding: 12px;
+  font-family: monospace;
+  font-size: 13px;
+  background: #ffffff;
+  color: #000000;
   width: 100%;
-  max-width: 500px;
 }
 
-/* Autoresponder Enable Field */
-.authdocs-autoresponder-enable {
+.large-text:focus {
+  border-color: #333333;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Description Text */
+.description {
+  color: #666666;
+  font-style: italic;
+  margin-top: 5px;
+}
+
+/* Section Descriptions */
+.authdocs-settings-container p {
+  color: #333333;
   margin-bottom: 15px;
 }
 
-.authdocs-autoresponder-enable label {
-  display: flex;
+/* Preview Container */
+.authdocs-preview-container {
+  margin-top: 15px;
+}
+
+.authdocs-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+}
+
+.authdocs-preview-item {
+  border: 2px solid #000000;
+  border-radius: 4px;
+  padding: 15px;
+  background: #ffffff;
+}
+
+.authdocs-preview-item h4 {
+  margin: 0 0 10px 0;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.authdocs-preview-item p {
+  margin: 0 0 10px 0;
+  color: #333333;
+  font-size: 13px;
+}
+
+.authdocs-preview-btn {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.authdocs-preview-btn:hover {
+  background: #ffffff;
+  color: #000000;
+}
+
+.authdocs-preview-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Test Results */
+#test-email-results {
+  margin-top: 15px;
+}
+
+.notice {
+  padding: 12px;
+  margin: 10px 0;
+  border: 2px solid;
+  border-radius: 4px;
   font-weight: 500;
 }
 
-.authdocs-autoresponder-enable input[type="checkbox"] {
-  margin: 0;
+.notice-success {
+  background: #f0f8f0;
+  border-color: #28a745;
+  color: #155724;
 }
 
-/* Rich Editor Styling */
-.authdocs-settings-container .wp-editor-wrap {
-  margin-bottom: 20px;
+.notice-error {
+  background: #f8f0f0;
+  border-color: #dc3545;
+  color: #721c24;
 }
 
-.authdocs-settings-container .wp-editor-area {
-  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
-  font-size: 13px;
-  line-height: 1.4;
+/* Responsive Design */
+@media (max-width: 782px) {
+  .authdocs-settings-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .authdocs-settings-sidebar {
+    width: 100%;
+  }
+
+  .nav-tab {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .authdocs-modal-content {
+    width: 95%;
+    margin: 10% auto;
+  }
+
+  .authdocs-modal-header {
+    padding: 15px 20px;
+  }
+
+  .authdocs-modal-body {
+    padding: 20px;
+  }
+
+  .authdocs-preview-tabs {
+    flex-direction: column;
+  }
+
+  .authdocs-tab-button {
+    margin-right: 0;
+    margin-bottom: 5px;
+    border-bottom: 2px solid #000000;
+  }
+
+  .authdocs-tab-button.active {
+    border-bottom-color: #000000;
+  }
 }
 
-.authdocs-settings-container .wp-editor-tools {
-  border: 1px solid #e2e8f0;
-  border-bottom: none;
-  background: #f8fafc;
-  padding: 8px 12px;
-  border-radius: 4px 4px 0 0;
+/* Form Table Responsive */
+@media (max-width: 600px) {
+  .form-table th,
+  .form-table td {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+  }
+
+  .form-table th {
+    border-bottom: 1px solid #000000;
+    padding-bottom: 5px;
+  }
+
+  .form-table td {
+    padding-top: 5px;
+  }
 }
 
-.authdocs-settings-container .wp-editor-tabs {
+/* Loading States */
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #cccccc;
+  color: #666666;
+  border-color: #cccccc;
+}
+
+.button:disabled:hover {
+  background: #cccccc;
+  color: #666666;
+  border-color: #cccccc;
+}
+
+/* Focus States */
+.button:focus,
+.submit:focus,
+.authdocs-modal-close:focus {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .authdocs-settings-card {
+    border-width: 3px;
+  }
+
+  .form-table input[type="text"],
+  .form-table input[type="email"],
+  .form-table textarea,
+  .form-table select {
+    border-width: 3px;
+  }
+
+  .button {
+    border-width: 3px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .authdocs-settings-sidebar {
+    display: none;
+  }
+
+  .nav-tab-wrapper {
+    display: none;
+  }
+
+  .authdocs-settings-card {
+    border: 1px solid #000000;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .button {
+    display: none;
+  }
+}
+
+/* Action Buttons */
+.authdocs-request-actions {
   display: flex;
-  gap: 2px;
+  gap: 5px;
+  align-items: center;
 }
 
-.authdocs-settings-container .wp-editor-tabs button {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  padding: 6px 12px;
+.authdocs-action-link {
+  background: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  padding: 5px 8px;
   cursor: pointer;
-  font-size: 12px;
-  border-radius: 3px 3px 0 0;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
 }
 
-.authdocs-settings-container .wp-editor-tabs button:hover {
-  background: #f1f5f9;
+.authdocs-action-link:hover {
+  background: #f5f5f5;
+  border-color: #333333;
 }
 
-.authdocs-settings-container .wp-editor-tabs button.active {
-  background: #007cba;
-  color: #fff;
-  border-color: #007cba;
+.authdocs-action-link:active {
+  background: #e5e5e5;
+  transform: translateY(1px);
 }
 
-.authdocs-settings-container .wp-editor-toolbar {
-  display: flex;
-  gap: 4px;
-  margin-left: 15px;
+.authdocs-action-link.disabled,
+.authdocs-action-link:disabled {
+  background: #f9f9f9;
+  border-color: #cccccc;
+  color: #999999;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
-.authdocs-settings-container .wp-editor-toolbar button {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+.authdocs-action-link.loading {
+  background: #f0f0f0;
+  cursor: wait;
+}
+
+.authdocs-action-accept:hover {
+  background: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.authdocs-action-decline:hover {
+  background: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.authdocs-action-inactive:hover {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+/* Toggle Link Visibility Button States */
+.authdocs-action-inactive .dashicons-visibility {
+  color: #dc3545; /* Red for hidden state */
+}
+
+.authdocs-action-inactive .dashicons-hidden {
+  color: #28a745; /* Green for visible state */
+}
+
+/* Toggle button should always be enabled, so no disabled styling needed */
+
+/* Delete Action Button */
+.authdocs-action-delete {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #ffffff;
+}
+
+.authdocs-action-delete:hover {
+  background: #c82333;
+  border-color: #bd2130;
+  color: #ffffff;
+}
+
+/* Modern Status Design */
+.authdocs-status-modern {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 8px;
+  border-radius: 4px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.authdocs-status-icon {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+}
+
+.authdocs-status-text {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Status-specific styling */
+.authdocs-status-pending {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.authdocs-status-accepted {
+  background: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.authdocs-status-declined {
+  background: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.authdocs-status-inactive {
+  background: #e2e3e5;
+  border-color: #6c757d;
+  color: #383d41;
+}
+
+/* Flat Table Design */
+.authdocs-requests-table-wrapper .wp-list-table {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table thead th {
+  background: #f8f9fa;
+  border: none;
+  border-bottom: 2px solid #e9ecef;
+  font-weight: 700;
+  color: #000000;
+  padding: 16px 12px;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table tbody tr {
+  border: 1px solid #e9ecef;
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table tbody tr:nth-child(even):hover {
+  background: #f1f3f4;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table tbody td {
+  border: none;
+  padding: 16px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+/* First column width */
+.authdocs-requests-table-wrapper .wp-list-table tbody td:first-child {
+  width: 1%;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table thead th:first-child {
+  width: 100px;
+}
+
+/* Center-align specific header cells */
+.authdocs-requests-table-wrapper .wp-list-table thead th[data-label="Status"],
+.authdocs-requests-table-wrapper .wp-list-table thead th[data-label="Actions"],
+.authdocs-requests-table-wrapper
+  .wp-list-table
+  thead
+  th[data-label="File Link"] {
+  text-align: center;
+}
+
+/* Center-align Action column content */
+.authdocs-requests-table-wrapper .wp-list-table tbody td:last-child {
+  text-align: center;
+}
+
+/* Center-align Status column content */
+.authdocs-requests-table-wrapper .wp-list-table tbody td[data-label="Status"] {
+  text-align: center;
+}
+
+/* Preserve existing link and icon styles */
+.authdocs-requests-table-wrapper .wp-list-table a {
+  color: #007cba;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table a:hover {
+  color: #005a87;
+  text-decoration: underline;
+}
+
+.authdocs-requests-table-wrapper .wp-list-table .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+/* Table Controls */
+.authdocs-table-controls {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.authdocs-filter-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.authdocs-filter-input {
+  padding: 8px 12px 8px 35px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 250px;
+  background: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.authdocs-filter-input:focus {
+  border-color: #007cba;
+  outline: none;
+  box-shadow: 0 0 0 1px #007cba;
+}
+
+.authdocs-filter-icon {
+  position: absolute;
+  left: 10px;
+  color: #666;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* Sortable Headers */
+.authdocs-sortable {
   cursor: pointer;
-  font-size: 11px;
-  border-radius: 3px;
+  user-select: none;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.authdocs-sortable:hover {
+  background-color: #f0f0f1;
+}
+
+.authdocs-sort-icon {
+  margin-left: 5px;
+  font-size: 14px;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.authdocs-sortable:hover .authdocs-sort-icon {
+  opacity: 1;
+}
+
+.authdocs-sortable.sorted .authdocs-sort-icon {
+  opacity: 1;
+  color: #007cba;
+}
+
+.authdocs-sortable.sorted-desc .authdocs-sort-icon {
+  transform: rotate(180deg);
+}
+
+/* Table Footer */
+.authdocs-table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-top: 1px solid #e1e1e1;
+  margin-top: 20px;
+}
+
+.authdocs-pagination-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.authdocs-pagination-links {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.authdocs-pagination .page-numbers {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #0073aa;
+  font-size: 14px;
   transition: all 0.2s ease;
+  gap: 4px;
 }
 
-.authdocs-settings-container .wp-editor-toolbar button:hover {
-  background: #f1f5f9;
-  border-color: #007cba;
+.authdocs-pagination .page-numbers:hover {
+  background: #f0f0f1;
+  border-color: #0073aa;
 }
 
-.authdocs-settings-container .wp-editor-toolbar button.active {
-  background: #007cba;
+.authdocs-pagination .page-numbers.current {
+  background: #0073aa;
   color: #fff;
-  border-color: #007cba;
+  border-color: #0073aa;
 }
 
-.authdocs-settings-container .mce-toolbar {
-  border: 1px solid #e2e8f0 !important;
-  border-bottom: none !important;
-  background: #f8fafc !important;
+.authdocs-pagination .page-numbers.dots {
+  border: none;
+  color: #666;
+  cursor: default;
 }
 
-.authdocs-settings-container .mce-toolbar .mce-btn {
-  background: #fff !important;
-  border: 1px solid #e2e8f0 !important;
-  margin: 2px !important;
+.authdocs-pagination .page-numbers.dots:hover {
+  background: transparent;
 }
 
-.authdocs-settings-container .mce-toolbar .mce-btn:hover {
-  background: #f1f5f9 !important;
-  border-color: #007cba !important;
+/* Hidden rows for filtering */
+.authdocs-table-row-hidden {
+  display: none !important;
 }
 
-.authdocs-settings-container .mce-toolbar .mce-btn.mce-active {
-  background: #007cba !important;
-  color: #fff !important;
-  border-color: #007cba !important;
+/* File Link Container - Compact Design */
+.authdocs-link-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  font-size: 12px;
+  max-width: fit-content;
 }
 
-.authdocs-settings-container .mce-edit-area {
-  border: 1px solid #e2e8f0 !important;
-  border-top: none !important;
+.authdocs-link-lock {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: #6c757d;
+  flex-shrink: 0;
 }
 
-.authdocs-settings-container .mce-edit-area iframe {
-  border: none !important;
+.authdocs-download-link,
+.authdocs-file-link {
+  display: inline-flex;
+  align-items: center;
+  color: #007cba;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.authdocs-download-link:hover,
+.authdocs-file-link:hover {
+  color: #005a87;
+  text-decoration: underline;
+}
+
+.authdocs-copy-link {
+  margin-left: 4px;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.authdocs-copy-link:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.authdocs-copy-link .dashicons {
+  font-size: 12px;
+  width: 12px;
+  height: 12px;
+}
+
+/* Simplified Access Revoked - Lock Icon with Locked Label */
+.authdocs-access-revoked {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  color: #721c24;
+}
+
+.authdocs-access-revoked .dashicons-lock {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #dc3545;
+}
+
+.authdocs-locked-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #721c24;
+}
+
+/* Row Highlighting */
+.authdocs-row-updated {
+  background-color: #d4edda !important;
+  transition: background-color 0.3s ease;
+}
+
+.authdocs-row-updated.fade-out {
+  background-color: transparent !important;
+}
+
+/* Confirmation Dialog */
+.authdocs-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.authdocs-confirm-overlay.show {
+  opacity: 1;
+}
+
+.authdocs-confirm-dialog {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 4px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.authdocs-confirm-overlay.show .authdocs-confirm-dialog {
+  transform: scale(1);
+}
+
+.authdocs-confirm-header {
+  background: #000000;
+  color: #ffffff;
+  padding: 15px 20px;
+  border-bottom: 1px solid #000000;
+}
+
+.authdocs-confirm-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+}
+
+.authdocs-confirm-body {
+  padding: 20px;
+}
+
+.authdocs-confirm-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333333;
+}
+
+.authdocs-confirm-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.authdocs-confirm-footer .button {
+  min-width: 80px;
+}
+
+.authdocs-access-revoked {
+  display: inline;
+  align-items: center; /* aligns icon with text top */
+  gap: 10px; /* space between icon and text */
+  padding: 12px;
+  /*border: 1px solid #ddd;*/
+  border-radius: 8px;
+  background: #f5e1e1;
+  max-width: 600px;
+}
+
+.authdocs-revoked-icon {
+  font-size: 28px;
+  color: #cc0000;
+  flex-shrink: 0; /* prevents icon from shrinking */
+}
+
+.authdocs-revoked-content {
+  line-height: 0.7;
+}
+
+.authdocs-revoked-content strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #222;
+}
+
+.authdocs-revoked-content span {
+  font-size: 9px;
+}
+
+.authdocs-revoked-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #555;
 }

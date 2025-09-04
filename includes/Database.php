@@ -154,15 +154,19 @@ class Database
         } elseif ($status === 'inactive') {
             // Store the current status before deactivating
             $current_status = self::get_request_status($request_id);
+            error_log("AuthDocs: Deactivating request {$request_id}, current status: {$current_status}");
             if ($current_status && $current_status !== 'inactive') {
-                update_post_meta($request_id, '_authdocs_previous_status', $current_status);
+                $meta_result = update_post_meta($request_id, '_authdocs_previous_status', $current_status);
+                error_log("AuthDocs: Saved previous status '{$current_status}' for request {$request_id}, meta result: " . ($meta_result ? 'success' : 'failed'));
+            } else {
+                error_log("AuthDocs: No previous status to save for request {$request_id} (current status: {$current_status})");
             }
         } elseif ($status === 'restore') {
             // Check if this is a reactivation and restore previous status
             $previous_status = get_post_meta($request_id, '_authdocs_previous_status', true);
             error_log("AuthDocs: Status is 'restore', checking for previous status. Previous status: {$previous_status}");
             
-            if ($previous_status && in_array($previous_status, ['accepted', 'declined'])) {
+            if ($previous_status && in_array($previous_status, ['accepted', 'declined', 'pending'])) {
                 error_log("AuthDocs: Restoring previous status: {$previous_status}");
                 $data['status'] = $previous_status;
                 // Clear the stored previous status
@@ -175,9 +179,24 @@ class Database
                 // Note: The status change hook will be fired from the calling method
                 // since we're changing the status to the previous status
             } else {
-                error_log("AuthDocs: No valid previous status found or status not in allowed list");
-                // If no previous status, default to 'pending'
-                $data['status'] = 'pending';
+                error_log("AuthDocs: No valid previous status found, checking current request status");
+                // If no previous status meta found, check the current request status
+                // This handles cases where the meta might not have been saved properly
+                $current_request = self::get_request_by_id($request_id);
+                if ($current_request && $current_request->status === 'inactive') {
+                    // If currently inactive, try to determine the most likely previous status
+                    // Check if there's a secure_hash, which indicates it was likely 'accepted'
+                    if (!empty($current_request->secure_hash)) {
+                        error_log("AuthDocs: Found secure_hash, assuming previous status was 'accepted'");
+                        $data['status'] = 'accepted';
+                    } else {
+                        error_log("AuthDocs: No secure_hash found, defaulting to 'pending'");
+                        $data['status'] = 'pending';
+                    }
+                } else {
+                    error_log("AuthDocs: Request not found or not inactive, defaulting to 'pending'");
+                    $data['status'] = 'pending';
+                }
             }
         }
         // Note: For 'inactive' status, hash is preserved to maintain link consistency
@@ -534,5 +553,32 @@ class Database
         
         $query = new \WP_Query($args);
         return $query->found_posts;
+    }
+
+    /**
+     * Delete a request by ID
+     */
+    public static function delete_request(int $request_id): bool
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . self::$table_name;
+        
+        $result = $wpdb->delete(
+            $table_name,
+            ['id' => $request_id],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            error_log("AuthDocs: Failed to delete request ID {$request_id}");
+            return false;
+        }
+        
+        // Clean up any associated post meta
+        delete_post_meta($request_id, '_authdocs_previous_status');
+        
+        error_log("AuthDocs: Successfully deleted request ID {$request_id}");
+        return true;
     }
 }

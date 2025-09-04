@@ -20,9 +20,54 @@ class Settings {
     private const ACCESS_REQUEST_RECIPIENTS_NAME = 'authdocs_access_request_recipients';
     private const GRANT_DECLINE_RECIPIENTS_NAME = 'authdocs_grant_decline_recipients';
     private const SECRET_KEY_OPTION_NAME = 'authdocs_secret_key';
+    private const FRONTEND_COLOR_PALETTE_NAME = 'authdocs_frontend_color_palette';
+    private const PAGINATION_STYLE_NAME = 'authdocs_pagination_style';
     
     public function __construct() {
         add_action('admin_init', [$this, 'init_settings']);
+        add_action('admin_init', [$this, 'ensure_default_templates']);
+    }
+    
+    /**
+     * Ensure default templates are set
+     */
+    public function ensure_default_templates(): void {
+        // Check and set default access request template
+        $access_template = get_option(self::ACCESS_REQUEST_TEMPLATE_NAME, []);
+        if (empty($access_template) || !isset($access_template['subject']) || !isset($access_template['body'])) {
+            update_option(self::ACCESS_REQUEST_TEMPLATE_NAME, $this->get_default_access_request_template());
+        }
+        
+        // Check and set default auto-response template
+        $auto_template = get_option(self::AUTO_RESPONSE_TEMPLATE_NAME, []);
+        if (empty($auto_template) || !isset($auto_template['subject']) || !isset($auto_template['body'])) {
+            update_option(self::AUTO_RESPONSE_TEMPLATE_NAME, $this->get_default_auto_response_template());
+        }
+        
+        // Check and set default grant/decline template
+        $grant_template = get_option(self::GRANT_DECLINE_TEMPLATE_NAME, []);
+        if (empty($grant_template) || !isset($grant_template['subject']) || !isset($grant_template['body'])) {
+            update_option(self::GRANT_DECLINE_TEMPLATE_NAME, $this->get_default_grant_decline_template());
+        }
+        
+        // Check and set default recipients
+        if (empty(get_option(self::ACCESS_REQUEST_RECIPIENTS_NAME, ''))) {
+            update_option(self::ACCESS_REQUEST_RECIPIENTS_NAME, get_option('admin_email'));
+        }
+        
+        if (empty(get_option(self::GRANT_DECLINE_RECIPIENTS_NAME, ''))) {
+            update_option(self::GRANT_DECLINE_RECIPIENTS_NAME, '{{email}}');
+        }
+        
+        // Check and set default color palette
+        if (empty(get_option(self::FRONTEND_COLOR_PALETTE_NAME, ''))) {
+            update_option(self::FRONTEND_COLOR_PALETTE_NAME, 'black_white');
+        }
+        
+        // Check and set default pagination style
+        if (empty(get_option(self::PAGINATION_STYLE_NAME, ''))) {
+            update_option(self::PAGINATION_STYLE_NAME, 'classic');
+        }
     }
     
     /**
@@ -85,6 +130,27 @@ class Settings {
             $secret_key = wp_generate_password(64, false);
             update_option(self::SECRET_KEY_OPTION_NAME, $secret_key);
         }
+        
+        // Register frontend color palette setting
+        register_setting(
+            self::OPTION_GROUP,
+            self::FRONTEND_COLOR_PALETTE_NAME,
+            [
+                'type' => 'string',
+                'sanitize_callback' => [$this, 'sanitize_color_palette'],
+                'default' => 'black_white'
+            ]
+        );
+        
+        register_setting(
+            self::OPTION_GROUP,
+            self::PAGINATION_STYLE_NAME,
+            [
+                'type' => 'string',
+                'sanitize_callback' => [$this, 'sanitize_pagination_style'],
+                'default' => 'classic'
+            ]
+        );
         
         // Access Request Email Section
         add_settings_section(
@@ -204,6 +270,46 @@ class Settings {
             [$this, 'render_grant_decline_variables_help'],
             'authdocs-settings',
             'authdocs_grant_decline_section'
+        );
+        
+        // Frontend Color Palette Section
+        add_settings_section(
+            'authdocs_frontend_colors_section',
+            __('Frontend Color Palette', 'authdocs'),
+            [$this, 'render_frontend_colors_section_description'],
+            'authdocs-settings'
+        );
+        
+        add_settings_field(
+            'frontend_color_palette',
+            __('Color Palette', 'authdocs'),
+            [$this, 'render_frontend_color_palette_field'],
+            'authdocs-settings',
+            'authdocs_frontend_colors_section'
+        );
+        
+        // Pagination Section
+        add_settings_section(
+            'authdocs_pagination_section',
+            __('Pagination Settings', 'authdocs'),
+            [$this, 'render_pagination_section_description'],
+            'authdocs-settings'
+        );
+        
+        add_settings_field(
+            'pagination_style',
+            __('Pagination Style', 'authdocs'),
+            [$this, 'render_pagination_style_field'],
+            'authdocs-settings',
+            'authdocs_pagination_section'
+        );
+        
+        // General Section
+        add_settings_section(
+            'authdocs_general_section',
+            __('General Settings', 'authdocs'),
+            [$this, 'render_general_section_description'],
+            'authdocs-settings'
         );
     }
     
@@ -359,7 +465,16 @@ class Settings {
     /**
      * Sanitize email template data
      */
-    public function sanitize_email_template(array $input): array {
+    public function sanitize_email_template($input): array {
+        // Handle null or non-array input
+        if (!is_array($input)) {
+            return [
+                'subject' => '',
+                'body' => '',
+                'enabled' => false
+            ];
+        }
+        
         return [
             'subject' => sanitize_text_field($input['subject'] ?? ''),
             'body' => wp_kses_post($input['body'] ?? ''),
@@ -370,7 +485,12 @@ class Settings {
     /**
      * Sanitize recipient emails
      */
-    public function sanitize_recipient_emails(string $input): string {
+    public function sanitize_recipient_emails($input): string {
+        // Handle null or non-string input
+        if (!is_string($input)) {
+            return '';
+        }
+        
         $emails = array_map('trim', explode(',', $input));
         $valid_emails = [];
         
@@ -383,6 +503,67 @@ class Settings {
         return implode(', ', $valid_emails);
     }
     
+    /**
+     * Sanitize color palette selection
+     */
+    public function sanitize_color_palette($input): string {
+        // Handle null or non-string input
+        if (!is_string($input)) {
+            return 'black_white';
+        }
+        
+        $allowed_palettes = ['black_white', 'blue_gray'];
+        return in_array($input, $allowed_palettes) ? $input : 'black_white';
+    }
+    
+    /**
+     * Sanitize pagination style input
+     */
+    public function sanitize_pagination_style($input): string {
+        // Handle null or non-string input
+        if (!is_string($input)) {
+            return 'classic';
+        }
+        
+        $allowed_styles = ['classic', 'load_more'];
+        return in_array($input, $allowed_styles) ? $input : 'classic';
+    }
+    
+    public function render_pagination_section_description(): void
+    {
+        echo '<p>' . __('Configure how pagination is displayed on the frontend.', 'authdocs') . '</p>';
+    }
+    
+    public function render_pagination_style_field(): void
+    {
+        $current_style = $this->get_pagination_style();
+        ?>
+        <fieldset>
+            <legend class="screen-reader-text"><?php _e('Pagination Style', 'authdocs'); ?></legend>
+            
+            <label>
+                <input type="radio" name="<?php echo self::PAGINATION_STYLE_NAME; ?>" value="classic" 
+                       <?php checked($current_style, 'classic'); ?> />
+                <strong><?php _e('Classic Pagination', 'authdocs'); ?></strong>
+                <p class="description"><?php _e('Traditional page numbers with Previous/Next buttons.', 'authdocs'); ?></p>
+            </label>
+            <br><br>
+            
+            <label>
+                <input type="radio" name="<?php echo self::PAGINATION_STYLE_NAME; ?>" value="load_more" 
+                       <?php checked($current_style, 'load_more'); ?> />
+                <strong><?php _e('Load More Button', 'authdocs'); ?></strong>
+                <p class="description"><?php _e('Progressive loading with a "Load More" button.', 'authdocs'); ?></p>
+            </label>
+        </fieldset>
+        <?php
+    }
+    
+    public function render_general_section_description(): void
+    {
+        echo '<p>' . __('General plugin settings and information.', 'authdocs') . '</p>';
+    }
+    
     // Render methods for Access Request Email
     public function render_access_request_section_description(): void {
         echo '<p>' . __('Configure the email template that will be sent to website owners when a document access request is submitted.', 'authdocs') . '</p>';
@@ -392,6 +573,12 @@ class Settings {
         $template = $this->get_access_request_template();
         $subject = $template['subject'] ?? '';
         
+        // If subject is empty, use default
+        if (empty($subject)) {
+            $default_template = $this->get_default_access_request_template();
+            $subject = $default_template['subject'];
+        }
+        
         echo '<input type="text" id="access_request_subject" name="' . self::ACCESS_REQUEST_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
         echo '<p class="description">' . __('Subject line for the access request notification email.', 'authdocs') . '</p>';
     }
@@ -399,6 +586,12 @@ class Settings {
     public function render_access_request_body_field(): void {
         $template = $this->get_access_request_template();
         $body = $template['body'] ?? '';
+        
+        // If body is empty, use default
+        if (empty($body)) {
+            $default_template = $this->get_default_access_request_template();
+            $body = $default_template['body'];
+        }
         
         $editor_settings = [
             'textarea_name' => self::ACCESS_REQUEST_TEMPLATE_NAME . '[body]',
@@ -469,6 +662,12 @@ class Settings {
         $template = $this->get_auto_response_template();
         $subject = $template['subject'] ?? '';
         
+        // If subject is empty, use default
+        if (empty($subject)) {
+            $default_template = $this->get_default_auto_response_template();
+            $subject = $default_template['subject'];
+        }
+        
         echo '<input type="text" id="auto_response_subject" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
         echo '<p class="description">' . __('Subject line for the auto-response email.', 'authdocs') . '</p>';
     }
@@ -476,6 +675,12 @@ class Settings {
     public function render_auto_response_body_field(): void {
         $template = $this->get_auto_response_template();
         $body = $template['body'] ?? '';
+        
+        // If body is empty, use default
+        if (empty($body)) {
+            $default_template = $this->get_default_auto_response_template();
+            $body = $default_template['body'];
+        }
         
         $editor_settings = [
             'textarea_name' => self::AUTO_RESPONSE_TEMPLATE_NAME . '[body]',
@@ -530,6 +735,12 @@ class Settings {
         $template = $this->get_grant_decline_template();
         $subject = $template['subject'] ?? '';
         
+        // If subject is empty, use default
+        if (empty($subject)) {
+            $default_template = $this->get_default_grant_decline_template();
+            $subject = $default_template['subject'];
+        }
+        
         echo '<input type="text" id="grant_decline_subject" name="' . self::GRANT_DECLINE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
         echo '<p class="description">' . __('Subject line for grant/decline emails. Use {{status}} for "Granted" or "Declined".', 'authdocs') . '</p>';
     }
@@ -537,6 +748,12 @@ class Settings {
     public function render_grant_decline_body_field(): void {
         $template = $this->get_grant_decline_template();
         $body = $template['body'] ?? '';
+        
+        // If body is empty, use default
+        if (empty($body)) {
+            $default_template = $this->get_default_grant_decline_template();
+            $body = $default_template['body'];
+        }
         
         $editor_settings = [
             'textarea_name' => self::GRANT_DECLINE_TEMPLATE_NAME . '[body]',
@@ -596,8 +813,12 @@ class Settings {
     public function get_access_request_template(): array {
         $template = get_option(self::ACCESS_REQUEST_TEMPLATE_NAME, []);
         
-        if (empty($template)) {
+        if (empty($template) || !isset($template['subject']) || !isset($template['body'])) {
             $template = $this->get_default_access_request_template();
+            // Save the default template if it doesn't exist
+            if (empty(get_option(self::ACCESS_REQUEST_TEMPLATE_NAME, []))) {
+                update_option(self::ACCESS_REQUEST_TEMPLATE_NAME, $template);
+            }
         }
         
         return $template;
@@ -606,8 +827,12 @@ class Settings {
     public function get_auto_response_template(): array {
         $template = get_option(self::AUTO_RESPONSE_TEMPLATE_NAME, []);
         
-        if (empty($template)) {
+        if (empty($template) || !isset($template['subject']) || !isset($template['body'])) {
             $template = $this->get_default_auto_response_template();
+            // Save the default template if it doesn't exist
+            if (empty(get_option(self::AUTO_RESPONSE_TEMPLATE_NAME, []))) {
+                update_option(self::AUTO_RESPONSE_TEMPLATE_NAME, $template);
+            }
         }
         
         return $template;
@@ -616,8 +841,12 @@ class Settings {
     public function get_grant_decline_template(): array {
         $template = get_option(self::GRANT_DECLINE_TEMPLATE_NAME, []);
         
-        if (empty($template)) {
+        if (empty($template) || !isset($template['subject']) || !isset($template['body'])) {
             $template = $this->get_default_grant_decline_template();
+            // Save the default template if it doesn't exist
+            if (empty(get_option(self::GRANT_DECLINE_TEMPLATE_NAME, []))) {
+                update_option(self::GRANT_DECLINE_TEMPLATE_NAME, $template);
+            }
         }
         
         return $template;
@@ -717,5 +946,117 @@ class Settings {
             default:
                 return ''; // Unknown placeholder
         }
+    }
+    
+    // Render methods for Frontend Color Palette
+    public function render_frontend_colors_section_description(): void {
+        echo '<p>' . __('Choose a color palette for the frontend document display. Changes will apply to all shortcodes and document grids.', 'authdocs') . '</p>';
+    }
+    
+    public function render_frontend_color_palette_field(): void {
+        $current_palette = get_option(self::FRONTEND_COLOR_PALETTE_NAME, 'black_white');
+        
+        $palettes = [
+            'black_white' => [
+                'name' => __('Black & White', 'authdocs'),
+                'description' => __('Clean black and white theme with minimal styling', 'authdocs'),
+                'colors' => [
+                    'primary' => '#000000',
+                    'secondary' => '#ffffff',
+                    'text' => '#000000',
+                    'background' => '#ffffff',
+                    'border' => '#e5e5e5'
+                ]
+            ],
+            'blue_gray' => [
+                'name' => __('Blue & Gray', 'authdocs'),
+                'description' => __('Professional blue and gray color scheme', 'authdocs'),
+                'colors' => [
+                    'primary' => '#2563eb',
+                    'secondary' => '#f8fafc',
+                    'text' => '#1e293b',
+                    'background' => '#ffffff',
+                    'border' => '#e2e8f0'
+                ]
+            ]
+        ];
+        
+        echo '<div class="authdocs-color-palettes">';
+        
+        foreach ($palettes as $palette_key => $palette_data) {
+            $checked = checked($palette_key, $current_palette, false);
+            
+            echo '<div class="authdocs-palette-option" style="margin-bottom: 20px; padding: 20px; border: 2px solid ' . ($palette_key === $current_palette ? $palette_data['colors']['primary'] : '#e5e5e5') . '; border-radius: 8px; background: ' . $palette_data['colors']['background'] . ';">';
+            echo '<label style="display: flex; align-items: center; cursor: pointer;">';
+            echo '<input type="radio" name="' . self::FRONTEND_COLOR_PALETTE_NAME . '" value="' . esc_attr($palette_key) . '" ' . $checked . ' style="margin-right: 12px;" />';
+            echo '<div>';
+            echo '<h4 style="margin: 0 0 5px 0; color: ' . $palette_data['colors']['text'] . ';">' . esc_html($palette_data['name']) . '</h4>';
+            echo '<p style="margin: 0 0 10px 0; color: ' . $palette_data['colors']['text'] . '; opacity: 0.7;">' . esc_html($palette_data['description']) . '</p>';
+            
+            // Color preview
+            echo '<div style="display: flex; gap: 8px;">';
+            foreach ($palette_data['colors'] as $color_name => $color_value) {
+                echo '<div style="width: 24px; height: 24px; background: ' . $color_value . '; border: 1px solid #ddd; border-radius: 4px;" title="' . esc_attr($color_name) . '"></div>';
+            }
+            echo '</div>';
+            
+            echo '</div>';
+            echo '</label>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+        echo '<p class="description">' . __('Select a color palette to customize the appearance of your document displays.', 'authdocs') . '</p>';
+    }
+    
+    /**
+     * Get current frontend color palette
+     */
+    public function get_frontend_color_palette(): string {
+        return get_option(self::FRONTEND_COLOR_PALETTE_NAME, 'black_white');
+    }
+    
+    /**
+     * Get the selected pagination style
+     */
+    public function get_pagination_style(): string
+    {
+        return get_option(self::PAGINATION_STYLE_NAME, 'classic');
+    }
+    
+    /**
+     * Get color palette data
+     */
+    public function get_color_palette_data(string $palette_key = null): array {
+        if (!$palette_key) {
+            $palette_key = $this->get_frontend_color_palette();
+        }
+        
+        $palettes = [
+            'black_white' => [
+                'primary' => '#000000',
+                'secondary' => '#ffffff',
+                'text' => '#000000',
+                'text_secondary' => '#666666',
+                'background' => '#ffffff',
+                'background_secondary' => '#f9f9f9',
+                'border' => '#e5e5e5',
+                'border_radius' => '4px',
+                'shadow' => '0 2px 4px rgba(0, 0, 0, 0.1)'
+            ],
+            'blue_gray' => [
+                'primary' => '#2563eb',
+                'secondary' => '#f8fafc',
+                'text' => '#1e293b',
+                'text_secondary' => '#64748b',
+                'background' => '#ffffff',
+                'background_secondary' => '#f1f5f9',
+                'border' => '#e2e8f0',
+                'border_radius' => '4px',
+                'shadow' => '0 2px 4px rgba(0, 0, 0, 0.1)'
+            ]
+        ];
+        
+        return $palettes[$palette_key] ?? $palettes['black_white'];
     }
 }

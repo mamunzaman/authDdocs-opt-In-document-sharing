@@ -221,7 +221,7 @@ class Plugin
         $request_id = intval($_POST['request_id'] ?? 0);
         $action = sanitize_text_field($_POST['action_type'] ?? '');
 
-        if (!$request_id || !in_array($action, ['accept', 'decline', 'inactive'])) {
+        if (!$request_id || !in_array($action, ['accept', 'decline', 'inactive', 'delete'])) {
             wp_send_json_error(__('Invalid request', 'authdocs'));
         }
 
@@ -229,6 +229,19 @@ class Plugin
         $current_request = Database::get_request_by_id($request_id);
         if (!$current_request) {
             wp_send_json_error(__('Request not found', 'authdocs'));
+        }
+
+        // Handle delete action separately
+        if ($action === 'delete') {
+            $result = Database::delete_request($request_id);
+            if ($result) {
+                wp_send_json_success([
+                    'message' => __('Request deleted successfully.', 'authdocs'),
+                    'deleted' => true
+                ]);
+            } else {
+                wp_send_json_error(__('Failed to delete request', 'authdocs'));
+            }
         }
 
         // Map action to database status with toggle logic for inactive
@@ -310,8 +323,8 @@ class Plugin
                 break;
             case 'inactive':
                 $base_message = $status === 'inactive' ? 
-                    __('Request deactivated successfully.', 'authdocs') : 
-                    __('Request activated successfully.', 'authdocs');
+                    __('Document link hidden successfully.', 'authdocs') : 
+                    __('Document link restored successfully.', 'authdocs');
                 break;
             default:
                 $base_message = __('Request updated successfully.', 'authdocs');
@@ -679,6 +692,252 @@ class Plugin
     }
     
     /**
+     * Generate grid items HTML with color palette styling
+     */
+    private function generate_grid_items_html(array $documents): string
+    {
+        $settings = new Settings();
+        $color_palette = $settings->get_color_palette_data();
+        
+        ob_start();
+        foreach ($documents as $document): ?>
+            <!-- Card -->
+            <article class="card">
+                <div class="card-body">
+                    <span class="card-icon" aria-hidden="true">📄</span>
+                    <h3 class="card-title"><?php echo esc_html($document['title']); ?></h3>
+                    <?php if (!empty($document['description'])): ?>
+                        <p class="card-desc"><?php echo wp_kses_post(wp_trim_words($document['description'], 15)); ?></p>
+                    <?php endif; ?>
+                    <div class="card-date"><?php echo esc_html($document['date']); ?></div>
+                </div>
+
+                <!-- Overlay -->
+                <div class="card-overlay" aria-hidden="true">
+                    <div class="overlay-content">
+                        <?php if ($document['restricted']): ?>
+                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'authdocs'); ?>">
+                                <svg class="authdocs-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                                </svg>
+                            </button>
+                        <?php else: ?>
+                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download title="<?php _e('Open Document', 'authdocs'); ?>">
+                                <svg class="authdocs-open-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                                </svg>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </article>
+        <?php endforeach;
+        $html = ob_get_clean();
+        
+        // Add inline styles for color palette
+        $css = $this->generate_ajax_color_css($color_palette);
+        
+        return $css . $html;
+    }
+    
+    /**
+     * Generate CSS for AJAX-loaded content
+     */
+    private function generate_ajax_color_css(array $color_palette): string
+    {
+        return "<style>
+        .card {
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
+            position: relative !important;
+            overflow: hidden !important;
+            transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+        
+        .card-body {
+            padding: 20px !important;
+            position: relative !important;
+            z-index: 2 !important;
+        }
+        
+        .card-icon {
+            font-size: 24px !important;
+            display: block !important;
+            margin-bottom: 12px !important;
+        }
+        
+        .card-title {
+            color: {$color_palette['text']} !important;
+            margin: 0 0 8px 0 !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            line-height: 1.3 !important;
+        }
+        
+        .card-desc {
+            color: {$color_palette['text_secondary']} !important;
+            margin: 0 0 8px 0 !important;
+            font-size: 14px !important;
+            line-height: 1.4 !important;
+        }
+        
+        .card-date {
+            color: {$color_palette['text_secondary']} !important;
+            font-size: 12px !important;
+            margin-top: 8px !important;
+        }
+        
+        .card-overlay {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: rgba(0,0,0,0.8) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            opacity: 0 !important;
+            transition: opacity 0.3s ease !important;
+            z-index: 3 !important;
+        }
+        
+        .card:hover .card-overlay {
+            opacity: 1 !important;
+        }
+        
+        .overlay-content {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        .card-overlay .authdocs-request-access-btn,
+        .card-overlay .authdocs-download-btn {
+            background: transparent !important;
+            border: 2px solid {$color_palette['secondary']} !important;
+            color: {$color_palette['secondary']} !important;
+            padding: 12px 16px !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.3s ease !important;
+            text-decoration: none !important;
+        }
+        
+        .card-overlay .authdocs-request-access-btn:hover,
+        .card-overlay .authdocs-download-btn:hover {
+            background: {$color_palette['secondary']} !important;
+            color: {$color_palette['primary']} !important;
+            transform: scale(1.05) !important;
+        }
+        </style>";
+    }
+    
+    /**
+     * Generate pagination HTML with color palette
+     */
+    private function generate_pagination_html(int $page, int $total_pages, int $limit, int $total_documents): string
+    {
+        $settings = new Settings();
+        $color_palette = $settings->get_color_palette_data();
+        
+        if ($total_pages <= 1) {
+            return '';
+        }
+        
+        ob_start();
+        ?>
+        <style>
+        .authdocs-pagination {
+            background: <?php echo $color_palette['background_secondary']; ?> !important;
+            border-radius: <?php echo $color_palette['border_radius']; ?> !important;
+        }
+        
+        .authdocs-pagination-info {
+            color: <?php echo $color_palette['text_secondary']; ?> !important;
+        }
+        
+        .authdocs-pagination-btn {
+            background: <?php echo $color_palette['background']; ?> !important;
+            color: <?php echo $color_palette['text']; ?> !important;
+            border: 1px solid <?php echo $color_palette['border']; ?> !important;
+            border-radius: <?php echo $color_palette['border_radius']; ?> !important;
+        }
+        
+        .authdocs-pagination-btn:hover {
+            background: <?php echo $color_palette['background_secondary']; ?> !important;
+            color: <?php echo $color_palette['primary']; ?> !important;
+        }
+        
+        .authdocs-pagination-btn.active {
+            background: <?php echo $color_palette['primary']; ?> !important;
+            color: <?php echo $color_palette['secondary']; ?> !important;
+        }
+        </style>
+        
+        <div class="authdocs-pagination">
+            <div class="authdocs-pagination-info">
+                <?php 
+                $start = (($page - 1) * $limit) + 1;
+                $end = min($page * $limit, $total_documents);
+                printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                ?>
+            </div>
+            
+            <div class="authdocs-pagination-links">
+                <?php if ($page > 1): ?>
+                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($page - 1); ?>">
+                        <?php _e('Previous', 'authdocs'); ?>
+                    </button>
+                <?php endif; ?>
+                
+                <div class="authdocs-pagination-numbers">
+                    <?php
+                    $start_page = max(1, $page - 2);
+                    $end_page = min($total_pages, $page + 2);
+                    
+                    if ($start_page > 1): ?>
+                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
+                        <?php if ($start_page > 2): ?>
+                            <span class="authdocs-pagination-ellipsis">...</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    
+                    <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number <?php echo $i === $page ? 'active' : ''; ?>" data-page="<?php echo esc_attr($i); ?>">
+                            <?php echo $i; ?>
+                        </button>
+                    <?php endfor; ?>
+                    
+                    <?php if ($end_page < $total_pages): ?>
+                        <?php if ($end_page < $total_pages - 1): ?>
+                            <span class="authdocs-pagination-ellipsis">...</span>
+                        <?php endif; ?>
+                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
+                    <?php endif; ?>
+                </div>
+                
+                <?php if ($page < $total_pages): ?>
+                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($page + 1); ?>">
+                        <?php _e('Next', 'authdocs'); ?>
+                    </button>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
      * Handle AJAX request to load more documents for grid view
      */
     public function handle_load_more_documents(): void
@@ -704,41 +963,8 @@ class Plugin
             ]);
         }
         
-        // Generate HTML for the grid items
-        ob_start();
-        foreach ($documents as $document): ?>
-            <div class="authdocs-grid-item">
-                <div class="authdocs-grid-item-content">
-                    <div class="authdocs-grid-item-header">
-                        <h3 class="authdocs-grid-item-title">
-                            <?php echo esc_html($document['title']); ?>
-                        </h3>
-                        <div class="authdocs-grid-item-date">
-                            <?php echo esc_html($document['date']); ?>
-                        </div>
-                    </div>
-                    
-                    <?php if (!empty($document['description'])): ?>
-                        <div class="authdocs-grid-item-description">
-                            <?php echo wp_kses_post(wp_trim_words($document['description'], 20)); ?>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <div class="authdocs-grid-item-actions">
-                        <?php if ($document['restricted']): ?>
-                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>">
-                                <?php _e('Request Access', 'authdocs'); ?>
-                            </button>
-                        <?php else: ?>
-                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download>
-                                <?php _e('Download', 'authdocs'); ?>
-                            </a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach;
-        $html = ob_get_clean();
+        // Generate HTML for the grid items with color palette
+        $html = $this->generate_grid_items_html($documents);
         
         // Check if there are more documents available
         $total_documents = Database::get_total_requests_count();
@@ -778,7 +1004,7 @@ class Plugin
         
         $documents = Database::get_published_documents($limit, $restriction, $page, $orderby, $order);
         $total_documents = Database::get_published_documents_count($restriction);
-        $total_pages = ceil($total_documents / $limit);
+        $total_pages = (int) ceil($total_documents / $limit);
         
         if (empty($documents)) {
             wp_send_json_error([
@@ -786,96 +1012,11 @@ class Plugin
             ]);
         }
         
-        // Generate HTML for the grid items
-        ob_start();
-        foreach ($documents as $document): ?>
-            <div class="authdocs-grid-item">
-                <div class="authdocs-grid-item-content">
-                    <div class="authdocs-grid-item-header">
-                        <h3 class="authdocs-grid-item-title">
-                            <?php echo esc_html($document['title']); ?>
-                        </h3>
-                        <div class="authdocs-grid-item-date">
-                            <?php echo esc_html($document['date']); ?>
-                        </div>
-                    </div>
-                    
-                    <?php if (!empty($document['description'])): ?>
-                        <div class="authdocs-grid-item-description">
-                            <?php echo wp_kses_post(wp_trim_words($document['description'], 20)); ?>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <div class="authdocs-grid-item-actions">
-                        <?php if ($document['restricted']): ?>
-                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>">
-                                <?php _e('Request Access', 'authdocs'); ?>
-                            </button>
-                        <?php else: ?>
-                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download>
-                                <?php _e('Download', 'authdocs'); ?>
-                            </a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach;
-        $html = ob_get_clean();
+        // Generate HTML for the grid items with color palette
+        $html = $this->generate_grid_items_html($documents);
         
-        // Generate pagination HTML
-        ob_start();
-        if ($total_pages > 1): ?>
-            <div class="authdocs-pagination">
-                <div class="authdocs-pagination-info">
-                    <?php 
-                    $start = (($page - 1) * $limit) + 1;
-                    $end = min($page * $limit, $total_documents);
-                    printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
-                    ?>
-                </div>
-                
-                <div class="authdocs-pagination-links">
-                    <?php if ($page > 1): ?>
-                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($page - 1); ?>">
-                            <?php _e('Previous', 'authdocs'); ?>
-                        </button>
-                    <?php endif; ?>
-                    
-                    <div class="authdocs-pagination-numbers">
-                        <?php
-                        $start_page = max(1, $page - 2);
-                        $end_page = min($total_pages, $page + 2);
-                        
-                        if ($start_page > 1): ?>
-                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
-                            <?php if ($start_page > 2): ?>
-                                <span class="authdocs-pagination-ellipsis">...</span>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                        
-                        <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
-                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number <?php echo $i === $page ? 'active' : ''; ?>" data-page="<?php echo esc_attr($i); ?>">
-                                <?php echo $i; ?>
-                            </button>
-                        <?php endfor; ?>
-                        
-                        <?php if ($end_page < $total_pages): ?>
-                            <?php if ($end_page < $total_pages - 1): ?>
-                                <span class="authdocs-pagination-ellipsis">...</span>
-                            <?php endif; ?>
-                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <?php if ($page < $total_pages): ?>
-                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($page + 1); ?>">
-                            <?php _e('Next', 'authdocs'); ?>
-                        </button>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif;
-        $pagination_html = ob_get_clean();
+        // Generate pagination HTML with color palette
+        $pagination_html = $this->generate_pagination_html($page, $total_pages, $limit, $total_documents);
         
         wp_send_json_success([
             'html' => $html,
