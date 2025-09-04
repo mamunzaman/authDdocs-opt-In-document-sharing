@@ -328,9 +328,9 @@ class Settings {
         
         <p>Hello {{name}},</p>
         
-        {{#if granted}}
-        <p>Your request for document access has been approved. You can now view or download the document using the secure link below:</p>
+        <p>Your request for document access has been {{status}}. {{#if granted}}You can now view or download the document using the secure link below:{{else}}We regret to inform you that your request has been declined.{{/if}}</p>
         
+        {{#if granted}}
         <div style="background: #fff; padding: 20px; border-radius: 6px; border: 1px solid #dee2e6; margin: 20px 0;">
             <p style="margin: 0 0 15px 0; font-weight: bold; color: #495057;">Secure Download Link:</p>
             <a href="{{link}}" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Access Document</a>
@@ -339,8 +339,6 @@ class Settings {
         
         <p><strong>Important:</strong> This link is unique to your email address and should not be shared with others.</p>
         {{else}}
-        <p>We regret to inform you that your request for document access has been declined.</p>
-        
         <p><strong>Document:</strong> {{file_name}}</p>
         
         <p>If you believe this is an error or have any questions, please contact us directly.</p>

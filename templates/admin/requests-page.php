@@ -105,26 +105,26 @@ if (!defined('ABSPATH')) {
                             <td data-label="Actions">
                                 <div class="authdocs-request-actions">
                                     <!-- Accept Link -->
-                                    <a href="#" class="authdocs-action-link authdocs-action-accept <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>" 
+                                    <button type="button" class="authdocs-action-link authdocs-action-accept <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>" 
                                        data-action="accept" data-request-id="<?php echo esc_attr($request->id); ?>"
                                        <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>>
                                         <span class="dashicons dashicons-yes-alt"></span>
                                         <span class="action-text"><?php echo $request->status === 'accepted' ? __('Re-accept', 'authdocs') : __('Accept', 'authdocs'); ?></span>
-                                    </a>
+                                    </button>
                                     
                                     <!-- Decline Link -->
-                                    <a href="#" class="authdocs-action-link authdocs-action-decline <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>" 
+                                    <button type="button" class="authdocs-action-link authdocs-action-decline <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>" 
                                        data-action="decline" data-request-id="<?php echo esc_attr($request->id); ?>"
                                        <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>>
                                         <span class="dashicons dashicons-no-alt"></span>
                                         <span class="action-text"><?php echo $request->status === 'declined' ? __('Re-decline', 'authdocs') : __('Decline', 'authdocs'); ?></span>
-                                    </a>
+                                    </button>
                                     
                                     <!-- Activate/Deactivate Link -->
-                                    <a href="#" class="authdocs-action-link authdocs-action-inactive" data-action="inactive" data-request-id="<?php echo esc_attr($request->id); ?>">
+                                    <button type="button" class="authdocs-action-link authdocs-action-inactive" data-action="inactive" data-request-id="<?php echo esc_attr($request->id); ?>">
                                         <span class="dashicons dashicons-hidden"></span>
                                         <span class="action-text"><?php echo $request->status === 'inactive' ? __('Activate', 'authdocs') : __('Deactivate', 'authdocs'); ?></span>
-                                    </a>
+                                    </button>
                                 </div>
                             </td>
                         </tr>

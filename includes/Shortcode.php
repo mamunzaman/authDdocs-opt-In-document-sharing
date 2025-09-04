@@ -248,9 +248,12 @@ class Shortcode
         }
 
         // Validate the secure access first (this will check hash and basic validity)
+        error_log("AuthDocs: Download validation - Document ID: {$document_id}, Email: {$email}, Hash: {$hash}, Request ID: {$request_id}");
         if (!Database::validate_secure_access($hash, $email, $document_id, $request_id)) {
+            error_log("AuthDocs: Download validation failed - Invalid or expired download link");
             wp_die(__('Invalid or expired download link', 'authdocs'), __('Access Denied', 'authdocs'), ['response' => 403]);
         }
+        error_log("AuthDocs: Download validation successful");
 
         // Check if request is accessible (not inactive) after hash validation
         if ($request_id && !Database::is_request_accessible($request_id)) {

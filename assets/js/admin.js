@@ -2,17 +2,25 @@ jQuery(document).ready(function ($) {
   "use strict";
 
   // Handle request management actions
-  $(".authdocs-action-link").on("click", function () {
+  $(document).on("click", ".authdocs-action-link", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
     var $btn = $(this);
+
+    console.log("AuthDocs: Action link clicked", $btn);
 
     // Prevent action if button is disabled
     if ($btn.hasClass("disabled") || $btn.prop("disabled")) {
+      console.log("AuthDocs: Button is disabled, preventing action");
       return false;
     }
 
     var action = $btn.data("action");
     var requestId = $btn.data("request-id");
     var $row = $btn.closest("tr");
+
+    console.log("AuthDocs: Action:", action, "Request ID:", requestId);
 
     var confirmMessage = "Are you sure you want to perform this action?";
     if (action === "decline") {
@@ -36,8 +44,17 @@ jQuery(document).ready(function ($) {
     }
 
     // Show confirmation popup instead of browser confirm
+    console.log(
+      "AuthDocs: Showing confirmation dialog with message:",
+      confirmMessage
+    );
     showConfirmDialog(confirmMessage, function () {
       // User confirmed, proceed with action
+      console.log(
+        "AuthDocs: User confirmed action, proceeding with:",
+        action,
+        requestId
+      );
       proceedWithAction($btn, action, requestId);
     });
     return;
@@ -45,7 +62,16 @@ jQuery(document).ready(function ($) {
 
   // WordPress native notice function
   function showNotice(message, type) {
-    var noticeClass = type === "success" ? "notice-success" : "notice-error";
+    var noticeClass = "notice-info"; // Default to info
+
+    if (type === "success") {
+      noticeClass = "notice-success";
+    } else if (type === "error") {
+      noticeClass = "notice-error";
+    } else if (type === "warning") {
+      noticeClass = "notice-warning";
+    }
+
     var $notice = $(
       '<div class="notice ' +
         noticeClass +
@@ -73,6 +99,11 @@ jQuery(document).ready(function ($) {
 
   // WordPress native confirmation popup
   function showConfirmDialog(message, onConfirm) {
+    console.log(
+      "AuthDocs: Creating confirmation dialog with message:",
+      message
+    );
+
     // Remove any existing confirmation dialogs
     $(".authdocs-confirm-overlay").remove();
 
@@ -97,12 +128,15 @@ jQuery(document).ready(function ($) {
     $overlay.append($dialog);
     $("body").append($overlay);
 
+    console.log("AuthDocs: Confirmation dialog created and appended to body");
+
     // Trigger reflow and add show class for animation
     $overlay[0].offsetHeight;
     $overlay.addClass("show");
 
-    // Handle button clicks
-    $(".authdocs-confirm-ok").on("click", function () {
+    // Handle button clicks using event delegation
+    $overlay.on("click", ".authdocs-confirm-ok", function () {
+      console.log("AuthDocs: Confirmation dialog OK clicked");
       $overlay.removeClass("show");
       setTimeout(function () {
         $overlay.remove();
@@ -110,7 +144,8 @@ jQuery(document).ready(function ($) {
       }, 300);
     });
 
-    $(".authdocs-confirm-cancel").on("click", function () {
+    $overlay.on("click", ".authdocs-confirm-cancel", function () {
+      console.log("AuthDocs: Confirmation dialog Cancel clicked");
       $overlay.removeClass("show");
       setTimeout(function () {
         $overlay.remove();
@@ -311,6 +346,13 @@ jQuery(document).ready(function ($) {
     // Show loading state
     $btn.addClass("loading").prop("disabled", true);
 
+    console.log("AuthDocs: Making AJAX request with data:", {
+      action: "authdocs_manage_request",
+      request_id: requestId,
+      action_type: action,
+      nonce: authdocs_admin.nonce,
+    });
+
     $.ajax({
       url: ajaxurl,
       type: "POST",
@@ -327,69 +369,32 @@ jQuery(document).ready(function ($) {
           var $table = $row.closest("table");
           console.log("Row found:", $row.length > 0);
 
-          // Determine action result message
-          var actionMessage = "";
+          // Get message from server response
+          var actionMessage =
+            response.data.message || "Request updated successfully.";
+          var emailSent = response.data.email_sent || false;
+          var newStatus = response.data.status || "";
+
+          console.log("Action message:", actionMessage);
+          console.log("Email sent:", emailSent);
+          console.log("New status:", newStatus);
+
+          // Determine if we should remove the row (for accept/decline actions)
           var shouldRemoveRow = false;
-
-          switch (action) {
-            case "accept":
-              actionMessage =
-                "Request accepted successfully. Access granted email sent.";
-              shouldRemoveRow = true;
-              console.log("Action: accept - shouldRemoveRow:", shouldRemoveRow);
-              break;
-            case "reaccept":
-              actionMessage =
-                "Request re-accepted successfully. Access granted email sent.";
-              shouldRemoveRow = true;
-              console.log(
-                "Action: reaccept - shouldRemoveRow:",
-                shouldRemoveRow
-              );
-              break;
-            case "decline":
-              actionMessage = "Request declined successfully. Access revoked.";
-              shouldRemoveRow = true;
-              console.log(
-                "Action: decline - shouldRemoveRow:",
-                shouldRemoveRow
-              );
-              break;
-            case "inactive":
-              // Determine if we're activating or deactivating based on current status
-              var $currentRow = $btn.closest("tr");
-              var currentStatus = $currentRow
-                .find("td[data-label='Status'] .authdocs-status")
-                .text()
-                .toLowerCase();
-
-              if (currentStatus === "inactive") {
-                actionMessage =
-                  "Request activated successfully. Previous status restored.";
-              } else {
-                actionMessage =
-                  "Request deactivated successfully. Access disabled.";
-              }
-
-              shouldRemoveRow = false; // Keep row but update status
-              console.log(
-                "Action: inactive - shouldRemoveRow:",
-                shouldRemoveRow,
-                "Current status:",
-                currentStatus
-              );
-              break;
-            default:
-              actionMessage = "Request " + action + " successfully.";
-              shouldRemoveRow = true;
-              console.log(
-                "Action: default - shouldRemoveRow:",
-                shouldRemoveRow
-              );
+          if (action === "accept" || action === "decline") {
+            shouldRemoveRow = true;
           }
 
-          // Show success message
-          showNotice(actionMessage, "success");
+          // Show success message with email status
+          var messageType = emailSent ? "success" : "warning";
+          if (
+            !emailSent &&
+            (newStatus === "accepted" || newStatus === "declined")
+          ) {
+            messageType = "warning";
+          }
+
+          showNotice(actionMessage, messageType);
 
           if (shouldRemoveRow) {
             // Add completed class for simple highlight
@@ -418,7 +423,9 @@ jQuery(document).ready(function ($) {
           $btn.removeClass("loading").prop("disabled", false);
         }
       },
-      error: function () {
+      error: function (xhr, status, error) {
+        console.error("AuthDocs: AJAX error:", status, error);
+        console.error("AuthDocs: Response text:", xhr.responseText);
         showNotice("Network error. Please try again.", "error");
         $btn.removeClass("loading").prop("disabled", false);
       },

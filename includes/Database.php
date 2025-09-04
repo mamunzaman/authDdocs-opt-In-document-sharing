@@ -249,7 +249,15 @@ class Database
         
         $sql = "SELECT * FROM $table_name WHERE " . implode(' AND ', $where_conditions);
         
+        error_log("AuthDocs: validate_secure_access SQL: " . $sql);
+        error_log("AuthDocs: validate_secure_access values: " . json_encode($where_values));
+        
         $request = $wpdb->get_row($wpdb->prepare($sql, $where_values));
+        
+        error_log("AuthDocs: validate_secure_access result: " . ($request ? 'found' : 'not found'));
+        if ($request) {
+            error_log("AuthDocs: Found request - ID: {$request->id}, Status: {$request->status}, Hash: {$request->secure_hash}");
+        }
         
         return !empty($request);
     }

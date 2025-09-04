@@ -38,7 +38,6 @@ class Plugin
         
         // Email hooks
         add_action('authdocs/request_submitted', [$this, 'handle_request_submitted_hook']);
-        add_action('authdocs/request_status_changed', [$this, 'handle_request_status_changed_hook']);
         add_action('template_redirect', [$this, 'protect_document_files']);
         add_action('init', [$this, 'protect_media_files']);
         add_action('wp_ajax_authdocs_debug_hash', [$this, 'debug_hash_generation']);
@@ -206,11 +205,16 @@ class Plugin
 
     public function handle_request_management(): void
     {
+        error_log("AuthDocs: handle_request_management called");
+        error_log("AuthDocs: POST data: " . json_encode($_POST));
+        
         if (!current_user_can('manage_options')) {
+            error_log("AuthDocs: Insufficient permissions");
             wp_die(__('Insufficient permissions', 'authdocs'));
         }
 
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
+            error_log("AuthDocs: Security check failed");
             wp_die(__('Security check failed', 'authdocs'));
         }
 
@@ -246,17 +250,85 @@ class Plugin
             $final_status = Database::get_request_status($request_id);
             error_log("AuthDocs: Request updated successfully. Old status: {$old_status}, Final status: {$final_status}");
             
-            // Fire the status change hook with the final status
+            // Fire the status change hook with the final status and capture email result
             error_log("AuthDocs: Firing status change hook with final status: {$final_status}");
-            do_action('authdocs/request_status_changed', $request_id, $old_status, $final_status);
+            $email_sent = $this->handle_status_change_with_email($request_id, $old_status, $final_status);
             
-            wp_send_json_success(__('Request updated successfully', 'authdocs'));
+            // Prepare response message based on action and email result
+            $message = $this->get_action_response_message($action, $final_status, $email_sent);
+            
+            wp_send_json_success([
+                'message' => $message,
+                'email_sent' => $email_sent,
+                'status' => $final_status
+            ]);
         } else {
             error_log("AuthDocs: Failed to update request status");
             wp_send_json_error(__('Failed to update request', 'authdocs'));
         }
     }
-
+    
+    /**
+     * Handle status change with email sending and return result
+     */
+    private function handle_status_change_with_email(int $request_id, string $old_status, string $new_status): bool {
+        $email = new Email();
+        $email_sent = false;
+        
+        // Send grant/decline email based on status
+        if ($new_status === 'accepted') {
+            error_log("AuthDocs: Status is 'accepted', sending grant email");
+            $email_sent = $email->send_grant_decline_email($request_id, true);
+        } elseif ($new_status === 'declined') {
+            error_log("AuthDocs: Status is 'declined', sending decline email");
+            $email_sent = $email->send_grant_decline_email($request_id, false);
+        } else {
+            error_log("AuthDocs: Status is not 'accepted' or 'declined' ({$new_status}), not sending email");
+        }
+        
+        return $email_sent;
+    }
+    
+    /**
+     * Get response message based on action and email result
+     */
+    private function get_action_response_message(string $action, string $status, bool $email_sent): string {
+        $base_message = '';
+        $email_message = '';
+        
+        // Base message based on action
+        switch ($action) {
+            case 'accept':
+                $base_message = $status === 'accepted' ? 
+                    __('Request accepted successfully.', 'authdocs') : 
+                    __('Request re-accepted successfully.', 'authdocs');
+                break;
+            case 'decline':
+                $base_message = $status === 'declined' ? 
+                    __('Request declined successfully.', 'authdocs') : 
+                    __('Request re-declined successfully.', 'authdocs');
+                break;
+            case 'inactive':
+                $base_message = $status === 'inactive' ? 
+                    __('Request deactivated successfully.', 'authdocs') : 
+                    __('Request activated successfully.', 'authdocs');
+                break;
+            default:
+                $base_message = __('Request updated successfully.', 'authdocs');
+        }
+        
+        // Email message based on result
+        if ($email_sent && in_array($status, ['accepted', 'declined'])) {
+            $email_message = $status === 'accepted' ? 
+                __(' Grant email sent to requester.', 'authdocs') : 
+                __(' Decline email sent to requester.', 'authdocs');
+        } elseif (!$email_sent && in_array($status, ['accepted', 'declined'])) {
+            $email_message = __(' Warning: Email could not be sent.', 'authdocs');
+        }
+        
+        return $base_message . $email_message;
+    }
+    
     public function requests_page(): void
     {
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
@@ -558,54 +630,6 @@ class Plugin
         $email->send_access_request_email($request_id);
         // Send auto-response to requester
         $email->send_auto_response_email($request_id);
-    }
-    
-    /**
-     * Handle request status changed hook
-     */
-    public function handle_request_status_changed(int $request_id, string $old_status, string $new_status): void
-    {
-        $email = new Email();
-        
-        // Send grant/decline email based on status
-        if ($new_status === 'accepted') {
-            $email->send_grant_decline_email($request_id, true);
-        } elseif ($new_status === 'declined') {
-            $email->send_grant_decline_email($request_id, false);
-        }
-    }
-    
-    /**
-     * Handle request status changed hook (WordPress hook compatibility)
-     */
-    public function handle_request_status_changed_hook($request_id, $old_status = '', $new_status = ''): void
-    {
-        error_log("AuthDocs: handle_request_status_changed_hook called - Request ID: {$request_id}, Old Status: {$old_status}, New Status: {$new_status}");
-        
-        // Ensure we have the required parameters
-        if (!is_numeric($request_id)) {
-            error_log("AuthDocs: Invalid request ID: {$request_id}");
-            return;
-        }
-        
-        $request_id = (int) $request_id;
-        $old_status = (string) $old_status;
-        $new_status = (string) $new_status;
-        
-        error_log("AuthDocs: Processed parameters - Request ID: {$request_id}, Old Status: {$old_status}, New Status: {$new_status}");
-        
-        $email = new Email();
-        
-        // Send grant/decline email based on status
-        if ($new_status === 'accepted') {
-            error_log("AuthDocs: Status is 'accepted', sending grant email");
-            $email->send_grant_decline_email($request_id, true);
-        } elseif ($new_status === 'declined') {
-            error_log("AuthDocs: Status is 'declined', sending decline email");
-            $email->send_grant_decline_email($request_id, false);
-        } else {
-            error_log("AuthDocs: Status is not 'accepted' or 'declined' ({$new_status}), not sending email");
-        }
     }
     
     /**
