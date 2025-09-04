@@ -24,16 +24,22 @@ if (!current_user_can('manage_options')) {
             <?php
             settings_fields('authdocs_options');
             do_settings_sections('authdocs-settings');
-            submit_button(__('Save Email Template', 'authdocs'), 'primary', 'submit', false);
+            submit_button(__('Save Email Templates', 'authdocs'), 'primary', 'submit', false);
             ?>
         </form>
         
         <div class="authdocs-settings-sidebar">
             <div class="authdocs-settings-card">
                 <h3><?php _e('Email Template Preview', 'authdocs'); ?></h3>
-                <p><?php _e('Preview how your email will look with sample data:', 'authdocs'); ?></p>
-                <button type="button" id="preview-email" class="button button-secondary">
-                    <?php _e('Preview Email', 'authdocs'); ?>
+                <p><?php _e('Preview how your emails will look with sample data:', 'authdocs'); ?></p>
+                <button type="button" id="preview-access-request" class="button button-secondary">
+                    <?php _e('Preview Access Request', 'authdocs'); ?>
+                </button>
+                <button type="button" id="preview-auto-response" class="button button-secondary">
+                    <?php _e('Preview Auto-Response', 'authdocs'); ?>
+                </button>
+                <button type="button" id="preview-grant-decline" class="button button-secondary">
+                    <?php _e('Preview Grant/Decline', 'authdocs'); ?>
                 </button>
             </div>
             
@@ -48,21 +54,18 @@ if (!current_user_can('manage_options')) {
             </div>
             
             <div class="authdocs-settings-card">
-                <h3><?php _e('Test Email', 'authdocs'); ?></h3>
-                <p><?php _e('Send a test email to verify your template works correctly:', 'authdocs'); ?></p>
-                <button type="button" id="test-email" class="button button-secondary">
-                    <?php _e('Send Test Email', 'authdocs'); ?>
+                <h3><?php _e('Test Emails', 'authdocs'); ?></h3>
+                <p><?php _e('Send test emails to verify your templates work correctly:', 'authdocs'); ?></p>
+                <button type="button" id="test-access-request" class="button button-secondary">
+                    <?php _e('Test Access Request', 'authdocs'); ?>
                 </button>
-                <div id="test-email-result" style="margin-top: 10px;"></div>
-            </div>
-            
-            <div class="authdocs-settings-card">
-                <h3><?php _e('Test Autoresponder', 'authdocs'); ?></h3>
-                <p><?php _e('Send a test autoresponder email to verify your template works correctly:', 'authdocs'); ?></p>
-                <button type="button" id="test-autoresponder" class="button button-secondary">
-                    <?php _e('Send Test Autoresponder', 'authdocs'); ?>
+                <button type="button" id="test-auto-response" class="button button-secondary">
+                    <?php _e('Test Auto-Response', 'authdocs'); ?>
                 </button>
-                <div id="test-autoresponder-result" style="margin-top: 10px;"></div>
+                <button type="button" id="test-grant-decline" class="button button-secondary">
+                    <?php _e('Test Grant/Decline', 'authdocs'); ?>
+                </button>
+                <div id="test-email-results" style="margin-top: 10px;"></div>
             </div>
         </div>
     </div>
@@ -72,7 +75,7 @@ if (!current_user_can('manage_options')) {
 <div id="authdocs-email-preview-modal" class="authdocs-modal" style="display: none;">
     <div class="authdocs-modal-content">
         <div class="authdocs-modal-header">
-            <h3><?php _e('Email Preview', 'authdocs'); ?></h3>
+            <h3 id="preview-modal-title"><?php _e('Email Preview', 'authdocs'); ?></h3>
             <button type="button" class="authdocs-modal-close">&times;</button>
         </div>
         <div class="authdocs-modal-body">
@@ -102,28 +105,45 @@ if (!current_user_can('manage_options')) {
 
 <script>
 jQuery(document).ready(function($) {
-    // Preview email functionality
-    $('#preview-email').on('click', function() {
-        var subject = $('#email_subject').val();
-        var body = $('#email_body').val();
+    // Sample data for previews
+    var sampleData = {
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        file_name: 'Sample Document.pdf',
+        site_name: '<?php echo esc_js(get_bloginfo('name')); ?>',
+        status: 'Granted',
+        status_color: '#28a745',
+        link: 'https://example.com/authdocs/download?hash=abc123&file=document.pdf'
+    };
+    
+    // Preview functions
+    function previewEmail(templateType, title) {
+        var subjectField, bodyField;
         
-        // Sample data for preview
-        var sampleData = {
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-            link: 'https://example.com/authdocs/download?hash=abc123&file=document.pdf'
-        };
+        switch(templateType) {
+            case 'access_request':
+                subjectField = '#access_request_subject';
+                bodyField = '#access_request_body';
+                break;
+            case 'auto_response':
+                subjectField = '#auto_response_subject';
+                bodyField = '#auto_response_body';
+                break;
+            case 'grant_decline':
+                subjectField = '#grant_decline_subject';
+                bodyField = '#grant_decline_body';
+                break;
+        }
+        
+        var subject = $(subjectField).val();
+        var body = $(bodyField).val();
         
         // Replace variables in preview
-        var previewSubject = subject.replace(/\{\{name\}\}/g, sampleData.name)
-                                   .replace(/\{\{email\}\}/g, sampleData.email)
-                                   .replace(/\{\{link\}\}/g, sampleData.link);
-        
-        var previewBody = body.replace(/\{\{name\}\}/g, sampleData.name)
-                             .replace(/\{\{email\}\}/g, sampleData.email)
-                             .replace(/\{\{link\}\}/g, sampleData.link);
+        var previewSubject = replaceVariables(subject, sampleData);
+        var previewBody = replaceVariables(body, sampleData);
         
         // Update preview content
+        $('#preview-modal-title').text(title);
         $('#preview-subject').text(previewSubject);
         $('#preview-subject-display').text(previewSubject);
         $('#preview-body-html').val(previewBody);
@@ -131,6 +151,29 @@ jQuery(document).ready(function($) {
         
         // Show modal
         $('#authdocs-email-preview-modal').show();
+    }
+    
+    function replaceVariables(text, data) {
+        return text.replace(/\{\{name\}\}/g, data.name)
+                   .replace(/\{\{email\}\}/g, data.email)
+                   .replace(/\{\{file_name\}\}/g, data.file_name)
+                   .replace(/\{\{site_name\}\}/g, data.site_name)
+                   .replace(/\{\{status\}\}/g, data.status)
+                   .replace(/\{\{status_color\}\}/g, data.status_color)
+                   .replace(/\{\{link\}\}/g, data.link);
+    }
+    
+    // Preview button handlers
+    $('#preview-access-request').on('click', function() {
+        previewEmail('access_request', '<?php _e('Access Request Email Preview', 'authdocs'); ?>');
+    });
+    
+    $('#preview-auto-response').on('click', function() {
+        previewEmail('auto_response', '<?php _e('Auto-Response Email Preview', 'authdocs'); ?>');
+    });
+    
+    $('#preview-grant-decline').on('click', function() {
+        previewEmail('grant_decline', '<?php _e('Grant/Decline Email Preview', 'authdocs'); ?>');
     });
     
     // Close modal
@@ -158,10 +201,10 @@ jQuery(document).ready(function($) {
         $('#' + tab + '-tab').addClass('active');
     });
     
-    // Test email functionality
-    $('#test-email').on('click', function() {
-        var $btn = $(this);
-        var $result = $('#test-email-result');
+    // Test email functions
+    function testEmail(action, buttonText, successMessage) {
+        var $btn = $('#' + action);
+        var $result = $('#test-email-results');
         
         $btn.prop('disabled', true).text('Sending...');
         $result.html('');
@@ -170,12 +213,12 @@ jQuery(document).ready(function($) {
             url: ajaxurl,
             type: 'POST',
             data: {
-                action: 'authdocs_test_email',
+                action: 'authdocs_' + action,
                 nonce: authdocs_admin.nonce
             },
             success: function(response) {
                 if (response.success) {
-                    $result.html('<div class="notice notice-success"><p>' + response.data + '</p></div>');
+                    $result.html('<div class="notice notice-success"><p>' + successMessage + '</p></div>');
                 } else {
                     $result.html('<div class="notice notice-error"><p>' + response.data + '</p></div>');
                 }
@@ -184,40 +227,22 @@ jQuery(document).ready(function($) {
                 $result.html('<div class="notice notice-error"><p>Error sending test email</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text('Send Test Email');
+                $btn.prop('disabled', false).text(buttonText);
             }
         });
+    }
+    
+    // Test email button handlers
+    $('#test-access-request').on('click', function() {
+        testEmail('test_access_request', 'Test Access Request', 'Access request test email sent successfully!');
     });
     
-    // Test autoresponder functionality
-    $('#test-autoresponder').on('click', function() {
-        var $btn = $(this);
-        var $result = $('#test-autoresponder-result');
-        
-        $btn.prop('disabled', true).text('Sending...');
-        $result.html('');
-        
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'authdocs_test_autoresponder',
-                nonce: authdocs_admin.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    $result.html('<div class="notice notice-success"><p>' + response.data + '</p></div>');
-                } else {
-                    $result.html('<div class="notice notice-error"><p>' + response.data + '</p></div>');
-                }
-            },
-            error: function() {
-                $result.html('<div class="notice notice-error"><p>Error sending test autoresponder email</p></div>');
-            },
-            complete: function() {
-                $btn.prop('disabled', false).text('Send Test Autoresponder');
-            }
-        });
+    $('#test-auto-response').on('click', function() {
+        testEmail('test_auto_response', 'Test Auto-Response', 'Auto-response test email sent successfully!');
+    });
+    
+    $('#test-grant-decline').on('click', function() {
+        testEmail('test_grant_decline', 'Test Grant/Decline', 'Grant/decline test email sent successfully!');
     });
 });
 </script>

@@ -151,9 +151,23 @@ class CustomPostType
             $restricted_param = $restricted === 'yes' ? 'yes' : 'no';
             $shortcode = sprintf('[authdocs id="%d" restricted="%s"]', $post->ID, $restricted_param);
             ?>
-            <p><strong><?php _e('Shortcode:', 'authdocs'); ?></strong></p>
+            <p><strong><?php _e('Single Document Shortcode:', 'authdocs'); ?></strong></p>
             <input type="text" value="<?php echo esc_attr($shortcode); ?>" readonly style="width: 100%;" onclick="this.select();" />
             <p class="description"><?php _e('Copy this shortcode to display the document on your pages.', 'authdocs'); ?></p>
+            
+            <hr style="margin: 20px 0;">
+            
+            <p><strong><?php _e('Grid View Shortcodes:', 'authdocs'); ?></strong></p>
+            <p class="description"><?php _e('Use these shortcodes to display multiple documents in a grid layout:', 'authdocs'); ?></p>
+            
+            <p><strong><?php _e('All Documents:', 'authdocs'); ?></strong></p>
+            <input type="text" value="[authdocs_grid limit=&quot;12&quot; columns=&quot;3&quot;]" readonly style="width: 100%; margin-bottom: 10px;" onclick="this.select();" />
+            
+            <p><strong><?php _e('Restricted Documents Only:', 'authdocs'); ?></strong></p>
+            <input type="text" value="[authdocs_grid restriction=&quot;restricted&quot; limit=&quot;8&quot; columns=&quot;2&quot;]" readonly style="width: 100%; margin-bottom: 10px;" onclick="this.select();" />
+            
+            <p><strong><?php _e('Unrestricted Documents Only:', 'authdocs'); ?></strong></p>
+            <input type="text" value="[authdocs_grid restriction=&quot;unrestricted&quot; limit=&quot;6&quot; columns=&quot;4&quot;]" readonly style="width: 100%;" onclick="this.select();" />
             <?php
         } else {
             ?>
@@ -199,6 +213,7 @@ class CustomPostType
             ?>
             <div class="notice notice-info">
                 <p><strong><?php _e('Document Shortcode:', 'authdocs'); ?></strong> <code><?php echo esc_html($shortcode); ?></code></p>
+                <p><strong><?php _e('Grid View Shortcode:', 'authdocs'); ?></strong> <code>[authdocs_grid limit="12" columns="3"]</code></p>
             </div>
             <?php
         }

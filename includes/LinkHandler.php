@@ -76,9 +76,9 @@ class LinkHandler
         // Fire status change hook
         do_action('authdocs/request_status_changed', $request_id, $old_status, 'accepted');
         
-        // Send access granted email
+        // Send grant email
         $email = new Email();
-        $email_result = $email->send_access_granted_email($request_id);
+        $email_result = $email->send_grant_decline_email($request_id, true);
         
         // Log the action
         $this->log_email_link_action($request_id, $action, $email_result);

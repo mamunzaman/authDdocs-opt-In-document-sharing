@@ -2,7 +2,7 @@
 /**
  * Email handling for AuthDocs plugin
  * 
- * @since 1.1.0 Email logic separation; new autoresponder recipient; trigger fixes.
+ * @since 1.2.0 Three separate email templates with dynamic placeholders
  */
 declare(strict_types=1);
 
@@ -20,30 +20,106 @@ class Email {
     }
     
     /**
-     * Send document access granted email
+     * Send access request email to website owners
      */
-    public function send_access_granted_email(int $request_id): bool {
-        $template = $this->settings->get_email_template();
-        $request = Database::get_request_by_id($request_id);
+    public function send_access_request_email(int $request_id): bool {
+        error_log("AuthDocs: Starting send_access_request_email for request ID: {$request_id}");
         
+        $template = $this->settings->get_access_request_template();
+        error_log("AuthDocs: Access request template retrieved: " . json_encode($template));
+        
+        $request = Database::get_request_by_id($request_id);
         if (!$request) {
-            $this->log_email_attempt($request_id, 'access_granted', '', false, 'Request not found');
+            error_log("AuthDocs: Request not found for ID: {$request_id}");
+            $this->log_email_attempt($request_id, 'access_request', '', false, 'Request not found');
             return false;
         }
         
-        // Resolve recipient
-        $recipient_template = $this->settings->get_access_granted_recipient_email();
-        $recipient = $this->settings->resolve_recipient_email($recipient_template, $request_id);
+        error_log("AuthDocs: Request found: " . json_encode($request));
         
-        if (empty($recipient) || !is_email($recipient)) {
-            $this->log_email_attempt($request_id, 'access_granted', $recipient, false, 'Invalid recipient: ' . $recipient);
+        $recipients = $this->settings->get_access_request_recipients();
+        error_log("AuthDocs: Recipients: " . json_encode($recipients));
+        
+        if (empty($recipients)) {
+            error_log("AuthDocs: No recipients configured");
+            $this->log_email_attempt($request_id, 'access_request', '', false, 'No recipients configured');
             return false;
         }
         
         $variables = [
             'name' => $request->requester_name ?? '',
             'email' => $request->requester_email ?? '',
-            'link' => $this->generate_secure_link($request_id)
+            'file_name' => get_the_title($request->document_id) ?: '',
+            'site_name' => get_bloginfo('name')
+        ];
+        
+        error_log("AuthDocs: Email variables: " . json_encode($variables));
+        
+        $processed_template = $this->settings->process_template($template, $variables);
+        error_log("AuthDocs: Processed template: " . json_encode($processed_template));
+        
+        $subject = $processed_template['subject'];
+        $body = $processed_template['body'];
+        
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        ];
+        
+        $success = true;
+        foreach ($recipients as $recipient) {
+            // Resolve placeholder recipients
+            $resolved_recipient = $this->settings->resolve_recipient_email($recipient, $request_id);
+            if (empty($resolved_recipient) || !is_email($resolved_recipient)) {
+                error_log("AuthDocs: Invalid recipient: {$recipient} -> {$resolved_recipient}");
+                $this->log_email_attempt($request_id, 'access_request', $resolved_recipient, false, 'Invalid recipient: ' . $resolved_recipient);
+                $success = false;
+                continue;
+            }
+            
+            error_log("AuthDocs: Attempting to send access request email to: {$resolved_recipient}");
+            $result = wp_mail($resolved_recipient, $subject, $body, $headers);
+            
+            error_log("AuthDocs: wp_mail result: " . ($result ? 'true' : 'false'));
+            
+            $this->log_email_attempt($request_id, 'access_request', $resolved_recipient, $result, $result ? '' : 'wp_mail failed');
+            
+            if (!$result) {
+                $success = false;
+            }
+        }
+        
+        return $success;
+    }
+    
+    /**
+     * Send auto-response email to requester
+     */
+    public function send_auto_response_email(int $request_id): bool {
+        $template = $this->settings->get_auto_response_template();
+        
+        if (empty($template['enabled'])) {
+            return true; // Not enabled, consider it successful
+        }
+        
+        $request = Database::get_request_by_id($request_id);
+        if (!$request) {
+            $this->log_email_attempt($request_id, 'auto_response', '', false, 'Request not found');
+            return false;
+        }
+        
+        $recipient = $request->requester_email;
+        
+        if (empty($recipient) || !is_email($recipient)) {
+            $this->log_email_attempt($request_id, 'auto_response', $recipient, false, 'Invalid recipient: ' . $recipient);
+            return false;
+        }
+        
+        $variables = [
+            'name' => $request->requester_name ?? '',
+            'email' => $request->requester_email ?? '',
+            'file_name' => get_the_title($request->document_id) ?: '',
+            'site_name' => get_bloginfo('name')
         ];
         
         $processed_template = $this->settings->process_template($template, $variables);
@@ -58,44 +134,55 @@ class Email {
         
         $result = wp_mail($recipient, $subject, $body, $headers);
         
-        $this->log_email_attempt($request_id, 'access_granted', $recipient, $result, $result ? '' : 'wp_mail failed');
+        $this->log_email_attempt($request_id, 'auto_response', $recipient, $result, $result ? '' : 'wp_mail failed');
         
         return $result;
     }
     
     /**
-     * Send autoresponder email
+     * Send grant/decline email to requester
      */
-    public function send_autoresponder_email(int $request_id): bool {
-        $template = $this->settings->get_autoresponder_template();
+    public function send_grant_decline_email(int $request_id, bool $granted): bool {
+        error_log("AuthDocs: Starting send_grant_decline_email for request ID: {$request_id}, granted: " . ($granted ? 'true' : 'false'));
         
-        if (empty($template['enabled'])) {
-            return true; // Not enabled, consider it successful
-        }
+        $template = $this->settings->get_grant_decline_template();
+        error_log("AuthDocs: Grant/decline template retrieved: " . json_encode($template));
         
         $request = Database::get_request_by_id($request_id);
         if (!$request) {
-            $this->log_email_attempt($request_id, 'autoresponder', '', false, 'Request not found');
+            error_log("AuthDocs: Request not found for ID: {$request_id}");
+            $this->log_email_attempt($request_id, 'grant_decline', '', false, 'Request not found');
             return false;
         }
         
-        // Resolve recipient
-        $recipient_template = $this->settings->get_autoresponder_recipient_email();
-        $recipient = $this->settings->resolve_recipient_email($recipient_template, $request_id);
+        error_log("AuthDocs: Request found: " . json_encode($request));
         
-        if (empty($recipient) || !is_email($recipient)) {
-            $this->log_email_attempt($request_id, 'autoresponder', $recipient, false, 'Invalid recipient: ' . $recipient);
+        $recipients = $this->settings->get_grant_decline_recipients();
+        error_log("AuthDocs: Recipients: " . json_encode($recipients));
+        
+        if (empty($recipients)) {
+            error_log("AuthDocs: No recipients configured");
+            $this->log_email_attempt($request_id, 'grant_decline', '', false, 'No recipients configured');
             return false;
         }
+        
+        $status = $granted ? 'Granted' : 'Declined';
+        $status_color = $granted ? '#28a745' : '#dc3545';
         
         $variables = [
             'name' => $request->requester_name ?? '',
             'email' => $request->requester_email ?? '',
-            'document_title' => get_the_title($request->document_id) ?: '',
-            'site_name' => get_bloginfo('name')
+            'file_name' => get_the_title($request->document_id) ?: '',
+            'site_name' => get_bloginfo('name'),
+            'status' => $status,
+            'status_color' => $status_color,
+            'link' => $granted ? $this->generate_secure_link($request_id) : ''
         ];
         
-        $processed_template = $this->settings->process_autoresponder_template($template, $variables);
+        error_log("AuthDocs: Email variables: " . json_encode($variables));
+        
+        $processed_template = $this->settings->process_template($template, $variables);
+        error_log("AuthDocs: Processed template: " . json_encode($processed_template));
         
         $subject = $processed_template['subject'];
         $body = $processed_template['body'];
@@ -105,104 +192,30 @@ class Email {
             'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
         ];
         
-        $result = wp_mail($recipient, $subject, $body, $headers);
-        
-        $this->log_email_attempt($request_id, 'autoresponder', $recipient, $result, $result ? '' : 'wp_mail failed');
-        
-        return $result;
-    }
-    
-    /**
-     * Send admin notification email
-     */
-    public function send_admin_notification_email(string $requester_name, string $requester_email, string $document_title, string $document_id): bool {
-        $recipients = $this->settings->get_recipient_emails();
-        
-        if (empty($recipients)) {
-            return true; // No recipients configured
-        }
-        
-        $subject = sprintf(__('New Document Access Request: %s', 'authdocs'), $document_title);
-        
-        $body = $this->get_admin_notification_body($requester_name, $requester_email, $document_title, $document_id);
-        
-        $headers = [
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-        ];
-        
         $success = true;
         foreach ($recipients as $recipient) {
-            if (!wp_mail($recipient, $subject, $body, $headers)) {
+            // Resolve placeholder recipients
+            $resolved_recipient = $this->settings->resolve_recipient_email($recipient, $request_id);
+            if (empty($resolved_recipient) || !is_email($resolved_recipient)) {
+                error_log("AuthDocs: Invalid recipient: {$recipient} -> {$resolved_recipient}");
+                $this->log_email_attempt($request_id, 'grant_decline', $resolved_recipient, false, 'Invalid recipient: ' . $resolved_recipient);
+                $success = false;
+                continue;
+            }
+            
+            error_log("AuthDocs: Attempting to send grant/decline email to: {$resolved_recipient}");
+            $result = wp_mail($resolved_recipient, $subject, $body, $headers);
+            
+            error_log("AuthDocs: wp_mail result: " . ($result ? 'true' : 'false'));
+            
+            $this->log_email_attempt($request_id, 'grant_decline', $resolved_recipient, $result, $result ? '' : 'wp_mail failed');
+            
+            if (!$result) {
                 $success = false;
             }
         }
         
         return $success;
-    }
-    
-    /**
-     * Get admin notification email body
-     */
-    private function get_admin_notification_body(string $requester_name, string $requester_email, string $document_title, string $document_id): string {
-        $admin_url = admin_url('edit.php?post_type=document&page=authdocs-requests');
-        
-        // Generate action links
-        $request_id = $this->get_request_id_by_document_and_email($document_id, $requester_email);
-        $accept_link = '';
-        $reaccept_link = '';
-        
-        if ($request_id) {
-            $accept_token = Tokens::create($request_id, 'accept');
-            $reaccept_token = Tokens::create($request_id, 'reaccept');
-            
-            $accept_link = $accept_token['url'];
-            $reaccept_link = $reaccept_token['url'];
-        }
-        
-        $action_links_html = '';
-        if ($accept_link && $reaccept_link) {
-            $action_links_html = '
-            <div style="background: #fff; padding: 20px; border-radius: 6px; border: 1px solid #dee2e6; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #007cba;">Quick Actions</h3>
-                <p style="margin-bottom: 15px;">Click one of the links below to immediately grant access:</p>
-                <div style="text-align: center;">
-                    <a href="' . esc_url($accept_link) . '" style="display: inline-block; background: #28a745; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500; margin: 0 10px;">Accept Request</a>
-                    <a href="' . esc_url($reaccept_link) . '" style="display: inline-block; background: #17a2b8; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500; margin: 0 10px;">Re-accept Request</a>
-                </div>
-                <p style="margin-top: 15px; font-size: 12px; color: #6c757d;">These links are secure and will expire in 48 hours. Each link can only be used once.</p>
-            </div>';
-        }
-        
-        return '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Access Request</title>
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: #f8f9fa; padding: 30px; border-radius: 8px; border-left: 4px solid #007cba;">
-        <h1 style="color: #007cba; margin-top: 0; font-size: 24px;">New Document Access Request</h1>
-        
-        <p>A new request for document access has been submitted:</p>
-        
-        <div style="background: #fff; padding: 20px; border-radius: 6px; border: 1px solid #dee2e6; margin: 20px 0;">
-            <p><strong>Requester Name:</strong> ' . esc_html($requester_name) . '</p>
-            <p><strong>Requester Email:</strong> ' . esc_html($requester_email) . '</p>
-            <p><strong>Document:</strong> ' . esc_html($document_title) . '</p>
-            <p><strong>Document ID:</strong> ' . esc_html($document_id) . '</p>
-            <p><strong>Request Date:</strong> ' . date_i18n(get_option('date_format') . ' ' . get_option('time_format')) . '</p>
-        </div>
-        
-        ' . $action_links_html . '
-        
-        <p><a href="' . esc_url($admin_url) . '" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Review Request</a></p>
-        
-        <p>You can review and manage this request from your WordPress admin panel.</p>
-    </div>
-</body>
-</html>';
     }
     
     /**
@@ -262,31 +275,16 @@ class Email {
     }
     
     /**
-     * Get request ID by document ID and requester email
+     * Send test email for access request template
      */
-    private function get_request_id_by_document_and_email(string $document_id, string $requester_email): ?int {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'authdocs_requests';
-        
-        $request_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM $table_name WHERE document_id = %s AND requester_email = %s ORDER BY id DESC LIMIT 1",
-            $document_id,
-            $requester_email
-        ));
-        
-        return $request_id ? (int) $request_id : null;
-    }
-    
-    /**
-     * Send test email to admin
-     */
-    public function send_test_email(): bool {
-        $template = $this->settings->get_email_template();
+    public function send_test_access_request_email(): bool {
+        $template = $this->settings->get_access_request_template();
         
         $variables = [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'link' => 'https://example.com/authdocs/download?hash=test123&file=sample.pdf'
+            'file_name' => 'Sample Document.pdf',
+            'site_name' => get_bloginfo('name')
         ];
         
         $processed_template = $this->settings->process_template($template, $variables);
@@ -299,14 +297,14 @@ class Email {
             'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
         ];
         
-        return wp_mail(get_option('admin_email'), 'TEST: ' . $subject, $body, $headers);
+        return wp_mail(get_option('admin_email'), 'TEST ACCESS REQUEST: ' . $subject, $body, $headers);
     }
     
     /**
-     * Send test autoresponder email to admin
+     * Send test email for auto-response template
      */
-    public function send_test_autoresponder_email(): bool {
-        $template = $this->settings->get_autoresponder_template();
+    public function send_test_auto_response_email(): bool {
+        $template = $this->settings->get_auto_response_template();
         
         if (empty($template['enabled'])) {
             return false; // Not enabled
@@ -315,11 +313,11 @@ class Email {
         $variables = [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'document_title' => 'Sample Document.pdf',
+            'file_name' => 'Sample Document.pdf',
             'site_name' => get_bloginfo('name')
         ];
         
-        $processed_template = $this->settings->process_autoresponder_template($template, $variables);
+        $processed_template = $this->settings->process_template($template, $variables);
         
         $subject = $processed_template['subject'];
         $body = $processed_template['body'];
@@ -329,6 +327,75 @@ class Email {
             'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
         ];
         
-        return wp_mail(get_option('admin_email'), 'TEST AUTORESPONDER: ' . $subject, $body, $headers);
+        return wp_mail(get_option('admin_email'), 'TEST AUTO-RESPONSE: ' . $subject, $body, $headers);
+    }
+    
+    /**
+     * Send test email for grant/decline template
+     */
+    public function send_test_grant_decline_email(bool $granted = true): bool {
+        $template = $this->settings->get_grant_decline_template();
+        
+        $status = $granted ? 'Granted' : 'Declined';
+        $status_color = $granted ? '#28a745' : '#dc3545';
+        
+        $variables = [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'file_name' => 'Sample Document.pdf',
+            'site_name' => get_bloginfo('name'),
+            'status' => $status,
+            'status_color' => $status_color,
+            'link' => $granted ? 'https://example.com/authdocs/download?hash=test123&file=sample.pdf' : ''
+        ];
+        
+        $processed_template = $this->settings->process_template($template, $variables);
+        
+        $subject = $processed_template['subject'];
+        $body = $processed_template['body'];
+        
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        ];
+        
+        $test_type = $granted ? 'GRANT' : 'DECLINE';
+        return wp_mail(get_option('admin_email'), 'TEST ' . $test_type . ': ' . $subject, $body, $headers);
+    }
+    
+    // Legacy methods for backward compatibility
+    public function send_access_granted_email(int $request_id): bool {
+        return $this->send_grant_decline_email($request_id, true);
+    }
+    
+    public function send_autoresponder_email(int $request_id): bool {
+        return $this->send_auto_response_email($request_id);
+    }
+    
+    public function send_admin_notification_email(string $requester_name, string $requester_email, string $document_title, string $document_id): bool {
+        // This method is now handled by send_access_request_email
+        // Find the request ID and call the new method
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'authdocs_requests';
+        
+        $request_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name WHERE document_id = %s AND requester_email = %s ORDER BY id DESC LIMIT 1",
+            $document_id,
+            $requester_email
+        ));
+        
+        if ($request_id) {
+            return $this->send_access_request_email((int) $request_id);
+        }
+        
+        return false;
+    }
+    
+    public function send_test_email(): bool {
+        return $this->send_test_grant_decline_email(true);
+    }
+    
+    public function send_test_autoresponder_email(): bool {
+        return $this->send_test_auto_response_email();
     }
 }

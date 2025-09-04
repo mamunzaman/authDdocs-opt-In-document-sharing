@@ -27,6 +27,14 @@ class Plugin
         add_action('wp_ajax_authdocs_manage_request', [$this, 'handle_request_management']);
         add_action('wp_ajax_authdocs_test_email', [$this, 'handle_test_email']);
         add_action('wp_ajax_authdocs_test_autoresponder', [$this, 'handle_test_autoresponder']);
+        add_action('wp_ajax_authdocs_test_access_request', [$this, 'handle_test_access_request']);
+        add_action('wp_ajax_authdocs_test_auto_response', [$this, 'handle_test_auto_response']);
+        add_action('wp_ajax_authdocs_test_grant_decline', [$this, 'handle_test_grant_decline']);
+        add_action('wp_ajax_authdocs_get_request_data', [$this, 'handle_get_request_data']);
+        add_action('wp_ajax_authdocs_load_more_documents', [$this, 'handle_load_more_documents']);
+        add_action('wp_ajax_nopriv_authdocs_load_more_documents', [$this, 'handle_load_more_documents']);
+        add_action('wp_ajax_authdocs_paginate_documents', [$this, 'handle_paginate_documents']);
+        add_action('wp_ajax_nopriv_authdocs_paginate_documents', [$this, 'handle_paginate_documents']);
         
         // Email hooks
         add_action('authdocs/request_submitted', [$this, 'handle_request_submitted_hook']);
@@ -107,13 +115,17 @@ class Plugin
             true
         );
 
-        wp_localize_script('authdocs-frontend', 'authdocs_ajax', [
+        wp_localize_script('authdocs-frontend', 'authdocs_frontend', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('authdocs_nonce'),
-            'strings' => [
-                'request_sent' => __('Request sent successfully!', 'authdocs'),
-                'error' => __('An error occurred. Please try again.', 'authdocs'),
-            ]
+            'nonce' => wp_create_nonce('authdocs_frontend_nonce'),
+            'request_access_title' => __('Request Document Access', 'authdocs'),
+            'name_label' => __('Full Name', 'authdocs'),
+            'email_label' => __('Email Address', 'authdocs'),
+            'cancel_label' => __('Cancel', 'authdocs'),
+            'submit_label' => __('Submit Request', 'authdocs'),
+            'submitting_label' => __('Submitting...', 'authdocs'),
+            'loading_label' => __('Loading...', 'authdocs'),
+            'load_more_label' => __('Load More Documents', 'authdocs')
         ]);
     }
 
@@ -146,32 +158,49 @@ class Plugin
         wp_localize_script('authdocs-admin', 'authdocs_admin', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('authdocs_manage_nonce'),
+            'site_url' => home_url('/'),
         ]);
     }
 
     public function handle_access_request(): void
     {
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_nonce')) {
-            wp_die(__('Security check failed', 'authdocs'));
-        }
+        try {
+            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+                wp_send_json_error([
+                    'message' => __('Security check failed', 'authdocs')
+                ]);
+            }
 
-        $document_id = intval($_POST['document_id'] ?? 0);
-        $name = sanitize_text_field($_POST['name'] ?? '');
-        $email = sanitize_email($_POST['email'] ?? '');
+            $document_id = intval($_POST['document_id'] ?? 0);
+            $name = sanitize_text_field($_POST['name'] ?? '');
+            $email = sanitize_email($_POST['email'] ?? '');
 
-        if (!$document_id || !$name || !$email) {
-            wp_send_json_error(__('Missing required fields', 'authdocs'));
-        }
+            if (!$document_id || !$name || !$email) {
+                wp_send_json_error([
+                    'message' => __('Missing required fields', 'authdocs')
+                ]);
+            }
 
-        $result = Database::save_access_request($document_id, $name, $email);
-        
-        if ($result) {
-            // Fire the request submitted hook
-            do_action('authdocs/request_submitted', $result);
+            $result = Database::save_access_request($document_id, $name, $email);
             
-            wp_send_json_success(__('Request submitted successfully', 'authdocs'));
-        } else {
-            wp_send_json_error(__('Failed to submit request', 'authdocs'));
+            if ($result) {
+                // Fire the request submitted hook
+                do_action('authdocs/request_submitted', $result);
+                
+                wp_send_json_success([
+                    'message' => __('Request submitted successfully', 'authdocs'),
+                    'request_id' => $result
+                ]);
+            } else {
+                wp_send_json_error([
+                    'message' => __('Failed to submit request', 'authdocs')
+                ]);
+            }
+        } catch (Exception $e) {
+            error_log('AuthDocs: Error in handle_access_request: ' . $e->getMessage());
+            wp_send_json_error([
+                'message' => __('An unexpected error occurred', 'authdocs')
+            ]);
         }
     }
 
@@ -192,11 +221,17 @@ class Plugin
             wp_send_json_error(__('Invalid request', 'authdocs'));
         }
 
-        // Map action to database status
+        // Get current request to determine toggle behavior
+        $current_request = Database::get_request_by_id($request_id);
+        if (!$current_request) {
+            wp_send_json_error(__('Request not found', 'authdocs'));
+        }
+
+        // Map action to database status with toggle logic for inactive
         $status_map = [
             'accept' => 'accepted',
             'decline' => 'declined',
-            'inactive' => 'inactive'
+            'inactive' => $current_request->status === 'inactive' ? 'restore' : 'inactive' // 'restore' will trigger status restoration in Database::update_request_status
         ];
         
         $status = $status_map[$action] ?? $action;
@@ -207,11 +242,17 @@ class Plugin
         $result = Database::update_request_status($request_id, $status);
         
         if ($result) {
-            // Fire the status change hook
-            do_action('authdocs/request_status_changed', $request_id, $old_status, $status);
+            // Get the actual final status after update (in case it was restored from pending)
+            $final_status = Database::get_request_status($request_id);
+            error_log("AuthDocs: Request updated successfully. Old status: {$old_status}, Final status: {$final_status}");
+            
+            // Fire the status change hook with the final status
+            error_log("AuthDocs: Firing status change hook with final status: {$final_status}");
+            do_action('authdocs/request_status_changed', $request_id, $old_status, $final_status);
             
             wp_send_json_success(__('Request updated successfully', 'authdocs'));
         } else {
+            error_log("AuthDocs: Failed to update request status");
             wp_send_json_error(__('Failed to update request', 'authdocs'));
         }
     }
@@ -429,13 +470,76 @@ class Plugin
         }
     }
     
+    public function handle_test_access_request(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'authdocs'));
+        }
+        
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'authdocs'));
+        }
+        
+        $email = new Email();
+        $result = $email->send_test_access_request_email();
+        
+        if ($result) {
+            wp_send_json_success(__('Test access request email sent successfully! Check your admin email.', 'authdocs'));
+        } else {
+            wp_send_json_error(__('Failed to send test access request email. Check your WordPress email configuration.', 'authdocs'));
+        }
+    }
+    
+    public function handle_test_auto_response(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'authdocs'));
+        }
+        
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'authdocs'));
+        }
+        
+        $email = new Email();
+        $result = $email->send_test_auto_response_email();
+        
+        if ($result) {
+            wp_send_json_success(__('Test auto-response email sent successfully! Check your admin email.', 'authdocs'));
+        } else {
+            wp_send_json_error(__('Failed to send test auto-response email. Make sure auto-response is enabled and check your WordPress email configuration.', 'authdocs'));
+        }
+    }
+    
+    public function handle_test_grant_decline(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'authdocs'));
+        }
+        
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'authdocs'));
+        }
+        
+        $email = new Email();
+        $result = $email->send_test_grant_decline_email(true); // Test with granted status
+        
+        if ($result) {
+            wp_send_json_success(__('Test grant/decline email sent successfully! Check your admin email.', 'authdocs'));
+        } else {
+            wp_send_json_error(__('Failed to send test grant/decline email. Check your WordPress email configuration.', 'authdocs'));
+        }
+    }
+    
     /**
      * Handle request submitted hook
      */
     public function handle_request_submitted(int $request_id): void
     {
         $email = new Email();
-        $email->send_autoresponder_email($request_id);
+        // Send access request notification to website owners
+        $email->send_access_request_email($request_id);
+        // Send auto-response to requester
+        $email->send_auto_response_email($request_id);
     }
     
     /**
@@ -450,7 +554,10 @@ class Plugin
         
         $request_id = (int) $request_id;
         $email = new Email();
-        $email->send_autoresponder_email($request_id);
+        // Send access request notification to website owners
+        $email->send_access_request_email($request_id);
+        // Send auto-response to requester
+        $email->send_auto_response_email($request_id);
     }
     
     /**
@@ -458,10 +565,13 @@ class Plugin
      */
     public function handle_request_status_changed(int $request_id, string $old_status, string $new_status): void
     {
-        // Only send access granted email when status changes to 'accepted'
+        $email = new Email();
+        
+        // Send grant/decline email based on status
         if ($new_status === 'accepted') {
-            $email = new Email();
-            $email->send_access_granted_email($request_id);
+            $email->send_grant_decline_email($request_id, true);
+        } elseif ($new_status === 'declined') {
+            $email->send_grant_decline_email($request_id, false);
         }
     }
     
@@ -470,8 +580,11 @@ class Plugin
      */
     public function handle_request_status_changed_hook($request_id, $old_status = '', $new_status = ''): void
     {
+        error_log("AuthDocs: handle_request_status_changed_hook called - Request ID: {$request_id}, Old Status: {$old_status}, New Status: {$new_status}");
+        
         // Ensure we have the required parameters
         if (!is_numeric($request_id)) {
+            error_log("AuthDocs: Invalid request ID: {$request_id}");
             return;
         }
         
@@ -479,10 +592,269 @@ class Plugin
         $old_status = (string) $old_status;
         $new_status = (string) $new_status;
         
-        // Only send access granted email when status changes to 'accepted'
+        error_log("AuthDocs: Processed parameters - Request ID: {$request_id}, Old Status: {$old_status}, New Status: {$new_status}");
+        
+        $email = new Email();
+        
+        // Send grant/decline email based on status
         if ($new_status === 'accepted') {
-            $email = new Email();
-            $email->send_access_granted_email($request_id);
+            error_log("AuthDocs: Status is 'accepted', sending grant email");
+            $email->send_grant_decline_email($request_id, true);
+        } elseif ($new_status === 'declined') {
+            error_log("AuthDocs: Status is 'declined', sending decline email");
+            $email->send_grant_decline_email($request_id, false);
+        } else {
+            error_log("AuthDocs: Status is not 'accepted' or 'declined' ({$new_status}), not sending email");
         }
+    }
+    
+    /**
+     * Handle AJAX request to get updated request data
+     */
+    public function handle_get_request_data(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'authdocs'));
+        }
+
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'authdocs'));
+        }
+
+        $request_id = intval($_POST['request_id'] ?? 0);
+        
+        if (!$request_id) {
+            wp_send_json_error(__('Request ID required', 'authdocs'));
+        }
+
+        $request = Database::get_request_by_id($request_id);
+        if (!$request) {
+            wp_send_json_error(__('Request not found', 'authdocs'));
+        }
+
+        // Get document file information
+        $document_file = Database::get_document_file(intval($request->document_id));
+        
+        // Prepare response data
+        $response_data = [
+            'id' => $request->id,
+            'document_id' => $request->document_id,
+            'requester_name' => $request->requester_name,
+            'requester_email' => $request->requester_email,
+            'status' => $request->status,
+            'secure_hash' => $request->secure_hash,
+            'created_at' => $request->created_at,
+            'document_file' => $document_file
+        ];
+
+        wp_send_json_success($response_data);
+    }
+    
+    /**
+     * Handle AJAX request to load more documents for grid view
+     */
+    public function handle_load_more_documents(): void
+    {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed', 'authdocs')
+            ]);
+        }
+
+        $limit = intval($_POST['limit'] ?? 12);
+        $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
+        
+        // Validate inputs
+        if ($limit < 1) $limit = 12;
+        if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
+        
+        $documents = Database::get_published_documents($limit, $restriction);
+        
+        if (empty($documents)) {
+            wp_send_json_error([
+                'message' => __('No documents found.', 'authdocs')
+            ]);
+        }
+        
+        // Generate HTML for the grid items
+        ob_start();
+        foreach ($documents as $document): ?>
+            <div class="authdocs-grid-item">
+                <div class="authdocs-grid-item-content">
+                    <div class="authdocs-grid-item-header">
+                        <h3 class="authdocs-grid-item-title">
+                            <?php echo esc_html($document['title']); ?>
+                        </h3>
+                        <div class="authdocs-grid-item-date">
+                            <?php echo esc_html($document['date']); ?>
+                        </div>
+                    </div>
+                    
+                    <?php if (!empty($document['description'])): ?>
+                        <div class="authdocs-grid-item-description">
+                            <?php echo wp_kses_post(wp_trim_words($document['description'], 20)); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="authdocs-grid-item-actions">
+                        <?php if ($document['restricted']): ?>
+                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>">
+                                <?php _e('Request Access', 'authdocs'); ?>
+                            </button>
+                        <?php else: ?>
+                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download>
+                                <?php _e('Download', 'authdocs'); ?>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach;
+        $html = ob_get_clean();
+        
+        // Check if there are more documents available
+        $total_documents = Database::get_total_requests_count();
+        $has_more = $total_documents > $limit;
+        
+        wp_send_json_success([
+            'html' => $html,
+            'has_more' => $has_more,
+            'total' => $total_documents,
+            'current_limit' => $limit
+        ]);
+    }
+    
+    /**
+     * Handle AJAX request to paginate documents for grid view
+     */
+    public function handle_paginate_documents(): void
+    {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed', 'authdocs')
+            ]);
+        }
+
+        $page = intval($_POST['page'] ?? 1);
+        $limit = intval($_POST['limit'] ?? 12);
+        $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
+        $orderby = sanitize_text_field($_POST['orderby'] ?? 'date');
+        $order = sanitize_text_field($_POST['order'] ?? 'DESC');
+        
+        // Validate inputs
+        if ($page < 1) $page = 1;
+        if ($limit < 1) $limit = 12;
+        if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
+        if (!in_array($orderby, ['date', 'title'])) $orderby = 'date';
+        if (!in_array($order, ['ASC', 'DESC'])) $order = 'DESC';
+        
+        $documents = Database::get_published_documents($limit, $restriction, $page, $orderby, $order);
+        $total_documents = Database::get_published_documents_count($restriction);
+        $total_pages = ceil($total_documents / $limit);
+        
+        if (empty($documents)) {
+            wp_send_json_error([
+                'message' => __('No documents found.', 'authdocs')
+            ]);
+        }
+        
+        // Generate HTML for the grid items
+        ob_start();
+        foreach ($documents as $document): ?>
+            <div class="authdocs-grid-item">
+                <div class="authdocs-grid-item-content">
+                    <div class="authdocs-grid-item-header">
+                        <h3 class="authdocs-grid-item-title">
+                            <?php echo esc_html($document['title']); ?>
+                        </h3>
+                        <div class="authdocs-grid-item-date">
+                            <?php echo esc_html($document['date']); ?>
+                        </div>
+                    </div>
+                    
+                    <?php if (!empty($document['description'])): ?>
+                        <div class="authdocs-grid-item-description">
+                            <?php echo wp_kses_post(wp_trim_words($document['description'], 20)); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="authdocs-grid-item-actions">
+                        <?php if ($document['restricted']): ?>
+                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>">
+                                <?php _e('Request Access', 'authdocs'); ?>
+                            </button>
+                        <?php else: ?>
+                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download>
+                                <?php _e('Download', 'authdocs'); ?>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach;
+        $html = ob_get_clean();
+        
+        // Generate pagination HTML
+        ob_start();
+        if ($total_pages > 1): ?>
+            <div class="authdocs-pagination">
+                <div class="authdocs-pagination-info">
+                    <?php 
+                    $start = (($page - 1) * $limit) + 1;
+                    $end = min($page * $limit, $total_documents);
+                    printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                    ?>
+                </div>
+                
+                <div class="authdocs-pagination-links">
+                    <?php if ($page > 1): ?>
+                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($page - 1); ?>">
+                            <?php _e('Previous', 'authdocs'); ?>
+                        </button>
+                    <?php endif; ?>
+                    
+                    <div class="authdocs-pagination-numbers">
+                        <?php
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        if ($start_page > 1): ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
+                            <?php if ($start_page > 2): ?>
+                                <span class="authdocs-pagination-ellipsis">...</span>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        
+                        <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number <?php echo $i === $page ? 'active' : ''; ?>" data-page="<?php echo esc_attr($i); ?>">
+                                <?php echo $i; ?>
+                            </button>
+                        <?php endfor; ?>
+                        
+                        <?php if ($end_page < $total_pages): ?>
+                            <?php if ($end_page < $total_pages - 1): ?>
+                                <span class="authdocs-pagination-ellipsis">...</span>
+                            <?php endif; ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <?php if ($page < $total_pages): ?>
+                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($page + 1); ?>">
+                            <?php _e('Next', 'authdocs'); ?>
+                        </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif;
+        $pagination_html = ob_get_clean();
+        
+        wp_send_json_success([
+            'html' => $html,
+            'pagination_html' => $pagination_html,
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total_documents' => $total_documents
+        ]);
     }
 }

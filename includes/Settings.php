@@ -2,7 +2,7 @@
 /**
  * Settings management for AuthDocs plugin
  * 
- * @since 1.1.0 Email logic separation; new autoresponder recipient; trigger fixes.
+ * @since 1.2.0 Three separate email templates with dynamic placeholders
  */
 declare(strict_types=1);
 
@@ -14,11 +14,11 @@ namespace AuthDocs;
 class Settings {
     
     private const OPTION_GROUP = 'authdocs_options';
-    private const OPTION_NAME = 'authdocs_email_template';
-    private const RECIPIENT_OPTION_NAME = 'authdocs_recipient_emails';
-    private const AUTORESPONDER_OPTION_NAME = 'authdocs_autoresponder_template';
-    private const AUTORESPONDER_RECIPIENT_OPTION_NAME = 'authdocs_autoresponder_recipient_email';
-    private const ACCESS_GRANTED_RECIPIENT_OPTION_NAME = 'authdocs_access_granted_recipient_email';
+    private const ACCESS_REQUEST_TEMPLATE_NAME = 'authdocs_access_request_template';
+    private const AUTO_RESPONSE_TEMPLATE_NAME = 'authdocs_auto_response_template';
+    private const GRANT_DECLINE_TEMPLATE_NAME = 'authdocs_grant_decline_template';
+    private const ACCESS_REQUEST_RECIPIENTS_NAME = 'authdocs_access_request_recipients';
+    private const GRANT_DECLINE_RECIPIENTS_NAME = 'authdocs_grant_decline_recipients';
     private const SECRET_KEY_OPTION_NAME = 'authdocs_secret_key';
     
     public function __construct() {
@@ -31,51 +31,51 @@ class Settings {
     public function init_settings(): void {
         register_setting(
             self::OPTION_GROUP,
-            self::OPTION_NAME,
+            self::ACCESS_REQUEST_TEMPLATE_NAME,
             [
                 'type' => 'array',
                 'sanitize_callback' => [$this, 'sanitize_email_template'],
-                'default' => $this->get_default_template()
+                'default' => $this->get_default_access_request_template()
             ]
         );
         
         register_setting(
             self::OPTION_GROUP,
-            self::RECIPIENT_OPTION_NAME,
+            self::AUTO_RESPONSE_TEMPLATE_NAME,
+            [
+                'type' => 'array',
+                'sanitize_callback' => [$this, 'sanitize_email_template'],
+                'default' => $this->get_default_auto_response_template()
+            ]
+        );
+        
+        register_setting(
+            self::OPTION_GROUP,
+            self::GRANT_DECLINE_TEMPLATE_NAME,
+            [
+                'type' => 'array',
+                'sanitize_callback' => [$this, 'sanitize_email_template'],
+                'default' => $this->get_default_grant_decline_template()
+            ]
+        );
+        
+        register_setting(
+            self::OPTION_GROUP,
+            self::ACCESS_REQUEST_RECIPIENTS_NAME,
             [
                 'type' => 'string',
                 'sanitize_callback' => [$this, 'sanitize_recipient_emails'],
-                'default' => ''
-            ]
-        );
-        
-        register_setting(
-            self::OPTION_GROUP,
-            self::AUTORESPONDER_OPTION_NAME,
-            [
-                'type' => 'array',
-                'sanitize_callback' => [$this, 'sanitize_autoresponder_template'],
-                'default' => $this->get_default_autoresponder_template()
-            ]
-        );
-        
-        register_setting(
-            self::OPTION_GROUP,
-            self::AUTORESPONDER_RECIPIENT_OPTION_NAME,
-            [
-                'type' => 'string',
-                'sanitize_callback' => [$this, 'sanitize_recipient_email'],
-                'default' => '{{requester_email}}'
-            ]
-        );
-        
-        register_setting(
-            self::OPTION_GROUP,
-            self::ACCESS_GRANTED_RECIPIENT_OPTION_NAME,
-            [
-                'type' => 'string',
-                'sanitize_callback' => [$this, 'sanitize_recipient_email'],
                 'default' => get_option('admin_email')
+            ]
+        );
+        
+        register_setting(
+            self::OPTION_GROUP,
+            self::GRANT_DECLINE_RECIPIENTS_NAME,
+            [
+                'type' => 'string',
+                'sanitize_callback' => [$this, 'sanitize_recipient_emails'],
+                'default' => '{{email}}'
             ]
         );
         
@@ -86,175 +86,194 @@ class Settings {
             update_option(self::SECRET_KEY_OPTION_NAME, $secret_key);
         }
         
-        // Main Email Template Section
+        // Access Request Email Section
         add_settings_section(
-            'authdocs_email_section',
-            __('Email Template Settings', 'authdocs'),
-            [$this, 'render_section_description'],
+            'authdocs_access_request_section',
+            __('Access Request Email Template', 'authdocs'),
+            [$this, 'render_access_request_section_description'],
             'authdocs-settings'
         );
         
         add_settings_field(
-            'email_subject',
+            'access_request_subject',
             __('Email Subject', 'authdocs'),
-            [$this, 'render_subject_field'],
+            [$this, 'render_access_request_subject_field'],
             'authdocs-settings',
-            'authdocs_email_section'
+            'authdocs_access_request_section'
         );
         
         add_settings_field(
-            'email_body',
+            'access_request_body',
             __('Email Body (HTML)', 'authdocs'),
-            [$this, 'render_body_field'],
+            [$this, 'render_access_request_body_field'],
             'authdocs-settings',
-            'authdocs_email_section'
+            'authdocs_access_request_section'
         );
         
         add_settings_field(
-            'email_variables',
-            __('Available Variables', 'authdocs'),
-            [$this, 'render_variables_help'],
-            'authdocs-settings',
-            'authdocs_email_section'
-        );
-        
-        // Recipient Emails Section
-        add_settings_section(
-            'authdocs_recipient_section',
-            __('Recipient Settings', 'authdocs'),
-            [$this, 'render_recipient_section_description'],
-            'authdocs-settings'
-        );
-        
-        add_settings_field(
-            'recipient_emails',
+            'access_request_recipients',
             __('Recipient Email Addresses', 'authdocs'),
-            [$this, 'render_recipient_field'],
+            [$this, 'render_access_request_recipients_field'],
             'authdocs-settings',
-            'authdocs_recipient_section'
+            'authdocs_access_request_section'
         );
         
-        // Autoresponder Section
+        add_settings_field(
+            'access_request_variables',
+            __('Available Variables', 'authdocs'),
+            [$this, 'render_access_request_variables_help'],
+            'authdocs-settings',
+            'authdocs_access_request_section'
+        );
+        
+        // Auto-Response Email Section
         add_settings_section(
-            'authdocs_autoresponder_section',
-            __('Autoresponder Template', 'authdocs'),
-            [$this, 'render_autoresponder_section_description'],
+            'authdocs_auto_response_section',
+            __('Auto-Response Email Template', 'authdocs'),
+            [$this, 'render_auto_response_section_description'],
             'authdocs-settings'
         );
         
         add_settings_field(
-            'autoresponder_enable',
-            __('Enable Autoresponder', 'authdocs'),
-            [$this, 'render_autoresponder_enable_field'],
+            'auto_response_enable',
+            __('Enable Auto-Response', 'authdocs'),
+            [$this, 'render_auto_response_enable_field'],
             'authdocs-settings',
-            'authdocs_autoresponder_section'
+            'authdocs_auto_response_section'
         );
         
         add_settings_field(
-            'autoresponder_subject',
-            __('Autoresponder Subject', 'authdocs'),
-            [$this, 'render_autoresponder_subject_field'],
+            'auto_response_subject',
+            __('Email Subject', 'authdocs'),
+            [$this, 'render_auto_response_subject_field'],
             'authdocs-settings',
-            'authdocs_autoresponder_section'
+            'authdocs_auto_response_section'
         );
         
         add_settings_field(
-            'autoresponder_body',
-            __('Autoresponder Body (HTML)', 'authdocs'),
-            [$this, 'render_autoresponder_body_field'],
+            'auto_response_body',
+            __('Email Body (HTML)', 'authdocs'),
+            [$this, 'render_auto_response_body_field'],
             'authdocs-settings',
-            'authdocs_autoresponder_section'
+            'authdocs_auto_response_section'
         );
         
         add_settings_field(
-            'autoresponder_variables',
+            'auto_response_variables',
             __('Available Variables', 'authdocs'),
-            [$this, 'render_autoresponder_variables_help'],
+            [$this, 'render_auto_response_variables_help'],
             'authdocs-settings',
-            'authdocs_autoresponder_section'
+            'authdocs_auto_response_section'
+        );
+        
+        // Grant/Decline Email Section
+        add_settings_section(
+            'authdocs_grant_decline_section',
+            __('Grant/Decline Email Template', 'authdocs'),
+            [$this, 'render_grant_decline_section_description'],
+            'authdocs-settings'
         );
         
         add_settings_field(
-            'autoresponder_recipient',
-            __('Recipient Email', 'authdocs'),
-            [$this, 'render_autoresponder_recipient_field'],
+            'grant_decline_subject',
+            __('Email Subject', 'authdocs'),
+            [$this, 'render_grant_decline_subject_field'],
             'authdocs-settings',
-            'authdocs_autoresponder_section'
+            'authdocs_grant_decline_section'
         );
         
         add_settings_field(
-            'access_granted_recipient',
-            __('Recipient Email', 'authdocs'),
-            [$this, 'render_access_granted_recipient_field'],
+            'grant_decline_body',
+            __('Email Body (HTML)', 'authdocs'),
+            [$this, 'render_grant_decline_body_field'],
             'authdocs-settings',
-            'authdocs_email_section'
+            'authdocs_grant_decline_section'
+        );
+        
+        add_settings_field(
+            'grant_decline_recipients',
+            __('Recipient Email Addresses', 'authdocs'),
+            [$this, 'render_grant_decline_recipients_field'],
+            'authdocs-settings',
+            'authdocs_grant_decline_section'
+        );
+        
+        add_settings_field(
+            'grant_decline_variables',
+            __('Available Variables', 'authdocs'),
+            [$this, 'render_grant_decline_variables_help'],
+            'authdocs-settings',
+            'authdocs_grant_decline_section'
         );
     }
     
     /**
-     * Get default email template
+     * Get default access request template
      */
-    private function get_default_template(): array {
+    private function get_default_access_request_template(): array {
         return [
-            'subject' => __('Your document access has been granted', 'authdocs'),
-            'body' => $this->get_default_body_html()
+            'subject' => __('New Document Access Request: {{file_name}}', 'authdocs'),
+            'body' => $this->get_default_access_request_body_html()
         ];
     }
     
     /**
-     * Get default autoresponder template
+     * Get default auto-response template
      */
-    private function get_default_autoresponder_template(): array {
+    private function get_default_auto_response_template(): array {
         return [
             'enabled' => false,
-            'subject' => __('Document Access Request Received', 'authdocs'),
-            'body' => $this->get_default_autoresponder_body_html()
+            'subject' => __('Document Access Request Received - {{site_name}}', 'authdocs'),
+            'body' => $this->get_default_auto_response_body_html()
         ];
     }
     
     /**
-     * Get default email body HTML
+     * Get default grant/decline template
      */
-    private function get_default_body_html(): string {
+    private function get_default_grant_decline_template(): array {
+        return [
+            'subject' => __('Document Access {{status}} - {{file_name}}', 'authdocs'),
+            'body' => $this->get_default_grant_decline_body_html()
+        ];
+    }
+    
+    /**
+     * Get default access request body HTML
+     */
+    private function get_default_access_request_body_html(): string {
         return '<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Access Granted</title>
+    <title>New Document Access Request</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: #f8f9fa; padding: 30px; border-radius: 8px; border-left: 4px solid #28a745;">
-        <h1 style="color: #28a745; margin-top: 0; font-size: 24px;">Document Access Granted</h1>
+    <div style="background: #f8f9fa; padding: 30px; border-radius: 8px; border-left: 4px solid #007cba;">
+        <h1 style="color: #007cba; margin-top: 0; font-size: 24px;">New Document Access Request</h1>
         
-        <p>Hello {{name}},</p>
-        
-        <p>Your request for document access has been approved. You can now view or download the document using the secure link below:</p>
+        <p>A new request for document access has been submitted:</p>
         
         <div style="background: #fff; padding: 20px; border-radius: 6px; border: 1px solid #dee2e6; margin: 20px 0;">
-            <p style="margin: 0 0 15px 0; font-weight: bold; color: #495057;">Secure Download Link:</p>
-            <a href="{{link}}" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Access Document</a>
-            <p style="margin: 10px 0 0 0; font-size: 12px; color: #6c757d;">Or copy this link: <span style="word-break: break-all;">{{link}}</span></p>
+            <p><strong>Requester Name:</strong> {{name}}</p>
+            <p><strong>Requester Email:</strong> {{email}}</p>
+            <p><strong>Document:</strong> {{file_name}}</p>
+            <p><strong>Request Date:</strong> ' . date_i18n(get_option('date_format') . ' ' . get_option('time_format')) . '</p>
         </div>
         
-        <p><strong>Important:</strong> This link is unique to your email address and should not be shared with others.</p>
+        <p><a href="' . admin_url('edit.php?post_type=document&page=authdocs-requests') . '" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Review Request</a></p>
         
-        <p>If you have any questions, please contact us.</p>
-        
-        <p>Best regards,<br>Your Team</p>
-    </div>
-    
-    <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6c757d; font-size: 12px;">
-        <p>This email was sent to {{email}}</p>
+        <p>You can review and manage this request from your WordPress admin panel.</p>
     </div>
 </body>
 </html>';
     }
     
     /**
-     * Get default autoresponder body HTML
+     * Get default auto-response body HTML
      */
-    private function get_default_autoresponder_body_html(): string {
+    private function get_default_auto_response_body_html(): string {
         return '<!DOCTYPE html>
 <html>
 <head>
@@ -266,27 +285,74 @@ class Settings {
     <div style="background: #f8f9fa; padding: 30px; border-radius: 8px; border-left: 4px solid #007cba;">
         <h1 style="color: #007cba; margin-top: 0; font-size: 24px;">Document Access Request Received</h1>
         
-        <p>Hello {name},</p>
+        <p>Hello {{name}},</p>
         
-        <p>Thank you for your request to access the document: <strong>{document_title}</strong></p>
+        <p>Thank you for your request to access the document: <strong>{{file_name}}</strong></p>
         
         <p>We have received your request and it is currently being reviewed by our team. You will receive another email once your access has been approved or declined.</p>
         
         <p><strong>Request Details:</strong></p>
         <ul style="background: #fff; padding: 20px; border-radius: 6px; border: 1px solid #dee2e6; margin: 20px 0;">
-            <li><strong>Requester:</strong> {name}</li>
-            <li><strong>Email:</strong> {email}</li>
-            <li><strong>Document:</strong> {document_title}</li>
+            <li><strong>Requester:</strong> {{name}}</li>
+            <li><strong>Email:</strong> {{email}}</li>
+            <li><strong>Document:</strong> {{file_name}}</li>
             <li><strong>Request Date:</strong> ' . date_i18n(get_option('date_format') . ' ' . get_option('time_format')) . '</li>
         </ul>
         
         <p>We typically process requests within 24-48 hours. If you have any urgent questions, please contact us directly.</p>
         
-        <p>Best regards,<br>{site_name} Team</p>
+        <p>Best regards,<br>{{site_name}} Team</p>
     </div>
     
     <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6c757d; font-size: 12px;">
         <p>This is an automated response to your document access request.</p>
+    </div>
+</body>
+</html>';
+    }
+    
+    /**
+     * Get default grant/decline body HTML
+     */
+    private function get_default_grant_decline_body_html(): string {
+        return '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Access {{status}}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: #f8f9fa; padding: 30px; border-radius: 8px; border-left: 4px solid {{status_color}};">
+        <h1 style="color: {{status_color}}; margin-top: 0; font-size: 24px;">Document Access {{status}}</h1>
+        
+        <p>Hello {{name}},</p>
+        
+        {{#if granted}}
+        <p>Your request for document access has been approved. You can now view or download the document using the secure link below:</p>
+        
+        <div style="background: #fff; padding: 20px; border-radius: 6px; border: 1px solid #dee2e6; margin: 20px 0;">
+            <p style="margin: 0 0 15px 0; font-weight: bold; color: #495057;">Secure Download Link:</p>
+            <a href="{{link}}" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Access Document</a>
+            <p style="margin: 10px 0 0 0; font-size: 12px; color: #6c757d;">Or copy this link: <span style="word-break: break-all;">{{link}}</span></p>
+        </div>
+        
+        <p><strong>Important:</strong> This link is unique to your email address and should not be shared with others.</p>
+        {{else}}
+        <p>We regret to inform you that your request for document access has been declined.</p>
+        
+        <p><strong>Document:</strong> {{file_name}}</p>
+        
+        <p>If you believe this is an error or have any questions, please contact us directly.</p>
+        {{/if}}
+        
+        <p>If you have any questions, please contact us.</p>
+        
+        <p>Best regards,<br>{{site_name}} Team</p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px; padding: 20px; color: #6c757d; font-size: 12px;">
+        <p>This email was sent to {{email}}</p>
     </div>
 </body>
 </html>';
@@ -298,7 +364,8 @@ class Settings {
     public function sanitize_email_template(array $input): array {
         return [
             'subject' => sanitize_text_field($input['subject'] ?? ''),
-            'body' => wp_kses_post($input['body'] ?? '')
+            'body' => wp_kses_post($input['body'] ?? ''),
+            'enabled' => !empty($input['enabled'])
         ];
     }
     
@@ -310,78 +377,33 @@ class Settings {
         $valid_emails = [];
         
         foreach ($emails as $email) {
-            if (!empty($email) && is_email($email)) {
-                $valid_emails[] = sanitize_email($email);
+            if (!empty($email) && (is_email($email) || preg_match('/^\{\{[a-zA-Z_]+\}\}$/', $email))) {
+                $valid_emails[] = sanitize_text_field($email);
             }
         }
         
         return implode(', ', $valid_emails);
     }
     
-    /**
-     * Sanitize autoresponder template data
-     */
-    public function sanitize_autoresponder_template(array $input): array {
-        return [
-            'enabled' => !empty($input['enabled']),
-            'subject' => sanitize_text_field($input['subject'] ?? ''),
-            'body' => wp_kses_post($input['body'] ?? '')
-        ];
+    // Render methods for Access Request Email
+    public function render_access_request_section_description(): void {
+        echo '<p>' . __('Configure the email template that will be sent to website owners when a document access request is submitted.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Sanitize recipient email (supports placeholders)
-     */
-    public function sanitize_recipient_email(string $input): string {
-        $input = trim($input);
-        
-        // Check if it's a valid email
-        if (is_email($input)) {
-            return sanitize_email($input);
-        }
-        
-        // Check if it's a valid placeholder pattern
-        if (preg_match('/^\{\{[a-zA-Z_]+\}\}$/', $input)) {
-            return $input;
-        }
-        
-        // Invalid input - return empty string and add admin notice
-        add_settings_error(
-            'authdocs_recipient_email',
-            'invalid_recipient',
-            sprintf(__('Invalid recipient email "%s". Must be a valid email address or a supported placeholder (e.g., {{requester_email}}).', 'authdocs'), $input)
-        );
-        
-        return '';
-    }
-    
-    /**
-     * Render section description
-     */
-    public function render_section_description(): void {
-        echo '<p>' . __('Configure the email template that will be sent when document access is granted. Use the variables below to personalize your emails.', 'authdocs') . '</p>';
-    }
-    
-    /**
-     * Render subject field
-     */
-    public function render_subject_field(): void {
-        $template = $this->get_email_template();
+    public function render_access_request_subject_field(): void {
+        $template = $this->get_access_request_template();
         $subject = $template['subject'] ?? '';
         
-        echo '<input type="text" id="email_subject" name="' . self::OPTION_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
-        echo '<p class="description">' . __('Subject line for the access granted email. You can use variables like {{name}}.', 'authdocs') . '</p>';
+        echo '<input type="text" id="access_request_subject" name="' . self::ACCESS_REQUEST_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
+        echo '<p class="description">' . __('Subject line for the access request notification email.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Render body field
-     */
-    public function render_body_field(): void {
-        $template = $this->get_email_template();
+    public function render_access_request_body_field(): void {
+        $template = $this->get_access_request_template();
         $body = $template['body'] ?? '';
         
         $editor_settings = [
-            'textarea_name' => self::OPTION_NAME . '[body]',
+            'textarea_name' => self::ACCESS_REQUEST_TEMPLATE_NAME . '[body]',
             'textarea_rows' => 15,
             'media_buttons' => false,
             'tinymce' => [
@@ -408,82 +430,57 @@ class Settings {
             'editor_height' => 300
         ];
         
-        wp_editor($body, 'email_body', $editor_settings);
-        echo '<p class="description">' . __('HTML email body. Use the variables below to personalize your emails. You can use the rich editor above or switch to HTML mode for advanced customization.', 'authdocs') . '</p>';
+        wp_editor($body, 'access_request_body', $editor_settings);
+        echo '<p class="description">' . __('HTML email body for access request notifications.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Render variables help
-     */
-    public function render_variables_help(): void {
+    public function render_access_request_recipients_field(): void {
+        $recipients = get_option(self::ACCESS_REQUEST_RECIPIENTS_NAME, get_option('admin_email'));
+        
+        echo '<input type="text" id="access_request_recipients" name="' . self::ACCESS_REQUEST_RECIPIENTS_NAME . '" value="' . esc_attr($recipients) . '" class="regular-text" placeholder="admin@example.com, manager@example.com" />';
+        echo '<p class="description">' . __('Enter email addresses separated by commas. These will receive notifications when access is requested.', 'authdocs') . '</p>';
+    }
+    
+    public function render_access_request_variables_help(): void {
         echo '<div class="authdocs-variables-help">';
         echo '<h4>' . __('Available Variables:', 'authdocs') . '</h4>';
         echo '<ul style="list-style: disc; margin-left: 20px;">';
         echo '<li><code>{{name}}</code> - ' . __('Requester\'s name', 'authdocs') . '</li>';
         echo '<li><code>{{email}}</code> - ' . __('Requester\'s email address', 'authdocs') . '</li>';
-        echo '<li><code>{{link}}</code> - ' . __('Generated secure download/view link', 'authdocs') . '</li>';
+        echo '<li><code>{{file_name}}</code> - ' . __('Name of the requested file', 'authdocs') . '</li>';
+        echo '<li><code>{{site_name}}</code> - ' . __('Name of your website', 'authdocs') . '</li>';
         echo '</ul>';
-        echo '<p><strong>' . __('Note:', 'authdocs') . '</strong> ' . __('If a variable is missing, it will be replaced with an empty string.', 'authdocs') . '</p>';
         echo '</div>';
     }
     
-    /**
-     * Render recipient section description
-     */
-    public function render_recipient_section_description(): void {
-        echo '<p>' . __('Configure email addresses that will receive notifications when document access is requested or granted. Leave empty to use the site admin email.', 'authdocs') . '</p>';
+    // Render methods for Auto-Response Email
+    public function render_auto_response_section_description(): void {
+        echo '<p>' . __('Configure the automatic response email that will be sent to users when they request document access.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Render recipient field
-     */
-    public function render_recipient_field(): void {
-        $recipients = get_option(self::RECIPIENT_OPTION_NAME, '');
-        
-        echo '<input type="text" id="recipient_emails" name="' . self::RECIPIENT_OPTION_NAME . '" value="' . esc_attr($recipients) . '" class="regular-text" placeholder="admin@example.com, manager@example.com" />';
-        echo '<p class="description">' . __('Enter email addresses separated by commas or semicolons. Invalid addresses will be automatically removed.', 'authdocs') . '</p>';
-        echo '<div id="recipient-validation" class="authdocs-validation-message"></div>';
-    }
-    
-    /**
-     * Render autoresponder section description
-     */
-    public function render_autoresponder_section_description(): void {
-        echo '<p>' . __('Configure an automatic response email that will be sent to users when they request document access. This email is sent immediately upon request submission.', 'authdocs') . '</p>';
-    }
-    
-    /**
-     * Render autoresponder enable field
-     */
-    public function render_autoresponder_enable_field(): void {
-        $template = $this->get_autoresponder_template();
+    public function render_auto_response_enable_field(): void {
+        $template = $this->get_auto_response_template();
         $enabled = $template['enabled'] ?? false;
         
-        echo '<label><input type="checkbox" name="' . self::AUTORESPONDER_OPTION_NAME . '[enabled]" value="1" ' . checked(1, $enabled, false) . ' />';
-        echo ' ' . __('Enable autoresponder emails', 'authdocs') . '</label>';
+        echo '<label><input type="checkbox" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[enabled]" value="1" ' . checked(1, $enabled, false) . ' />';
+        echo ' ' . __('Enable auto-response emails', 'authdocs') . '</label>';
         echo '<p class="description">' . __('When enabled, users will automatically receive a confirmation email after submitting a document access request.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Render autoresponder subject field
-     */
-    public function render_autoresponder_subject_field(): void {
-        $template = $this->get_autoresponder_template();
+    public function render_auto_response_subject_field(): void {
+        $template = $this->get_auto_response_template();
         $subject = $template['subject'] ?? '';
         
-        echo '<input type="text" id="autoresponder_subject" name="' . self::AUTORESPONDER_OPTION_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
-        echo '<p class="description">' . __('Subject line for the autoresponder email. You can use variables like {name} and {document_title}.', 'authdocs') . '</p>';
+        echo '<input type="text" id="auto_response_subject" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
+        echo '<p class="description">' . __('Subject line for the auto-response email.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Render autoresponder body field
-     */
-    public function render_autoresponder_body_field(): void {
-        $template = $this->get_autoresponder_template();
+    public function render_auto_response_body_field(): void {
+        $template = $this->get_auto_response_template();
         $body = $template['body'] ?? '';
         
         $editor_settings = [
-            'textarea_name' => self::AUTORESPONDER_OPTION_NAME . '[body]',
+            'textarea_name' => self::AUTO_RESPONSE_TEMPLATE_NAME . '[body]',
             'textarea_rows' => 15,
             'media_buttons' => false,
             'tinymce' => [
@@ -510,131 +507,148 @@ class Settings {
             'editor_height' => 300
         ];
         
-        wp_editor($body, 'autoresponder_body', $editor_settings);
-        echo '<p class="description">' . __('HTML email body for the autoresponder. Use the variables below to personalize your emails. You can use the rich editor above or switch to HTML mode for advanced customization.', 'authdocs') . '</p>';
+        wp_editor($body, 'auto_response_body', $editor_settings);
+        echo '<p class="description">' . __('HTML email body for auto-response emails.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Render autoresponder variables help
-     */
-    public function render_autoresponder_variables_help(): void {
+    public function render_auto_response_variables_help(): void {
         echo '<div class="authdocs-variables-help">';
         echo '<h4>' . __('Available Variables:', 'authdocs') . '</h4>';
         echo '<ul style="list-style: disc; margin-left: 20px;">';
-        echo '<li><code>{name}</code> - ' . __('Requester\'s name', 'authdocs') . '</li>';
-        echo '<li><code>{email}</code> - ' . __('Requester\'s email address', 'authdocs') . '</li>';
-        echo '<li><code>{document_title}</code> - ' . __('Title of the requested document', 'authdocs') . '</li>';
-        echo '<li><code>{site_name}</code> - ' . __('Name of your website', 'authdocs') . '</li>';
+        echo '<li><code>{{name}}</code> - ' . __('Requester\'s name', 'authdocs') . '</li>';
+        echo '<li><code>{{email}}</code> - ' . __('Requester\'s email address', 'authdocs') . '</li>';
+        echo '<li><code>{{file_name}}</code> - ' . __('Name of the requested file', 'authdocs') . '</li>';
+        echo '<li><code>{{site_name}}</code> - ' . __('Name of your website', 'authdocs') . '</li>';
         echo '</ul>';
-        echo '<p><strong>' . __('Note:', 'authdocs') . '</strong> ' . __('Unknown placeholders will remain unchanged in the email.', 'authdocs') . '</p>';
         echo '</div>';
     }
     
-    /**
-     * Render autoresponder recipient field
-     */
-    public function render_autoresponder_recipient_field(): void {
-        $recipient = get_option(self::AUTORESPONDER_RECIPIENT_OPTION_NAME, '{{requester_email}}');
-        
-        echo '<input type="text" id="autoresponder_recipient" name="' . self::AUTORESPONDER_RECIPIENT_OPTION_NAME . '" value="' . esc_attr($recipient) . '" class="regular-text" placeholder="{{requester_email}}" />';
-        echo '<p class="description">' . __('Email address or placeholder for autoresponder recipient. Use {{requester_email}} to send to the person requesting access.', 'authdocs') . '</p>';
-        echo '<div id="autoresponder-recipient-validation" class="authdocs-validation-message"></div>';
+    // Render methods for Grant/Decline Email
+    public function render_grant_decline_section_description(): void {
+        echo '<p>' . __('Configure the email template that will be sent when document access is granted or declined.', 'authdocs') . '</p>';
     }
     
-    /**
-     * Render access granted recipient field
-     */
-    public function render_access_granted_recipient_field(): void {
-        $recipient = get_option(self::ACCESS_GRANTED_RECIPIENT_OPTION_NAME, get_option('admin_email'));
+    public function render_grant_decline_subject_field(): void {
+        $template = $this->get_grant_decline_template();
+        $subject = $template['subject'] ?? '';
         
-        echo '<input type="text" id="access_granted_recipient" name="' . self::ACCESS_GRANTED_RECIPIENT_OPTION_NAME . '" value="' . esc_attr($recipient) . '" class="regular-text" placeholder="admin@example.com" />';
-        echo '<p class="description">' . __('Email address or placeholder for access granted notifications. Use {{requester_email}} to send to the person who requested access.', 'authdocs') . '</p>';
-        echo '<div id="access-granted-recipient-validation" class="authdocs-validation-message"></div>';
+        echo '<input type="text" id="grant_decline_subject" name="' . self::GRANT_DECLINE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text" />';
+        echo '<p class="description">' . __('Subject line for grant/decline emails. Use {{status}} for "Granted" or "Declined".', 'authdocs') . '</p>';
     }
     
-    /**
-     * Get email template from options
-     */
-    public function get_email_template(): array {
-        $template = get_option(self::OPTION_NAME, []);
+    public function render_grant_decline_body_field(): void {
+        $template = $this->get_grant_decline_template();
+        $body = $template['body'] ?? '';
+        
+        $editor_settings = [
+            'textarea_name' => self::GRANT_DECLINE_TEMPLATE_NAME . '[body]',
+            'textarea_rows' => 15,
+            'media_buttons' => false,
+            'tinymce' => [
+                'toolbar1' => 'formatselect,bold,italic,bullist,numlist,blockquote,alignleft,aligncenter,alignright,link,unlink,forecolor,backcolor,removeformat',
+                'toolbar2' => '',
+                'toolbar3' => '',
+                'height' => 300,
+                'content_css' => 'default',
+                'paste_as_text' => false,
+                'verify_html' => true,
+                'cleanup' => true,
+                'forced_root_block' => 'p',
+                'keep_styles' => false,
+                'remove_redundant_brs' => true,
+                'remove_linebreaks' => false,
+                'convert_newlines_to_brs' => false,
+                'remove_trailing_nbsp' => true
+            ],
+            'quicktags' => [
+                'buttons' => 'strong,em,link,block,del,ins,img,ul,ol,li,code,close'
+            ],
+            'drag_drop_upload' => false,
+            'wpautop' => false,
+            'editor_height' => 300
+        ];
+        
+        wp_editor($body, 'grant_decline_body', $editor_settings);
+        echo '<p class="description">' . __('HTML email body for grant/decline notifications. Use {{link}} for the document access link when granted.', 'authdocs') . '</p>';
+    }
+    
+    public function render_grant_decline_recipients_field(): void {
+        $recipients = get_option(self::GRANT_DECLINE_RECIPIENTS_NAME, '{{email}}');
+        
+        echo '<input type="text" id="grant_decline_recipients" name="' . self::GRANT_DECLINE_RECIPIENTS_NAME . '" value="' . esc_attr($recipients) . '" class="regular-text" placeholder="{{email}}" />';
+        echo '<p class="description">' . __('Enter email addresses separated by commas, or use {{email}} to send to the requester.', 'authdocs') . '</p>';
+    }
+    
+    public function render_grant_decline_variables_help(): void {
+        echo '<div class="authdocs-variables-help">';
+        echo '<h4>' . __('Available Variables:', 'authdocs') . '</h4>';
+        echo '<ul style="list-style: disc; margin-left: 20px;">';
+        echo '<li><code>{{name}}</code> - ' . __('Requester\'s name', 'authdocs') . '</li>';
+        echo '<li><code>{{email}}</code> - ' . __('Requester\'s email address', 'authdocs') . '</li>';
+        echo '<li><code>{{file_name}}</code> - ' . __('Name of the requested file', 'authdocs') . '</li>';
+        echo '<li><code>{{site_name}}</code> - ' . __('Name of your website', 'authdocs') . '</li>';
+        echo '<li><code>{{status}}</code> - ' . __('"Granted" or "Declined"', 'authdocs') . '</li>';
+        echo '<li><code>{{status_color}}</code> - ' . __('Color code for granted (#28a745) or declined (#dc3545)', 'authdocs') . '</li>';
+        echo '<li><code>{{link}}</code> - ' . __('Secure document access link (only available when granted)', 'authdocs') . '</li>';
+        echo '</ul>';
+        echo '</div>';
+    }
+    
+    // Getter methods
+    public function get_access_request_template(): array {
+        $template = get_option(self::ACCESS_REQUEST_TEMPLATE_NAME, []);
         
         if (empty($template)) {
-            $template = $this->get_default_template();
+            $template = $this->get_default_access_request_template();
         }
         
         return $template;
     }
     
-    /**
-     * Get autoresponder template from options
-     */
-    public function get_autoresponder_template(): array {
-        $template = get_option(self::AUTORESPONDER_OPTION_NAME, []);
+    public function get_auto_response_template(): array {
+        $template = get_option(self::AUTO_RESPONSE_TEMPLATE_NAME, []);
         
         if (empty($template)) {
-            $template = $this->get_default_autoresponder_template();
+            $template = $this->get_default_auto_response_template();
         }
         
         return $template;
     }
     
-    /**
-     * Get recipient emails from options
-     */
-    public function get_recipient_emails(): array {
-        $recipients = get_option(self::RECIPIENT_OPTION_NAME, '');
+    public function get_grant_decline_template(): array {
+        $template = get_option(self::GRANT_DECLINE_TEMPLATE_NAME, []);
+        
+        if (empty($template)) {
+            $template = $this->get_default_grant_decline_template();
+        }
+        
+        return $template;
+    }
+    
+    public function get_access_request_recipients(): array {
+        $recipients = get_option(self::ACCESS_REQUEST_RECIPIENTS_NAME, get_option('admin_email'));
         
         if (empty($recipients)) {
             return [get_option('admin_email')];
         }
         
         $emails = array_map('trim', explode(',', $recipients));
-        return array_filter($emails, 'is_email');
+        return array_filter($emails, function($email) {
+            return !empty($email) && (is_email($email) || preg_match('/^\{\{[a-zA-Z_]+\}\}$/', $email));
+        });
     }
     
-    /**
-     * Get autoresponder recipient email
-     */
-    public function get_autoresponder_recipient_email(): string {
-        return get_option(self::AUTORESPONDER_RECIPIENT_OPTION_NAME, '{{requester_email}}');
-    }
-    
-    /**
-     * Get access granted recipient email
-     */
-    public function get_access_granted_recipient_email(): string {
-        return get_option(self::ACCESS_GRANTED_RECIPIENT_OPTION_NAME, get_option('admin_email'));
-    }
-    
-    /**
-     * Resolve placeholders in recipient email
-     */
-    public function resolve_recipient_email(string $recipient_template, int $request_id): string {
-        if (empty($recipient_template) || !preg_match('/^\{\{[a-zA-Z_]+\}\}$/', $recipient_template)) {
-            return $recipient_template; // Not a placeholder, return as-is
+    public function get_grant_decline_recipients(): array {
+        $recipients = get_option(self::GRANT_DECLINE_RECIPIENTS_NAME, '{{email}}');
+        
+        if (empty($recipients)) {
+            return ['{{email}}'];
         }
         
-        // Extract placeholder name
-        $placeholder = trim($recipient_template, '{}');
-        
-        // Get request data
-        $request = Database::get_request_by_id($request_id);
-        if (!$request) {
-            return '';
-        }
-        
-        // Resolve placeholders
-        switch ($placeholder) {
-            case 'requester_email':
-                return $request->requester_email ?? '';
-            case 'requester_name':
-                return $request->requester_name ?? '';
-            case 'document_title':
-                $document_title = get_the_title($request->document_id);
-                return $document_title ?: '';
-            default:
-                return ''; // Unknown placeholder
-        }
+        $emails = array_map('trim', explode(',', $recipients));
+        return array_filter($emails, function($email) {
+            return !empty($email) && (is_email($email) || preg_match('/^\{\{[a-zA-Z_]+\}\}$/', $email));
+        });
     }
     
     /**
@@ -663,6 +677,10 @@ class Settings {
         $replacements = [
             '{{name}}' => $variables['name'] ?? '',
             '{{email}}' => $variables['email'] ?? '',
+            '{{file_name}}' => $variables['file_name'] ?? '',
+            '{{site_name}}' => $variables['site_name'] ?? get_bloginfo('name'),
+            '{{status}}' => $variables['status'] ?? '',
+            '{{status_color}}' => $variables['status_color'] ?? '',
             '{{link}}' => $variables['link'] ?? ''
         ];
         
@@ -670,35 +688,36 @@ class Settings {
     }
     
     /**
-     * Process autoresponder template with dynamic variables
+     * Resolve placeholders in recipient email
      */
-    public function process_autoresponder_template(array $template, array $variables): array {
-        $subject = $template['subject'] ?? '';
-        $body = $template['body'] ?? '';
+    public function resolve_recipient_email(string $recipient_template, int $request_id): string {
+        if (empty($recipient_template) || !preg_match('/^\{\{[a-zA-Z_]+\}\}$/', $recipient_template)) {
+            return $recipient_template; // Not a placeholder, return as-is
+        }
         
-        // Replace variables in subject
-        $subject = $this->replace_autoresponder_variables($subject, $variables);
+        // Extract placeholder name
+        $placeholder = trim($recipient_template, '{}');
         
-        // Replace variables in body
-        $body = $this->replace_autoresponder_variables($body, $variables);
+        // Get request data
+        $request = Database::get_request_by_id($request_id);
+        if (!$request) {
+            return '';
+        }
         
-        return [
-            'subject' => $subject,
-            'body' => $body
-        ];
-    }
-    
-    /**
-     * Replace autoresponder variables in text
-     */
-    private function replace_autoresponder_variables(string $text, array $variables): string {
-        $replacements = [
-            '{name}' => $variables['name'] ?? '',
-            '{email}' => $variables['email'] ?? '',
-            '{document_title}' => $variables['document_title'] ?? '',
-            '{site_name}' => $variables['site_name'] ?? get_bloginfo('name')
-        ];
-        
-        return str_replace(array_keys($replacements), array_values($replacements), $text);
+        // Resolve placeholders
+        switch ($placeholder) {
+            case 'email':
+            case 'requester_email':
+                return $request->requester_email ?? '';
+            case 'name':
+            case 'requester_name':
+                return $request->requester_name ?? '';
+            case 'file_name':
+            case 'document_title':
+                $document_title = get_the_title($request->document_id);
+                return $document_title ?: '';
+            default:
+                return ''; // Unknown placeholder
+        }
     }
 }

@@ -552,6 +552,28 @@
   content: "...";
 }
 
+/* Disabled action link styling */
+.authdocs-action-link.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
+  border-color: #d1d5db !important;
+}
+
+.authdocs-action-link.disabled:hover {
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
+  border-color: #d1d5db !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.authdocs-action-link.disabled .dashicons {
+  color: #9ca3af !important;
+}
+
 
 
 /* Simple row highlight styles */
@@ -1319,6 +1341,30 @@
   text-decoration: none;
 }
 
+/* Declined file link styling */
+.authdocs-file-link.authdocs-declined {
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.authdocs-file-link.authdocs-declined:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Inactive file link styling */
+.authdocs-file-link.authdocs-inactive {
+  color: #7c3aed;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+}
+
+.authdocs-file-link.authdocs-inactive:hover {
+  background: #e5e7eb;
+  color: #5b21b6;
+}
+
 .authdocs-no-file {
   color: #666;
   font-style: italic;
@@ -1364,6 +1410,27 @@
   font-style: italic;
   display: block;
   margin-top: 2px;
+}
+
+/* Status note styling for different states */
+.authdocs-status-note.declined {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.authdocs-status-note.inactive {
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.authdocs-status-note.pending {
+  color: #d97706;
+  font-weight: 500;
+}
+
+.authdocs-status-note.accepted {
+  color: #059669;
+  font-weight: 500;
 }
 
 /* Revoke Access Button */

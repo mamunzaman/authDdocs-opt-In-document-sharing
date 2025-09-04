@@ -4,6 +4,12 @@ jQuery(document).ready(function ($) {
   // Handle request management actions
   $(".authdocs-action-link").on("click", function () {
     var $btn = $(this);
+
+    // Prevent action if button is disabled
+    if ($btn.hasClass("disabled") || $btn.prop("disabled")) {
+      return false;
+    }
+
     var action = $btn.data("action");
     var requestId = $btn.data("request-id");
     var $row = $btn.closest("tr");
@@ -12,6 +18,21 @@ jQuery(document).ready(function ($) {
     if (action === "decline") {
       confirmMessage =
         "Are you sure you want to revoke access? This will immediately invalidate any existing download links.";
+    } else if (action === "inactive") {
+      // Check current status to determine the action
+      var $currentRow = $btn.closest("tr");
+      var currentStatus = $currentRow
+        .find("td[data-label='Status'] .authdocs-status")
+        .text()
+        .toLowerCase();
+
+      if (currentStatus === "inactive") {
+        confirmMessage =
+          "Are you sure you want to activate this request? This will enable Accept/Decline options.";
+      } else {
+        confirmMessage =
+          "Are you sure you want to deactivate this request? This will disable access and prevent further actions.";
+      }
     }
 
     // Show confirmation popup instead of browser confirm
@@ -118,6 +139,173 @@ jQuery(document).ready(function ($) {
     });
   }
 
+  // Function to refresh row data after status change
+  function refreshRowData($row, requestId) {
+    console.log("refreshRowData called for request ID:", requestId);
+    // Get the current row data and update it
+    $.ajax({
+      url: ajaxurl,
+      type: "POST",
+      data: {
+        action: "authdocs_get_request_data",
+        request_id: requestId,
+        nonce: authdocs_admin.nonce,
+      },
+      success: function (response) {
+        console.log("AJAX response received:", response);
+        if (response.success && response.data) {
+          var request = response.data;
+          console.log("Request data:", request);
+
+          // Update status column
+          var $statusCell = $row.find("td[data-label='Status']");
+          if ($statusCell.length) {
+            var statusClass =
+              "authdocs-status authdocs-status-" + request.status;
+            $statusCell.html(
+              '<span class="' +
+                statusClass +
+                '">' +
+                request.status.charAt(0).toUpperCase() +
+                request.status.slice(1) +
+                "</span>"
+            );
+            console.log("Updated status cell");
+          }
+
+          // Update file link column
+          var $fileLinkCell = $row.find("td[data-label='File Link']");
+          if ($fileLinkCell.length && request.document_file) {
+            if (request.status === "accepted" && request.secure_hash) {
+              var downloadUrl =
+                authdocs_admin.site_url +
+                "?authdocs_download=" +
+                request.document_id +
+                "&hash=" +
+                request.secure_hash +
+                "&email=" +
+                encodeURIComponent(request.requester_email) +
+                "&request_id=" +
+                request.id;
+              $fileLinkCell.html(
+                '<a href="' +
+                  downloadUrl +
+                  '" target="_blank" class="authdocs-download-link" title="Click to view document">' +
+                  request.document_file.filename +
+                  "</a><br>" +
+                  '<small class="authdocs-link-preview">' +
+                  downloadUrl.substring(0, 50) +
+                  "...</small>"
+              );
+              console.log("Updated file link cell with download link");
+            } else {
+              // Show appropriate status message based on request status
+              var statusMessage = "";
+              var linkClass = "authdocs-file-link";
+
+              switch (request.status) {
+                case "declined":
+                  statusMessage = "Access declined";
+                  linkClass = "authdocs-file-link authdocs-declined";
+                  break;
+                case "inactive":
+                  statusMessage = "Request deactivated";
+                  linkClass = "authdocs-file-link authdocs-inactive";
+                  break;
+                case "pending":
+                  statusMessage = "Request pending approval";
+                  break;
+                case "accepted":
+                  // This should not happen here as accepted status is handled above
+                  statusMessage = "Access granted";
+                  break;
+                default:
+                  statusMessage = "Request not accepted yet";
+              }
+
+              $fileLinkCell.html(
+                '<a href="' +
+                  request.document_file.url +
+                  '" target="_blank" class="' +
+                  linkClass +
+                  '">' +
+                  request.document_file.filename +
+                  "</a><br>" +
+                  '<small class="authdocs-status-note ' +
+                  request.status +
+                  '">' +
+                  statusMessage +
+                  "</small>"
+              );
+              console.log(
+                "Updated file link cell with regular link - status:",
+                request.status
+              );
+            }
+          }
+
+          // Update action buttons
+          var $acceptBtn = $row.find(".authdocs-action-accept");
+          var $declineBtn = $row.find(".authdocs-action-decline");
+          var $inactiveBtn = $row.find(".authdocs-action-inactive");
+
+          if ($acceptBtn.length) {
+            var acceptText =
+              request.status === "accepted" ? "Re-accept" : "Accept";
+            $acceptBtn.find(".action-text").text(acceptText);
+            console.log("Updated accept button text");
+          }
+
+          if ($declineBtn.length) {
+            var declineText =
+              request.status === "declined" ? "Re-decline" : "Decline";
+            $declineBtn.find(".action-text").text(declineText);
+            console.log("Updated decline button text");
+          }
+
+          if ($inactiveBtn.length) {
+            var inactiveText =
+              request.status === "inactive" ? "Activate" : "Deactivate";
+            $inactiveBtn.find(".action-text").text(inactiveText);
+            console.log("Updated inactive button text");
+          }
+
+          // Enable/disable Accept and Decline buttons based on status
+          if (request.status === "inactive") {
+            $acceptBtn.addClass("disabled").prop("disabled", true);
+            $declineBtn.addClass("disabled").prop("disabled", true);
+            console.log(
+              "Disabled Accept and Decline buttons for inactive status"
+            );
+          } else {
+            // Enable buttons for pending, accepted, or declined status
+            $acceptBtn.removeClass("disabled").prop("disabled", false);
+            $declineBtn.removeClass("disabled").prop("disabled", false);
+            console.log(
+              "Enabled Accept and Decline buttons for status:",
+              request.status
+            );
+          }
+
+          // Remove loading class and re-enable button
+          $row
+            .find(".authdocs-action-link")
+            .removeClass("loading")
+            .prop("disabled", false);
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error("AJAX error:", status, error);
+        console.error("Response text:", xhr.responseText);
+        // If refresh fails, just remove loading state
+        $row
+          .find(".authdocs-action-link")
+          .removeClass("loading")
+          .prop("disabled", false);
+      },
+    });
+  }
+
   // Function to proceed with the action after confirmation
   function proceedWithAction($btn, action, requestId) {
     // Show loading state
@@ -133,9 +321,11 @@ jQuery(document).ready(function ($) {
         nonce: authdocs_admin.nonce,
       },
       success: function (response) {
+        console.log("Main AJAX response:", response);
         if (response.success) {
           var $row = $btn.closest("tr");
           var $table = $row.closest("table");
+          console.log("Row found:", $row.length > 0);
 
           // Determine action result message
           var actionMessage = "";
@@ -146,56 +336,79 @@ jQuery(document).ready(function ($) {
               actionMessage =
                 "Request accepted successfully. Access granted email sent.";
               shouldRemoveRow = true;
+              console.log("Action: accept - shouldRemoveRow:", shouldRemoveRow);
               break;
             case "reaccept":
               actionMessage =
                 "Request re-accepted successfully. Access granted email sent.";
               shouldRemoveRow = true;
+              console.log(
+                "Action: reaccept - shouldRemoveRow:",
+                shouldRemoveRow
+              );
               break;
             case "decline":
               actionMessage = "Request declined successfully. Access revoked.";
               shouldRemoveRow = true;
+              console.log(
+                "Action: decline - shouldRemoveRow:",
+                shouldRemoveRow
+              );
               break;
             case "inactive":
-              actionMessage = "Request marked as inactive successfully.";
+              // Determine if we're activating or deactivating based on current status
+              var $currentRow = $btn.closest("tr");
+              var currentStatus = $currentRow
+                .find("td[data-label='Status'] .authdocs-status")
+                .text()
+                .toLowerCase();
+
+              if (currentStatus === "inactive") {
+                actionMessage =
+                  "Request activated successfully. Previous status restored.";
+              } else {
+                actionMessage =
+                  "Request deactivated successfully. Access disabled.";
+              }
+
               shouldRemoveRow = false; // Keep row but update status
+              console.log(
+                "Action: inactive - shouldRemoveRow:",
+                shouldRemoveRow,
+                "Current status:",
+                currentStatus
+              );
               break;
             default:
               actionMessage = "Request " + action + " successfully.";
               shouldRemoveRow = true;
+              console.log(
+                "Action: default - shouldRemoveRow:",
+                shouldRemoveRow
+              );
           }
 
           // Show success message
           showNotice(actionMessage, "success");
 
           if (shouldRemoveRow) {
-            // Show completion message
-            showNotice(actionMessage, "success");
-
             // Add completed class for simple highlight
             $row.addClass("completed");
 
             // Remove highlight after 5 seconds with fade effect
             setTimeout(function () {
-              $row.addClass("fade-out");
-              setTimeout(function () {
-                $row.removeClass("completed fade-out");
-              }, 300);
+              $row.removeClass("completed fade-out");
             }, 5000);
 
-            // Remove loading class and re-enable button
-            $btn.removeClass("loading").prop("disabled", false);
+            // Refresh the row data to show updated status and file link
+            console.log(
+              "About to call refreshRowData for request ID:",
+              requestId
+            );
+            refreshRowData($row, requestId);
           } else {
-            // For inactive status, just update the button state
-            $btn.removeClass("loading").prop("disabled", false);
-
-            // Update the status column to show "Inactive"
-            var $statusCell = $row.find(".column-status");
-            if ($statusCell.length) {
-              $statusCell.html(
-                '<span class="authdocs-status-inactive">Inactive</span>'
-              );
-            }
+            // For inactive status, refresh the row data to show updated status and disabled buttons
+            refreshRowData($row, requestId);
           }
         } else {
           showNotice(

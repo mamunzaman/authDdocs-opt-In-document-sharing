@@ -44,7 +44,7 @@ class Database
         // This will be handled by the CustomPostType class
     }
 
-    public static function save_access_request(int $document_id, string $name, string $email): bool
+    public static function save_access_request(int $document_id, string $name, string $email): int|false
     {
         global $wpdb;
         
@@ -67,12 +67,16 @@ class Database
                 'document_id' => $document_id,
                 'requester_name' => $name,
                 'requester_email' => $email,
-                'status' => 'pending'
+                'status' => 'inactive'
             ],
             ['%d', '%s', '%s', '%s']
         );
         
-        return $result !== false;
+        if ($result !== false) {
+            return $wpdb->insert_id; // Return the actual request ID
+        }
+        
+        return false;
     }
 
     public static function get_all_requests(): array
@@ -134,16 +138,50 @@ class Database
         if ($status === 'accepted') {
             // Always generate a new hash when accepting
             $data['secure_hash'] = self::generate_secure_hash($request_id);
-        } elseif ($status === 'declined' || $status === 'inactive') {
+        } elseif ($status === 'declined') {
             // Clear secure hash when revoking access
             $data['secure_hash'] = null;
+        } elseif ($status === 'inactive') {
+            // Store the current status before deactivating
+            $current_status = self::get_request_status($request_id);
+            if ($current_status && $current_status !== 'inactive') {
+                update_post_meta($request_id, '_authdocs_previous_status', $current_status);
+            }
+        } elseif ($status === 'restore') {
+            // Check if this is a reactivation and restore previous status
+            $previous_status = get_post_meta($request_id, '_authdocs_previous_status', true);
+            error_log("AuthDocs: Status is 'restore', checking for previous status. Previous status: {$previous_status}");
+            
+            if ($previous_status && in_array($previous_status, ['accepted', 'declined'])) {
+                error_log("AuthDocs: Restoring previous status: {$previous_status}");
+                $data['status'] = $previous_status;
+                // Clear the stored previous status
+                delete_post_meta($request_id, '_authdocs_previous_status');
+                
+                // For reactivation, preserve the existing hash instead of generating a new one
+                // The hash should already exist in the database from before deactivation
+                // No need to modify secure_hash - it should remain unchanged
+                
+                // Note: The status change hook will be fired from the calling method
+                // since we're changing the status to the previous status
+            } else {
+                error_log("AuthDocs: No valid previous status found or status not in allowed list");
+                // If no previous status, default to 'pending'
+                $data['status'] = 'pending';
+            }
         }
+        // Note: For 'inactive' status, hash is preserved to maintain link consistency
+        
+        // Debug logging for data being updated
+        error_log("AuthDocs: Updating request {$request_id} with data: " . json_encode($data));
         
         // Prepare format array based on what fields we're updating
         $formats = ['%s']; // status is always a string
         if (isset($data['secure_hash'])) {
             $formats[] = '%s'; // secure_hash is also a string
         }
+        
+        error_log("AuthDocs: Using formats: " . json_encode($formats));
         
         $result = $wpdb->update(
             $table_name,
@@ -198,7 +236,7 @@ class Database
             "secure_hash = %s",
             "requester_email = %s", 
             "document_id = %d",
-            "status = 'accepted'"
+            "status IN ('accepted', 'pending')"
         ];
         
         $where_values = [$hash, $email, $document_id];
@@ -223,11 +261,28 @@ class Database
         $table_name = $wpdb->prefix . self::$table_name;
         
         $request = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE secure_hash = %s AND status = 'accepted'",
+            "SELECT * FROM $table_name WHERE secure_hash = %s AND status IN ('accepted', 'pending')",
             $hash
         ));
         
         return $request ?: null;
+    }
+    
+    /**
+     * Check if a request is accessible (not inactive)
+     */
+    public static function is_request_accessible(int $request_id): bool
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . self::$table_name;
+        
+        $status = $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM $table_name WHERE id = %d",
+            $request_id
+        ));
+        
+        return $status !== 'inactive';
     }
     
     /**
@@ -348,5 +403,93 @@ class Database
             'path' => $file_path,
             'filename' => basename($file_path)
         ];
+    }
+    
+    /**
+     * Get published documents for grid display with pagination support
+     */
+    public static function get_published_documents(int $limit = -1, string $restriction_filter = 'all', int $page = 1, string $orderby = 'date', string $order = 'DESC'): array
+    {
+        $args = [
+            'post_type' => 'document',
+            'post_status' => 'publish',
+            'posts_per_page' => $limit,
+            'paged' => $page,
+            'orderby' => $orderby,
+            'order' => $order,
+            'meta_query' => []
+        ];
+        
+        // Filter by restriction status if specified
+        if ($restriction_filter === 'restricted') {
+            $args['meta_query'][] = [
+                'key' => '_authdocs_restricted',
+                'value' => 'yes',
+                'compare' => '='
+            ];
+        } elseif ($restriction_filter === 'unrestricted') {
+            $args['meta_query'][] = [
+                'key' => '_authdocs_restricted',
+                'value' => 'yes',
+                'compare' => '!='
+            ];
+        }
+        
+        $query = new \WP_Query($args);
+        $documents = [];
+        
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                $file_data = self::get_document_file($post_id);
+                
+                if ($file_data) {
+                    $documents[] = [
+                        'id' => $post_id,
+                        'title' => get_the_title(),
+                        'description' => get_the_excerpt() ?: get_the_content(),
+                        'date' => get_the_date(),
+                        'file_data' => $file_data,
+                        'restricted' => get_post_meta($post_id, '_authdocs_restricted', true) === 'yes'
+                    ];
+                }
+            }
+            wp_reset_postdata();
+        }
+        
+        return $documents;
+    }
+    
+    /**
+     * Get total count of published documents with restriction filter
+     */
+    public static function get_published_documents_count(string $restriction_filter = 'all'): int
+    {
+        $args = [
+            'post_type' => 'document',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+            'meta_query' => []
+        ];
+        
+        // Filter by restriction status if specified
+        if ($restriction_filter === 'restricted') {
+            $args['meta_query'][] = [
+                'key' => '_authdocs_restricted',
+                'value' => 'yes',
+                'compare' => '='
+            ];
+        } elseif ($restriction_filter === 'unrestricted') {
+            $args['meta_query'][] = [
+                'key' => '_authdocs_restricted',
+                'value' => 'yes',
+                'compare' => '!='
+            ];
+        }
+        
+        $query = new \WP_Query($args);
+        return $query->found_posts;
     }
 }

@@ -8,7 +8,8 @@ A secure WordPress plugin that allows sharing of document data (PDFs, Word files
 
 - **Custom Post Type**: Create and manage documents through WordPress admin
 - **Media Library Integration**: Use native WordPress media uploader for file uploads
-- **Shortcode Generation**: Automatic shortcode creation for each document
+- **Single Document Shortcode**: Automatic shortcode creation for each document
+- **Grid View Shortcode**: Display multiple documents in responsive grid layouts
 - **Responsive Design**: 100% responsive fluid grid display
 - **Secure Access Control**: Optional opt-in authentication for restricted documents
 
@@ -55,6 +56,64 @@ A secure WordPress plugin that allows sharing of document data (PDFs, Word files
 5. Check **Require Opt-in** if you want to restrict access
 6. Publish the document
 7. Copy the generated shortcode and use it on any page or post
+
+### Grid View Shortcode
+
+The `[authdocs_grid]` shortcode displays multiple documents in a responsive grid layout:
+
+**Basic Usage:**
+
+```
+[authdocs_grid]
+```
+
+**With Parameters:**
+
+```
+[authdocs_grid limit="12" columns="3" restriction="all" show_description="yes" show_date="yes" orderby="date" order="DESC"]
+```
+
+**Parameters:**
+
+- `limit` - Number of documents to display per page (default: 12)
+- `columns` - Number of grid columns (1-6, default: 3)
+- `restriction` - Filter by access restriction: `all`, `restricted`, or `unrestricted` (default: `all`)
+- `show_description` - Show document description: `yes` or `no` (default: `yes`)
+- `show_date` - Show document date: `yes` or `no` (default: `yes`)
+- `orderby` - Sort by: `date` or `title` (default: `date`)
+- `order` - Sort order: `ASC` or `DESC` (default: `DESC`)
+- `pagination` - Enable pagination: `yes` or `no` (default: `yes`)
+
+**Examples:**
+
+```
+<!-- Display all documents in 4 columns -->
+[authdocs_grid columns="4" limit="20"]
+
+<!-- Show only restricted documents in 2 columns -->
+[authdocs_grid restriction="restricted" columns="2" limit="8"]
+
+<!-- Show unrestricted documents sorted by title -->
+[authdocs_grid restriction="unrestricted" orderby="title" order="ASC"]
+```
+
+**Features:**
+
+- Responsive grid layout that adapts to screen size
+- AJAX pagination for smooth navigation without page reloads
+- Load more functionality for large document collections
+- Automatic access control based on document settings
+- Request access forms for restricted documents
+- Direct download links for unrestricted documents
+
+**Pagination Features:**
+
+- **AJAX Navigation**: Smooth page transitions without page reloads
+- **Smart Pagination**: Shows page numbers with ellipsis for large document sets
+- **Responsive Design**: Mobile-optimized pagination controls
+- **Loading States**: Visual feedback during page transitions
+- **URL Parameters**: Supports `?authdocs_page=X` for direct page access
+- **Auto-scroll**: Automatically scrolls to grid after page change
 
 ### Managing Requests
 

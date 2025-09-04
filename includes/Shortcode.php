@@ -8,7 +8,9 @@ class Shortcode
     public function __construct()
     {
         add_shortcode('authdocs', [$this, 'render_shortcode']);
+        add_shortcode('authdocs_grid', [$this, 'render_grid_shortcode']);
         add_action('init', [$this, 'handle_secure_download']);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
     }
 
     public function render_shortcode(array $atts): string
@@ -62,6 +64,170 @@ class Shortcode
         <?php
         return ob_get_clean();
     }
+    
+    /**
+     * Render grid view shortcode with pagination
+     */
+    public function render_grid_shortcode(array $atts): string
+    {
+        $atts = shortcode_atts([
+            'limit' => 12,
+            'restriction' => 'all', // all, restricted, unrestricted
+            'columns' => 3,
+            'show_description' => 'yes',
+            'show_date' => 'yes',
+            'orderby' => 'date', // date, title
+            'order' => 'DESC',
+            'pagination' => 'yes' // yes, no
+        ], $atts, 'authdocs_grid');
+        
+        $limit = intval($atts['limit']);
+        $restriction = sanitize_text_field($atts['restriction']);
+        $columns = intval($atts['columns']);
+        $show_description = $atts['show_description'] === 'yes';
+        $show_date = $atts['show_date'] === 'yes';
+        $orderby = sanitize_text_field($atts['orderby']);
+        $order = sanitize_text_field($atts['order']);
+        $pagination = $atts['pagination'] === 'yes';
+        
+        // Validate inputs
+        if ($limit < 1) $limit = 12;
+        if ($columns < 1 || $columns > 6) $columns = 3;
+        if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
+        if (!in_array($orderby, ['date', 'title'])) $orderby = 'date';
+        if (!in_array($order, ['ASC', 'DESC'])) $order = 'DESC';
+        
+        // Get current page from URL parameter
+        $current_page = isset($_GET['authdocs_page']) ? max(1, intval($_GET['authdocs_page'])) : 1;
+        
+        $documents = Database::get_published_documents($limit, $restriction, $current_page, $orderby, $order);
+        $total_documents = Database::get_published_documents_count($restriction);
+        $total_pages = ceil($total_documents / $limit);
+        
+        if (empty($documents)) {
+            return '<p class="authdocs-no-documents">' . __('No documents found.', 'authdocs') . '</p>';
+        }
+        
+        ob_start();
+        ?>
+        <div class="authdocs-grid-container" 
+             data-limit="<?php echo esc_attr($limit); ?>"
+             data-restriction="<?php echo esc_attr($restriction); ?>"
+             data-columns="<?php echo esc_attr($columns); ?>"
+             data-show-description="<?php echo esc_attr($show_description ? 'yes' : 'no'); ?>"
+             data-show-date="<?php echo esc_attr($show_date ? 'yes' : 'no'); ?>"
+             data-orderby="<?php echo esc_attr($orderby); ?>"
+             data-order="<?php echo esc_attr($order); ?>"
+             data-current-page="<?php echo esc_attr($current_page); ?>"
+             data-total-pages="<?php echo esc_attr($total_pages); ?>"
+             data-total-documents="<?php echo esc_attr($total_documents); ?>">
+            
+            <div class="authdocs-grid" data-columns="<?php echo esc_attr($columns); ?>">
+                <?php foreach ($documents as $document): ?>
+                    <div class="authdocs-grid-item">
+                        <div class="authdocs-grid-item-content">
+                            <div class="authdocs-grid-item-header">
+                                <h3 class="authdocs-grid-item-title">
+                                    <?php echo esc_html($document['title']); ?>
+                                </h3>
+                                <?php if ($show_date): ?>
+                                    <div class="authdocs-grid-item-date">
+                                        <?php echo esc_html($document['date']); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <?php if ($show_description && !empty($document['description'])): ?>
+                                <div class="authdocs-grid-item-description">
+                                    <?php echo wp_kses_post(wp_trim_words($document['description'], 20)); ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="authdocs-grid-item-actions">
+                                <?php if ($document['restricted']): ?>
+                                    <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>">
+                                        <?php _e('Request Access', 'authdocs'); ?>
+                                    </button>
+                                <?php else: ?>
+                                    <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download>
+                                        <?php _e('Download', 'authdocs'); ?>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <?php if ($pagination && $total_pages > 1): ?>
+                <div class="authdocs-pagination">
+                    <div class="authdocs-pagination-info">
+                        <?php 
+                        $start = (($current_page - 1) * $limit) + 1;
+                        $end = min($current_page * $limit, $total_documents);
+                        printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                        ?>
+                    </div>
+                    
+                    <div class="authdocs-pagination-links">
+                        <?php if ($current_page > 1): ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($current_page - 1); ?>">
+                                <?php _e('Previous', 'authdocs'); ?>
+                            </button>
+                        <?php endif; ?>
+                        
+                        <div class="authdocs-pagination-numbers">
+                            <?php
+                            $start_page = max(1, $current_page - 2);
+                            $end_page = min($total_pages, $current_page + 2);
+                            
+                            if ($start_page > 1): ?>
+                                <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
+                                <?php if ($start_page > 2): ?>
+                                    <span class="authdocs-pagination-ellipsis">...</span>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                            
+                            <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                                <button type="button" class="authdocs-pagination-btn authdocs-pagination-number <?php echo $i === $current_page ? 'active' : ''; ?>" data-page="<?php echo esc_attr($i); ?>">
+                                    <?php echo $i; ?>
+                                </button>
+                            <?php endfor; ?>
+                            
+                            <?php if ($end_page < $total_pages): ?>
+                                <?php if ($end_page < $total_pages - 1): ?>
+                                    <span class="authdocs-pagination-ellipsis">...</span>
+                                <?php endif; ?>
+                                <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <?php if ($current_page < $total_pages): ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($current_page + 1); ?>">
+                                <?php _e('Next', 'authdocs'); ?>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+    
+    /**
+     * Enqueue frontend assets for grid functionality
+     */
+    public function enqueue_frontend_assets(): void
+    {
+        if (has_shortcode(get_the_content(), 'authdocs_grid')) {
+            wp_enqueue_script('authdocs-frontend', plugin_dir_url(__FILE__) . '../assets/js/frontend.js', ['jquery'], '1.0.0', true);
+            wp_localize_script('authdocs-frontend', 'authdocs_frontend', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('authdocs_frontend_nonce')
+            ]);
+        }
+    }
 
     public function handle_secure_download(): void
     {
@@ -81,9 +247,16 @@ class Shortcode
             wp_die(__('Access denied. Valid authorization required.', 'authdocs'), __('Access Denied', 'authdocs'), ['response' => 403]);
         }
 
-        // Validate the secure access
+        // Validate the secure access first (this will check hash and basic validity)
         if (!Database::validate_secure_access($hash, $email, $document_id, $request_id)) {
             wp_die(__('Invalid or expired download link', 'authdocs'), __('Access Denied', 'authdocs'), ['response' => 403]);
+        }
+
+        // Check if request is accessible (not inactive) after hash validation
+        if ($request_id && !Database::is_request_accessible($request_id)) {
+            // Log the attempt to access a deactivated file
+            error_log("AuthDocs: Attempted access to deactivated file - Request ID: {$request_id}, Document ID: {$document_id}, Email: {$email}");
+            wp_die(__('File access has been deactivated. Please contact the administrator.', 'authdocs'), __('File Not Available', 'authdocs'), ['response' => 403]);
         }
 
         // Get the request details to log access
