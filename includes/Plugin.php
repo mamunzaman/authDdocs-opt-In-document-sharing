@@ -659,10 +659,14 @@ class Plugin
         // Get document file information
         $document_file = Database::get_document_file(intval($request->document_id));
         
+        // Get document title using the robust helper method
+        $document_title = Database::get_document_title(intval($request->document_id));
+        
         // Prepare response data
         $response_data = [
             'id' => $request->id,
             'document_id' => $request->document_id,
+            'document_title' => $document_title,
             'requester_name' => $request->requester_name,
             'requester_email' => $request->requester_email,
             'status' => $request->status,

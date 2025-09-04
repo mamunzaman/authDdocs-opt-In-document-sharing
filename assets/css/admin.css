@@ -479,15 +479,17 @@
 /* Action Links Styling */
 .authdocs-request-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
 }
 
 .authdocs-action-link {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  justify-content: center;
+  padding: 8px;
   border-radius: 6px;
   text-decoration: none;
   font-size: 13px;
@@ -496,18 +498,22 @@
   border: 1px solid transparent;
   color: #6b7280;
   background: #f9fafb;
+  min-width: 32px;
+  height: 32px;
+  position: relative;
 }
 
 .authdocs-action-link:hover {
   text-decoration: none;
-  transform: translateX(2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .authdocs-action-link .dashicons {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .authdocs-action-accept {
@@ -836,18 +842,18 @@
     td:nth-child(8)
     .authdocs-request-actions {
     flex-direction: row;
-    justify-content: flex-start;
-    gap: 8px;
-    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    align-items: center;
   }
 
   .authdocs-requests-table-wrapper
     .wp-list-table
     td:nth-child(8)
     .authdocs-action-link {
-    min-width: auto;
-    justify-content: flex-start;
-    /*width: 100%;*/
+    min-width: 30px;
+    height: 30px;
+    justify-content: center;
   }
 
   .authdocs-date-time {
@@ -880,19 +886,21 @@
 
   .authdocs-request-actions {
     gap: 4px;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
   }
 
   .authdocs-action-link {
-    padding: 6px 8px;
+    padding: 6px;
     font-size: 11px;
-    justify-content: flex-start; /* Left align actions */
+    min-width: 28px;
+    height: 28px;
   }
 
   .authdocs-action-link .dashicons {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
   }
 
   .authdocs-pagination {
@@ -945,9 +953,9 @@
   }
 
   .authdocs-action-link .dashicons {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
   }
 
   .authdocs-pagination {
@@ -1173,17 +1181,21 @@
 
   .authdocs-request-actions {
     gap: 3px;
+    flex-direction: row;
+    justify-content: center;
   }
 
   .authdocs-action-link {
-    padding: 5px 6px;
+    padding: 5px;
     font-size: 10px;
+    min-width: 24px;
+    height: 24px;
   }
 
   .authdocs-action-link .dashicons {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
+    font-size: 10px;
+    width: 10px;
+    height: 10px;
   }
 
   .authdocs-pagination {
@@ -1243,9 +1255,9 @@
   }
 
   .authdocs-action-link .dashicons {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -1270,15 +1282,17 @@
   }
 
   .authdocs-action-link {
-    padding: 4px 4px;
+    padding: 4px;
     font-size: 9px;
-    justify-content: flex-start;
+    min-width: 20px;
+    height: 20px;
+    justify-content: center;
   }
 
   .authdocs-action-link .dashicons {
-    font-size: 10px;
-    width: 10px;
-    height: 10px;
+    font-size: 8px;
+    width: 8px;
+    height: 8px;
   }
 
   .authdocs-pagination {
@@ -1395,13 +1409,113 @@
   border-color: #0073aa;
 }
 
+.authdocs-link-container {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+  gap: 5px;
+}
+
+.authdocs-copy-link {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: #666;
+  font-size: 12px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+}
+
+.authdocs-copy-link:hover {
+  background-color: #f0f0f1;
+  color: #0073aa;
+}
+
+.authdocs-copy-link:active {
+  background-color: #0073aa;
+  color: #fff;
+}
+
+.authdocs-copy-link .dashicons {
+  font-size: 12px;
+  width: 12px;
+  height: 12px;
+}
+
+.authdocs-copy-link.copied {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.authdocs-copy-link.copy-error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
 .authdocs-link-preview {
   color: #666;
   font-size: 10px;
   font-family: monospace;
   display: block;
-  margin-top: 2px;
   word-break: break-all;
+  flex: 1;
+}
+
+/* Access Revoked Message */
+.authdocs-access-revoked {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+  border: 1px solid #feb2b2;
+  border-radius: 8px;
+  margin: 8px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.authdocs-revoked-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  background: #e53e3e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.authdocs-revoked-icon .dashicons {
+  color: #fff;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.authdocs-revoked-content {
+  flex: 1;
+}
+
+.authdocs-revoked-content strong {
+  display: block;
+  color: #c53030;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.authdocs-revoked-content p {
+  margin: 0;
+  color: #742a2a;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .authdocs-status-note {

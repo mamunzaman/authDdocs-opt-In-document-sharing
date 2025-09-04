@@ -244,14 +244,16 @@ class Shortcode
 
         // Block access if no hash is provided (direct file access attempt)
         if (empty($hash)) {
-            wp_die(__('Access denied. Valid authorization required.', 'authdocs'), __('Access Denied', 'authdocs'), ['response' => 403]);
+            LinkHandler::render_error_page(__('Access denied. Valid authorization required.', 'authdocs'), __('Access Denied', 'authdocs'), 403);
+            exit;
         }
 
         // Validate the secure access first (this will check hash and basic validity)
         error_log("AuthDocs: Download validation - Document ID: {$document_id}, Email: {$email}, Hash: {$hash}, Request ID: {$request_id}");
         if (!Database::validate_secure_access($hash, $email, $document_id, $request_id)) {
             error_log("AuthDocs: Download validation failed - Invalid or expired download link");
-            wp_die(__('Invalid or expired download link', 'authdocs'), __('Access Denied', 'authdocs'), ['response' => 403]);
+            LinkHandler::render_error_page(__('Invalid or expired download link', 'authdocs'), __('Access Denied', 'authdocs'), 403);
+            exit;
         }
         error_log("AuthDocs: Download validation successful");
 
@@ -259,7 +261,8 @@ class Shortcode
         if ($request_id && !Database::is_request_accessible($request_id)) {
             // Log the attempt to access a deactivated file
             error_log("AuthDocs: Attempted access to deactivated file - Request ID: {$request_id}, Document ID: {$document_id}, Email: {$email}");
-            wp_die(__('File access has been deactivated. Please contact the administrator.', 'authdocs'), __('File Not Available', 'authdocs'), ['response' => 403]);
+            LinkHandler::render_error_page(__('File access has been deactivated. Please contact the administrator.', 'authdocs'), __('File Not Available', 'authdocs'), 403);
+            exit;
         }
 
         // Get the request details to log access
@@ -271,11 +274,13 @@ class Shortcode
 
         $file_data = Database::get_document_file($document_id);
         if (!$file_data) {
-            wp_die(__('File not found', 'authdocs'), __('Error', 'authdocs'), ['response' => 404]);
+            LinkHandler::render_error_page(__('File not found', 'authdocs'), __('Error', 'authdocs'), 404);
+            exit;
         }
 
         if (!file_exists($file_data['path'])) {
-            wp_die(__('File not found on server', 'authdocs'), __('Error', 'authdocs'), ['response' => 404]);
+            LinkHandler::render_error_page(__('File not found on server', 'authdocs'), __('Error', 'authdocs'), 404);
+            exit;
         }
 
         // Use filename from URL if provided, otherwise use the original filename

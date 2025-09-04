@@ -88,7 +88,7 @@ class Database
         $results = $wpdb->get_results($wpdb->prepare(
             "SELECT r.*, p.post_title as document_title 
              FROM $table_name r 
-             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID 
+             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID
              ORDER BY r.created_at DESC"
         ));
         
@@ -103,15 +103,25 @@ class Database
         
         $offset = ($page - 1) * $per_page;
         
-        $results = $wpdb->get_results($wpdb->prepare(
+        $query = $wpdb->prepare(
             "SELECT r.*, p.post_title as document_title 
              FROM $table_name r 
-             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID 
+             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID
              ORDER BY r.created_at DESC
              LIMIT %d OFFSET %d",
             $per_page,
             $offset
-        ));
+        );
+        
+        error_log("AuthDocs Debug - Paginated requests query: " . $query);
+        $results = $wpdb->get_results($query);
+        
+        // Debug: Log the results
+        if ($results) {
+            foreach ($results as $result) {
+                error_log("AuthDocs Debug - Result: ID={$result->id}, Document_ID={$result->document_id}, Document_Title=" . ($result->document_title ?? 'NULL'));
+            }
+        }
         
         return $results ?: [];
     }
@@ -294,6 +304,27 @@ class Database
     }
     
     /**
+     * Get document title with fallback
+     */
+    public static function get_document_title(int $document_id): string {
+        if ($document_id <= 0) {
+            return '';
+        }
+        
+        $title = get_the_title($document_id);
+        if (empty($title)) {
+            // Try to get from database directly
+            global $wpdb;
+            $title = $wpdb->get_var($wpdb->prepare(
+                "SELECT post_title FROM {$wpdb->posts} WHERE ID = %d",
+                $document_id
+            ));
+        }
+        
+        return $title ?: '';
+    }
+    
+    /**
      * Get request by ID
      */
     public static function get_request_by_id(int $request_id): ?object {
@@ -301,7 +332,10 @@ class Database
         $table_name = $wpdb->prefix . self::$table_name;
         
         $request = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE id = %d",
+            "SELECT r.*, p.post_title as document_title 
+             FROM $table_name r 
+             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID
+             WHERE r.id = %d",
             $request_id
         ));
         
@@ -409,7 +443,8 @@ class Database
             'id' => $file_id,
             'url' => $file_url,
             'path' => $file_path,
-            'filename' => basename($file_path)
+            'filename' => basename($file_path),
+            'title' => get_the_title($document_id) ?: basename($file_path)
         ];
     }
     

@@ -1,6 +1,125 @@
 jQuery(document).ready(function ($) {
   "use strict";
 
+  // Handle copy link button clicks
+  $(document).on("click", ".authdocs-copy-link", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    var $btn = $(this);
+    var linkToCopy = $btn.data("link");
+
+    // If data-link is not available, try to find the download link in the same row
+    if (!linkToCopy) {
+      var $downloadLink = $btn.closest("tr").find(".authdocs-download-link");
+      if ($downloadLink.length > 0) {
+        linkToCopy = $downloadLink.attr("href");
+        console.log("AuthDocs: Found download link from href:", linkToCopy);
+      }
+    }
+
+    console.log("AuthDocs: Copy button clicked");
+    console.log("AuthDocs: Button element:", $btn);
+    console.log("AuthDocs: Link to copy:", linkToCopy);
+
+    if (!linkToCopy) {
+      console.error("AuthDocs: No link data found for copy button");
+      return;
+    }
+
+    // Use the Clipboard API if available
+    if (navigator.clipboard && window.isSecureContext) {
+      console.log("AuthDocs: Using Clipboard API to copy:", linkToCopy);
+      navigator.clipboard
+        .writeText(linkToCopy)
+        .then(function () {
+          console.log("AuthDocs: Clipboard API copy successful");
+          showCopySuccess($btn);
+        })
+        .catch(function (err) {
+          console.error("AuthDocs: Clipboard API failed, using fallback:", err);
+          fallbackCopyTextToClipboard(linkToCopy, $btn);
+        });
+    } else {
+      console.log("AuthDocs: Clipboard API not available, using fallback");
+      // Fallback for older browsers or non-secure contexts
+      fallbackCopyTextToClipboard(linkToCopy, $btn);
+    }
+  });
+
+  // Fallback copy function for older browsers
+  function fallbackCopyTextToClipboard(text, $btn) {
+    console.log("AuthDocs: Using fallback copy method for text:", text);
+
+    var textArea = document.createElement("textarea");
+    textArea.value = text;
+
+    // Avoid scrolling to bottom
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      var successful = document.execCommand("copy");
+      console.log("AuthDocs: Fallback copy result:", successful);
+      if (successful) {
+        showCopySuccess($btn);
+      } else {
+        showCopyError($btn);
+      }
+    } catch (err) {
+      console.error("AuthDocs: Fallback copy failed:", err);
+      showCopyError($btn);
+    }
+
+    document.body.removeChild(textArea);
+  }
+
+  // Show copy success feedback
+  function showCopySuccess($btn) {
+    var $icon = $btn.find(".dashicons");
+    var originalClass = $icon.attr("class");
+
+    // Change icon to checkmark
+    $icon.removeClass("dashicons-admin-page").addClass("dashicons-yes-alt");
+    $btn.addClass("copied");
+
+    // Show tooltip
+    $btn.attr("title", "Link copied!");
+
+    // Reset after 2 seconds
+    setTimeout(function () {
+      $icon.attr("class", originalClass);
+      $btn.removeClass("copied");
+      $btn.attr("title", "Copy link");
+    }, 2000);
+  }
+
+  // Show copy error feedback
+  function showCopyError($btn) {
+    var $icon = $btn.find(".dashicons");
+    var originalClass = $icon.attr("class");
+
+    // Change icon to error
+    $icon.removeClass("dashicons-admin-page").addClass("dashicons-warning");
+    $btn.addClass("copy-error");
+
+    // Show tooltip
+    $btn.attr("title", "Copy failed");
+
+    // Reset after 3 seconds
+    setTimeout(function () {
+      $icon.attr("class", originalClass);
+      $btn.removeClass("copy-error");
+      $btn.attr("title", "Copy link");
+    }, 3000);
+  }
+
   // Handle request management actions
   $(document).on("click", ".authdocs-action-link", function (e) {
     e.preventDefault();
@@ -226,11 +345,18 @@ jQuery(document).ready(function ($) {
                 '<a href="' +
                   downloadUrl +
                   '" target="_blank" class="authdocs-download-link" title="Click to view document">' +
-                  request.document_file.filename +
+                  (request.document_file.filename ||
+                    request.document_file.title) +
                   "</a><br>" +
+                  '<div class="authdocs-link-container">' +
+                  '<button type="button" class="authdocs-copy-link" title="Copy link" data-link="' +
+                  downloadUrl +
+                  '">' +
+                  '<span class="dashicons dashicons-admin-page"></span>' +
+                  "</button>" +
                   '<small class="authdocs-link-preview">' +
                   downloadUrl.substring(0, 50) +
-                  "...</small>"
+                  "...</small></div>"
               );
               console.log("Updated file link cell with download link");
             } else {
@@ -264,7 +390,8 @@ jQuery(document).ready(function ($) {
                   '" target="_blank" class="' +
                   linkClass +
                   '">' +
-                  request.document_file.filename +
+                  (request.document_file.filename ||
+                    request.document_file.title) +
                   "</a><br>" +
                   '<small class="authdocs-status-note ' +
                   request.status +
@@ -287,22 +414,22 @@ jQuery(document).ready(function ($) {
           if ($acceptBtn.length) {
             var acceptText =
               request.status === "accepted" ? "Re-accept" : "Accept";
-            $acceptBtn.find(".action-text").text(acceptText);
-            console.log("Updated accept button text");
+            $acceptBtn.attr("title", acceptText);
+            console.log("Updated accept button tooltip");
           }
 
           if ($declineBtn.length) {
             var declineText =
               request.status === "declined" ? "Re-decline" : "Decline";
-            $declineBtn.find(".action-text").text(declineText);
-            console.log("Updated decline button text");
+            $declineBtn.attr("title", declineText);
+            console.log("Updated decline button tooltip");
           }
 
           if ($inactiveBtn.length) {
             var inactiveText =
               request.status === "inactive" ? "Activate" : "Deactivate";
-            $inactiveBtn.find(".action-text").text(inactiveText);
-            console.log("Updated inactive button text");
+            $inactiveBtn.attr("title", inactiveText);
+            console.log("Updated inactive button tooltip");
           }
 
           // Enable/disable Accept and Decline buttons based on status

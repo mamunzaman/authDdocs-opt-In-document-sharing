@@ -35,12 +35,22 @@ if (!defined('ABSPATH')) {
                             <td data-label="Requester Name"><?php echo esc_html($request->requester_name); ?></td>
                             <td data-label="Email"><?php echo esc_html($request->requester_email); ?></td>
                             <td data-label="Document">
-                                <?php if ($request->document_title): ?>
+                                <?php 
+                                // Get document title using the robust helper method
+                                $document_title = AuthDocs\Database::get_document_title(intval($request->document_id));
+                                
+                                // Debug logging
+                                error_log("AuthDocs Debug - Request ID: {$request->id}, Document ID: {$request->document_id}, Final Title: " . ($document_title ?: 'EMPTY'));
+                                ?>
+                                <?php if ($document_title): ?>
                                     <a href="<?php echo esc_url(get_edit_post_link($request->document_id)); ?>" target="_blank">
-                                        <?php echo esc_html($request->document_title); ?>
+                                        <?php echo esc_html($document_title); ?>
                                     </a>
                                 <?php else: ?>
-                                    <?php _e('Document not found', 'authdocs'); ?>
+                                    <a href="<?php echo esc_url(get_edit_post_link($request->document_id)); ?>" target="_blank">
+                                        <?php printf(__('Document #%d', 'authdocs'), $request->document_id); ?>
+                                    </a>
+                                    <br><small class="authdocs-status-note"><?php _e('Title not available', 'authdocs'); ?></small>
                                 <?php endif; ?>
                             </td>
                             <td data-label="File Link">
@@ -51,15 +61,33 @@ if (!defined('ABSPATH')) {
                                 }
                                 
                                 if ($file_data && isset($file_data['url']) && isset($file_data['filename'])): 
+                                    // Show special message for deactivated requests
+                                    if ($request->status === 'inactive'):
+                                        ?>
+                                        <div class="authdocs-access-revoked">
+                                            <div class="authdocs-revoked-icon">
+                                                <span class="dashicons dashicons-lock"></span>
+                                            </div>
+                                            <div class="authdocs-revoked-content">
+                                                <strong><?php _e('Access Revoked', 'authdocs'); ?></strong>
+                                                <p><?php _e('This document is no longer available for download. Access has been deactivated by the administrator.', 'authdocs'); ?></p>
+                                            </div>
+                                        </div>
+                                        <?php
                                     // Generate the full download link if request is accepted and has hash
-                                    if ($request->status === 'accepted' && $request->secure_hash): 
+                                    elseif ($request->status === 'accepted' && $request->secure_hash): 
                                         $download_url = home_url('?authdocs_download=' . $request->document_id . '&hash=' . $request->secure_hash . '&email=' . urlencode($request->requester_email) . '&request_id=' . $request->id);
                                         ?>
                                         <a href="<?php echo esc_url($download_url); ?>" target="_blank" class="authdocs-download-link" title="<?php _e('Click to view document', 'authdocs'); ?>">
                                             <?php echo esc_html($file_data['filename']); ?>
                                         </a>
                                         <br>
-                                        <small class="authdocs-link-preview"><?php echo esc_html(substr($download_url, 0, 50) . '...'); ?></small>
+                                        <div class="authdocs-link-container">
+                                            <button type="button" class="authdocs-copy-link" title="<?php _e('Copy link', 'authdocs'); ?>" data-link="<?php echo esc_attr($download_url); ?>">
+                                                <span class="dashicons dashicons-admin-page"></span>
+                                            </button>
+                                            <small class="authdocs-link-preview"><?php echo esc_html(substr($download_url, 0, 50) . '...'); ?></small>
+                                        </div>
                                                                          <?php else: ?>
                                          <a href="<?php echo esc_url($file_data['url']); ?>" target="_blank" class="authdocs-file-link">
                                              <?php echo esc_html($file_data['filename']); ?>
@@ -74,7 +102,7 @@ if (!defined('ABSPATH')) {
                                                  $status_class .= ' declined';
                                                  break;
                                              case 'inactive':
-                                                 $status_message = __('Request deactivated', 'authdocs');
+                                                 $status_message = __('Access revoked - File no longer available', 'authdocs');
                                                  $status_class .= ' inactive';
                                                  break;
                                              case 'pending':
@@ -107,23 +135,24 @@ if (!defined('ABSPATH')) {
                                     <!-- Accept Link -->
                                     <button type="button" class="authdocs-action-link authdocs-action-accept <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>" 
                                        data-action="accept" data-request-id="<?php echo esc_attr($request->id); ?>"
+                                       title="<?php echo $request->status === 'accepted' ? __('Re-accept', 'authdocs') : __('Accept', 'authdocs'); ?>"
                                        <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>>
                                         <span class="dashicons dashicons-yes-alt"></span>
-                                        <span class="action-text"><?php echo $request->status === 'accepted' ? __('Re-accept', 'authdocs') : __('Accept', 'authdocs'); ?></span>
                                     </button>
                                     
                                     <!-- Decline Link -->
                                     <button type="button" class="authdocs-action-link authdocs-action-decline <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>" 
                                        data-action="decline" data-request-id="<?php echo esc_attr($request->id); ?>"
+                                       title="<?php echo $request->status === 'declined' ? __('Re-decline', 'authdocs') : __('Decline', 'authdocs'); ?>"
                                        <?php echo $request->status === 'inactive' ? 'disabled' : ''; ?>>
                                         <span class="dashicons dashicons-no-alt"></span>
-                                        <span class="action-text"><?php echo $request->status === 'declined' ? __('Re-decline', 'authdocs') : __('Decline', 'authdocs'); ?></span>
                                     </button>
                                     
                                     <!-- Activate/Deactivate Link -->
-                                    <button type="button" class="authdocs-action-link authdocs-action-inactive" data-action="inactive" data-request-id="<?php echo esc_attr($request->id); ?>">
+                                    <button type="button" class="authdocs-action-link authdocs-action-inactive" 
+                                       data-action="inactive" data-request-id="<?php echo esc_attr($request->id); ?>"
+                                       title="<?php echo $request->status === 'inactive' ? __('Activate', 'authdocs') : __('Deactivate', 'authdocs'); ?>">
                                         <span class="dashicons dashicons-hidden"></span>
-                                        <span class="action-text"><?php echo $request->status === 'inactive' ? __('Activate', 'authdocs') : __('Deactivate', 'authdocs'); ?></span>
                                     </button>
                                 </div>
                             </td>
