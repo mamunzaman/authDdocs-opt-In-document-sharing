@@ -23,14 +23,7 @@ class Logs
      */
     public function add_logs_submenu(): void
     {
-        add_submenu_page(
-            'edit.php?post_type=document',
-            __('Email Logs', 'authdocs'),
-            __('Email Logs', 'authdocs'),
-            'manage_options',
-            'authdocs-logs',
-            [$this, 'render_logs_page']
-        );
+        // Email Logs submenu removed
     }
     
     /**

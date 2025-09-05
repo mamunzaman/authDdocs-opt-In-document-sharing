@@ -42,6 +42,10 @@ class Settings {
         $auto_template = get_option(self::AUTO_RESPONSE_TEMPLATE_NAME, []);
         if (empty($auto_template) || !isset($auto_template['subject']) || !isset($auto_template['body'])) {
             update_option(self::AUTO_RESPONSE_TEMPLATE_NAME, $this->get_default_auto_response_template());
+        } elseif (!isset($auto_template['enabled'])) {
+            // For existing installations, enable auto-response by default
+            $auto_template['enabled'] = true;
+            update_option(self::AUTO_RESPONSE_TEMPLATE_NAME, $auto_template);
         }
         
         // Check and set default grant/decline template
@@ -328,7 +332,7 @@ class Settings {
      */
     private function get_default_auto_response_template(): array {
         return [
-            'enabled' => false,
+            'enabled' => true,
             'subject' => __('Document Access Request Received - {{site_name}}', 'authdocs'),
             'body' => $this->get_default_auto_response_body_html()
         ];
@@ -478,7 +482,7 @@ class Settings {
         return [
             'subject' => sanitize_text_field($input['subject'] ?? ''),
             'body' => wp_kses_post($input['body'] ?? ''),
-            'enabled' => !empty($input['enabled'])
+            'enabled' => isset($input['enabled']) && ($input['enabled'] === '1' || $input['enabled'] === 1 || $input['enabled'] === true)
         ];
     }
     
@@ -1058,5 +1062,30 @@ class Settings {
         ];
         
         return $palettes[$palette_key] ?? $palettes['black_white'];
+    }
+    
+    /**
+     * Render hidden fields for email templates to preserve values when saving from other tabs
+     */
+    public function render_hidden_email_template_fields(): void {
+        // Access Request Template
+        $access_template = $this->get_access_request_template();
+        echo '<input type="hidden" name="' . self::ACCESS_REQUEST_TEMPLATE_NAME . '[subject]" value="' . esc_attr($access_template['subject'] ?? '') . '" />';
+        echo '<input type="hidden" name="' . self::ACCESS_REQUEST_TEMPLATE_NAME . '[body]" value="' . esc_attr($access_template['body'] ?? '') . '" />';
+        
+        // Auto-Response Template
+        $auto_template = $this->get_auto_response_template();
+        echo '<input type="hidden" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[enabled]" value="' . ($auto_template['enabled'] ? '1' : '0') . '" />';
+        echo '<input type="hidden" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($auto_template['subject'] ?? '') . '" />';
+        echo '<input type="hidden" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[body]" value="' . esc_attr($auto_template['body'] ?? '') . '" />';
+        
+        // Grant/Decline Template
+        $grant_template = $this->get_grant_decline_template();
+        echo '<input type="hidden" name="' . self::GRANT_DECLINE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($grant_template['subject'] ?? '') . '" />';
+        echo '<input type="hidden" name="' . self::GRANT_DECLINE_TEMPLATE_NAME . '[body]" value="' . esc_attr($grant_template['body'] ?? '') . '" />';
+        
+        // Recipients
+        echo '<input type="hidden" name="' . self::ACCESS_REQUEST_RECIPIENTS_NAME . '" value="' . esc_attr(get_option(self::ACCESS_REQUEST_RECIPIENTS_NAME, '')) . '" />';
+        echo '<input type="hidden" name="' . self::GRANT_DECLINE_RECIPIENTS_NAME . '" value="' . esc_attr(get_option(self::GRANT_DECLINE_RECIPIENTS_NAME, '')) . '" />';
     }
 }

@@ -1,4 +1,24 @@
 /* AuthDocs Frontend Styles - Minimal Design */
+
+/* Featured Image Styling for Grid Cards */
+.card-featured-image {
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.authdocs-card-thumbnail {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.card:hover .authdocs-card-thumbnail {
+  transform: scale(1.02);
+}
+
+/* AuthDocs Frontend Styles - Minimal Design */
 .authdocs-document {
   background: #ffffff;
   border: 1px solid #e5e5e5;

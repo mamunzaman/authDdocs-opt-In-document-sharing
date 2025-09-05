@@ -304,7 +304,7 @@ jQuery(document).ready(function ($) {
   // Load more documents
   function loadMoreDocuments($grid, currentLimit, restriction, $btn) {
     const $loadMoreContainer = $btn.closest(".authdocs-grid-load-more");
-    const newLimit = currentLimit + 12;
+    const loadMoreLimit = parseInt($btn.data("load-more-limit")) || 12;
 
     // Show loading state
     $btn
@@ -316,17 +316,18 @@ jQuery(document).ready(function ($) {
       type: "POST",
       data: {
         action: "authdocs_load_more_documents",
-        limit: newLimit,
+        limit: currentLimit,
         restriction: restriction,
+        load_more_limit: loadMoreLimit,
         nonce: authdocs_frontend.nonce,
       },
       success: function (response) {
         if (response.success) {
-          // Update grid content
-          $grid.html(response.data.html);
+          // Append new content to existing grid
+          $grid.append(response.data.html);
 
           // Update button data and text
-          $btn.data("current-limit", newLimit);
+          $btn.data("current-limit", response.data.current_limit);
 
           // Hide load more button if no more documents
           if (response.data.has_more === false) {

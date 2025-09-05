@@ -75,6 +75,22 @@ class Shortcode
     
     /**
      * Render grid view shortcode with pagination
+     * 
+     * Shortcode parameters:
+     * - limit: Total number of documents to display (default: 12)
+     * - restriction: Filter by restriction status - 'all', 'restricted', 'unrestricted' (default: 'all')
+     * - columns: Number of columns in grid layout 1-6 (default: 3)
+     * - show_description: Show document descriptions - 'yes', 'no' (default: 'yes')
+     * - show_date: Show document dates - 'yes', 'no' (default: 'yes')
+     * - orderby: Sort by - 'date', 'title' (default: 'date')
+     * - order: Sort order - 'ASC', 'DESC' (default: 'DESC')
+     * - pagination: Enable pagination - 'yes', 'no' (default: 'yes')
+     * - load_more_limit: Number of items to load each time Load More is clicked (default: 12)
+     * 
+     * Usage examples:
+     * [authdocs_grid limit="20" columns="4"]
+     * [authdocs_grid limit="20" columns="4" load_more_limit="8"]
+     * [authdocs_grid restriction="restricted" load_more_limit="6"]
      */
     public function render_grid_shortcode(array $atts): string
     {
@@ -86,7 +102,8 @@ class Shortcode
             'show_date' => 'yes',
             'orderby' => 'date', // date, title
             'order' => 'DESC',
-            'pagination' => 'yes' // yes, no
+            'pagination' => 'yes', // yes, no
+            'load_more_limit' => 12 // Number of additional items to load each time Load More is clicked
         ], $atts, 'authdocs_grid');
         
         $limit = intval($atts['limit']);
@@ -97,6 +114,7 @@ class Shortcode
         $orderby = sanitize_text_field($atts['orderby']);
         $order = sanitize_text_field($atts['order']);
         $pagination = $atts['pagination'] === 'yes';
+        $load_more_limit = intval($atts['load_more_limit']);
         $instance_id = 'authdocs-grid-' . uniqid();
         
         // Validate inputs
@@ -105,6 +123,7 @@ class Shortcode
         if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
         if (!in_array($orderby, ['date', 'title'])) $orderby = 'date';
         if (!in_array($order, ['ASC', 'DESC'])) $order = 'DESC';
+        if ($load_more_limit < 1) $load_more_limit = 12;
         
         // Get current page from URL parameter
         $current_page = isset($_GET['authdocs_page']) ? max(1, intval($_GET['authdocs_page'])) : 1;
@@ -134,7 +153,8 @@ class Shortcode
              data-order="<?php echo esc_attr($order); ?>"
              data-current-page="<?php echo esc_attr($current_page); ?>"
              data-total-pages="<?php echo esc_attr($total_pages); ?>"
-             data-total-documents="<?php echo esc_attr($total_documents); ?>">
+             data-total-documents="<?php echo esc_attr($total_documents); ?>"
+             data-load-more-limit="<?php echo esc_attr($load_more_limit); ?>">
             
             <div class="authdocs-grid" data-columns="<?php echo esc_attr($columns); ?>">
                 <?php foreach ($documents as $document): ?>
@@ -180,7 +200,7 @@ class Shortcode
                 ?>
                 <?php if ($pagination_style === 'load_more'): ?>
                     <!-- Load More Pagination -->
-                    <div class="authdocs-pagination authdocs-load-more-pagination">
+                    <div class="authdocs-grid-load-more">
                         <div class="authdocs-pagination-info">
                             <?php 
                             $start = (($current_page - 1) * $limit) + 1;
@@ -190,7 +210,7 @@ class Shortcode
                         </div>
                         
                         <?php if ($current_page < $total_pages): ?>
-                            <button type="button" class="authdocs-load-more-btn" data-page="<?php echo esc_attr($current_page + 1); ?>">
+                            <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="<?php echo esc_attr($restriction); ?>" data-load-more-limit="<?php echo esc_attr($load_more_limit); ?>">
                                 <?php _e('Load More Documents', 'authdocs'); ?>
                             </button>
                         <?php endif; ?>

@@ -11,6 +11,8 @@ class CustomPostType
         add_action('add_meta_boxes', [$this, 'add_document_meta_boxes']);
         add_action('save_post', [$this, 'save_document_meta']);
         add_action('admin_notices', [$this, 'show_shortcode_notice']);
+        add_filter('manage_document_posts_columns', [$this, 'add_document_columns']);
+        add_action('manage_document_posts_custom_column', [$this, 'display_document_columns'], 10, 2);
     }
 
     public function register_document_post_type(): void
@@ -42,7 +44,7 @@ class CustomPostType
             'hierarchical' => false,
             'menu_position' => 20,
             'menu_icon' => 'dashicons-media-document',
-            'supports' => ['title', 'editor'],
+            'supports' => ['title', 'editor', 'thumbnail'],
             'show_in_rest' => false,
         ];
 
@@ -78,35 +80,70 @@ class CustomPostType
         $file_id = get_post_meta($post->ID, '_authdocs_file_id', true);
         
         ?>
-        <table class="form-table">
-            <tr>
-                <th scope="row">
-                    <label for="authdocs_file"><?php _e('Document File', 'authdocs'); ?></label>
-                </th>
-                <td>
+        <div class="authdocs-document-settings">
+            <!-- Document File Section -->
+            <div class="authdocs-settings-card">
+                <div class="authdocs-card-header">
+                    <div class="authdocs-card-icon">
+                        <span class="dashicons dashicons-media-document"></span>
+                    </div>
+                    <div class="authdocs-card-title">
+                        <h3><?php _e('Document File', 'authdocs'); ?></h3>
+                        <p><?php _e('Upload or select a PDF document for this post', 'authdocs'); ?></p>
+                    </div>
+                </div>
+                <div class="authdocs-card-content">
                     <input type="hidden" id="authdocs_file_id" name="authdocs_file_id" value="<?php echo esc_attr($file_id); ?>" />
-                    <button type="button" class="button" id="authdocs_upload_button">
-                        <?php _e('Select Document', 'authdocs'); ?>
-                    </button>
-                    <div id="authdocs_file_preview">
+                    <div class="authdocs-file-upload">
+                        <button type="button" class="button button-primary authdocs-upload-btn" id="authdocs_upload_button">
+                            <span class="dashicons dashicons-upload"></span>
+                            <?php _e('Select Document', 'authdocs'); ?>
+                        </button>
+                        <button type="button" class="button authdocs-remove-btn" id="authdocs_remove_file" style="<?php echo $file_id ? '' : 'display:none;'; ?>">
+                            <span class="dashicons dashicons-trash"></span>
+                            <?php _e('Remove', 'authdocs'); ?>
+                        </button>
+                    </div>
+                    <div id="authdocs_file_preview" class="authdocs-file-preview">
                         <?php if ($file_id): ?>
-                            <?php echo wp_get_attachment_link($file_id, 'thumbnail', false, true, false); ?>
+                            <div class="authdocs-file-item">
+                                <?php echo wp_get_attachment_link($file_id, 'thumbnail', false, true, false); ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="authdocs-no-file">
+                                <span class="dashicons dashicons-media-document"></span>
+                                <p><?php _e('No document selected', 'authdocs'); ?></p>
+                            </div>
                         <?php endif; ?>
                     </div>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">
-                    <label for="authdocs_restricted"><?php _e('Require Opt-in', 'authdocs'); ?></label>
-                </th>
-                <td>
-                    <label>
-                        <input type="checkbox" id="authdocs_restricted" name="authdocs_restricted" value="yes" <?php checked($restricted, 'yes'); ?> />
-                        <?php _e('Require opt-in form before access', 'authdocs'); ?>
-                    </label>
-                </td>
-            </tr>
-        </table>
+                </div>
+            </div>
+
+            <!-- Access Settings Section -->
+            <div class="authdocs-settings-card">
+                <div class="authdocs-card-header">
+                    <div class="authdocs-card-icon">
+                        <span class="dashicons dashicons-lock"></span>
+                    </div>
+                    <div class="authdocs-card-title">
+                        <h3><?php _e('Access Settings', 'authdocs'); ?></h3>
+                        <p><?php _e('Configure how users can access this document', 'authdocs'); ?></p>
+                    </div>
+                </div>
+                <div class="authdocs-card-content">
+                    <div class="authdocs-toggle-field">
+                        <label class="authdocs-toggle">
+                            <input type="checkbox" id="authdocs_restricted" name="authdocs_restricted" value="yes" <?php checked($restricted, 'yes'); ?> />
+                            <span class="authdocs-toggle-slider"></span>
+                        </label>
+                        <div class="authdocs-toggle-content">
+                            <h4><?php _e('Require Opt-in Form', 'authdocs'); ?></h4>
+                            <p><?php _e('Users must fill out an opt-in form before accessing this document', 'authdocs'); ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <script>
         jQuery(document).ready(function($) {
@@ -134,10 +171,19 @@ class CustomPostType
                 file_frame.on('select', function() {
                     var attachment = file_frame.state().get('selection').first().toJSON();
                     $('#authdocs_file_id').val(attachment.id);
-                    $('#authdocs_file_preview').html('<p><a href="' + attachment.url + '" target="_blank">' + attachment.filename + '</a></p>');
+                    $('#authdocs_file_preview').html('<div class="authdocs-file-item"><a href="' + attachment.url + '" target="_blank">' + attachment.filename + '</a></div>');
+                    $('#authdocs_remove_file').show();
                 });
                 
                 file_frame.open();
+            });
+            
+            // Handle remove file button
+            $('#authdocs_remove_file').on('click', function(e) {
+                e.preventDefault();
+                $('#authdocs_file_id').val('');
+                $('#authdocs_file_preview').html('<div class="authdocs-no-file"><span class="dashicons dashicons-media-document"></span><p><?php _e('No document selected', 'authdocs'); ?></p></div>');
+                $(this).hide();
             });
         });
         </script>
@@ -216,6 +262,58 @@ class CustomPostType
                 <p><strong><?php _e('Grid View Shortcode:', 'authdocs'); ?></strong> <code>[authdocs_grid limit="12" columns="3"]</code></p>
             </div>
             <?php
+        }
+    }
+
+    /**
+     * Add custom columns to document list view
+     */
+    public function add_document_columns(array $columns): array
+    {
+        // Insert featured image column after title
+        $new_columns = [];
+        foreach ($columns as $key => $value) {
+            $new_columns[$key] = $value;
+            if ($key === 'title') {
+                $new_columns['featured_image'] = __('Featured Image', 'authdocs');
+                $new_columns['pdf_file'] = __('PDF File', 'authdocs');
+            }
+        }
+        return $new_columns;
+    }
+
+    /**
+     * Display content for custom columns
+     */
+    public function display_document_columns(string $column, int $post_id): void
+    {
+        switch ($column) {
+            case 'featured_image':
+                if (has_post_thumbnail($post_id)) {
+                    $thumbnail = get_the_post_thumbnail($post_id, [50, 50], ['style' => 'max-width: 50px; height: auto;']);
+                    echo $thumbnail;
+                } else {
+                    echo '<span class="dashicons dashicons-format-image" style="color: #ccc; font-size: 20px;"></span>';
+                }
+                break;
+
+            case 'pdf_file':
+                $file_id = get_post_meta($post_id, '_authdocs_file_id', true);
+                if ($file_id) {
+                    $file_url = wp_get_attachment_url($file_id);
+                    $file_name = get_the_title($file_id);
+                    if ($file_url && $file_name) {
+                        echo '<a href="' . esc_url($file_url) . '" target="_blank" class="authdocs-pdf-link">';
+                        echo '<span class="dashicons dashicons-media-document" style="margin-right: 5px; color: #d63638;"></span>';
+                        echo esc_html($file_name);
+                        echo '</a>';
+                    } else {
+                        echo '<span style="color: #999;">' . __('No file attached', 'authdocs') . '</span>';
+                    }
+                } else {
+                    echo '<span style="color: #999;">' . __('No file attached', 'authdocs') . '</span>';
+                }
+                break;
         }
     }
 }

@@ -95,7 +95,7 @@ class Database
         return $results ?: [];
     }
 
-    public static function get_paginated_requests(int $page = 1, int $per_page = 20): array
+    public static function get_paginated_requests(int $page = 1, int $per_page = 5): array
     {
         global $wpdb;
         
@@ -149,7 +149,7 @@ class Database
             // Always generate a new hash when accepting
             $data['secure_hash'] = self::generate_secure_hash($request_id);
         } elseif ($status === 'declined') {
-            // Clear secure hash when revoking access
+            // Clear secure hash when declining - this ensures the link is not accessible
             $data['secure_hash'] = null;
         } elseif ($status === 'inactive') {
             // Store the current status before deactivating
@@ -172,9 +172,18 @@ class Database
                 // Clear the stored previous status
                 delete_post_meta($request_id, '_authdocs_previous_status');
                 
+                // Get current request to check hash status
+                $current_request = self::get_request_by_id($request_id);
+                
                 // For reactivation, preserve the existing hash instead of generating a new one
                 // The hash should already exist in the database from before deactivation
                 // No need to modify secure_hash - it should remain unchanged
+                
+                // If restoring to 'accepted' status, ensure we have a hash
+                if ($previous_status === 'accepted' && $current_request && empty($current_request->secure_hash)) {
+                    error_log("AuthDocs: Restoring to accepted but no hash found, generating new one");
+                    $data['secure_hash'] = self::generate_secure_hash($request_id);
+                }
                 
                 // Note: The status change hook will be fired from the calling method
                 // since we're changing the status to the previous status
@@ -190,6 +199,9 @@ class Database
                         error_log("AuthDocs: Found secure_hash, assuming previous status was 'accepted'");
                         $data['status'] = 'accepted';
                     } else {
+                        // If no secure_hash, it could be pending or declined
+                        // Since we can't determine which, default to pending for safety
+                        // The admin can manually change it to declined if needed
                         error_log("AuthDocs: No secure_hash found, defaulting to 'pending'");
                         $data['status'] = 'pending';
                     }
