@@ -304,8 +304,8 @@ class Shortcode
     {
         $css = $this->generate_dynamic_css($instance_id, $color_palette);
         
-        // Add inline styles directly to the page
-        echo '<style type="text/css" id="authdocs-dynamic-' . esc_attr($instance_id) . '">' . $css . '</style>';
+        // Add inline styles using wp_add_inline_style to avoid output issues
+        wp_add_inline_style('authdocs-frontend', $css);
     }
     
     /**

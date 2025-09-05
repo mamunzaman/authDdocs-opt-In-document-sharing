@@ -15,15 +15,20 @@ if (!current_user_can('manage_options')) {
     wp_die(__('You do not have sufficient permissions to access this page.', 'authdocs'));
 }
 
-// Get current tab
-$current_tab = $_GET['tab'] ?? 'email-templates';
-$allowed_tabs = ['email-templates', 'frontend-settings', 'general'];
-if (!in_array($current_tab, $allowed_tabs)) {
-    $current_tab = 'email-templates';
-}
-
 // Create Settings instance for helper methods
 $settings = new \AuthDocs\Settings();
+
+// Get current tab
+$current_tab = $_GET['tab'] ?? 'email-templates';
+$allowed_tabs = ['email-templates', 'frontend-settings', 'about-plugin'];
+
+// Check if we have a preserved tab from form submission
+$preserved_tab = $settings->get_preserved_tab();
+if ($preserved_tab && in_array($preserved_tab, $allowed_tabs)) {
+    $current_tab = $preserved_tab;
+} elseif (!in_array($current_tab, $allowed_tabs)) {
+    $current_tab = 'email-templates';
+}
 
 // Check if settings were just saved
 $settings_updated = false;
@@ -46,7 +51,7 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
     </div>
     
     <?php if ($settings_updated): ?>
-        <div class="authdocs-settings-notice notice notice-success is-dismissible">
+        <div class="authdocs-settings-notice notice notice-success">
             <div class="authdocs-notice-content">
                 <div class="authdocs-notice-icon">
                     <span class="dashicons dashicons-yes-alt"></span>
@@ -69,9 +74,9 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
            class="nav-tab <?php echo $current_tab === 'frontend-settings' ? 'nav-tab-active' : ''; ?>">
             <?php _e('Frontend Settings', 'authdocs'); ?>
         </a>
-        <a href="?post_type=document&page=authdocs-settings&tab=general" 
-           class="nav-tab <?php echo $current_tab === 'general' ? 'nav-tab-active' : ''; ?>">
-            <?php _e('General', 'authdocs'); ?>
+        <a href="?post_type=document&page=authdocs-settings&tab=about-plugin" 
+           class="nav-tab <?php echo $current_tab === 'about-plugin' ? 'nav-tab-active' : ''; ?>">
+            <?php _e('About Plugin', 'authdocs'); ?>
         </a>
     </nav>
     
@@ -92,6 +97,7 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                     
                     <form method="post" action="options.php" class="authdocs-email-templates-form">
                         <?php settings_fields('authdocs_options'); ?>
+                        <input type="hidden" name="authdocs_current_tab" value="<?php echo esc_attr($current_tab); ?>" />
                         
                         <!-- Top Save Button -->
                         <div class="authdocs-form-actions authdocs-form-actions-top">
@@ -112,6 +118,10 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                         <h3><?php _e('Access Request Notification', 'authdocs'); ?></h3>
                                         <p><?php _e('Sent to website owners when someone requests document access', 'authdocs'); ?></p>
                                     </div>
+                                    <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('access_request', '<?php _e('Access Request Email Preview', 'authdocs'); ?>')">
+                                        <span class="dashicons dashicons-visibility"></span>
+                                        <?php _e('Preview', 'authdocs'); ?>
+                                    </button>
                                 </div>
                                 <div class="authdocs-section-content">
                                     <?php do_settings_fields('authdocs-settings', 'authdocs_access_request_section'); ?>
@@ -136,6 +146,10 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                         <h3><?php _e('Auto-Response Confirmation', 'authdocs'); ?></h3>
                                         <p><?php _e('Automatically sent to users when they submit an access request', 'authdocs'); ?></p>
                                     </div>
+                                    <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('auto_response', '<?php _e('Auto-Response Email Preview', 'authdocs'); ?>')">
+                                        <span class="dashicons dashicons-visibility"></span>
+                                        <?php _e('Preview', 'authdocs'); ?>
+                                    </button>
                                 </div>
                                 <div class="authdocs-section-content">
                                     <?php do_settings_fields('authdocs-settings', 'authdocs_auto_response_section'); ?>
@@ -152,6 +166,10 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                         <h3><?php _e('Access Decision Notification', 'authdocs'); ?></h3>
                                         <p><?php _e('Sent to users when their access request is approved or declined', 'authdocs'); ?></p>
                                     </div>
+                                    <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('grant_decline', '<?php _e('Access Decision Email Preview', 'authdocs'); ?>')">
+                                        <span class="dashicons dashicons-visibility"></span>
+                                        <?php _e('Preview', 'authdocs'); ?>
+                                    </button>
                                 </div>
                                 <div class="authdocs-section-content">
                                     <?php do_settings_fields('authdocs-settings', 'authdocs_grant_decline_section'); ?>
@@ -166,7 +184,6 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                             </button>
                             <div class="authdocs-save-status">
                                 <span class="authdocs-save-indicator"></span>
-                                <span class="authdocs-save-text"><?php _e('All changes are saved automatically', 'authdocs'); ?></span>
                             </div>
                         </div>
                     </form>
@@ -282,34 +299,6 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                             </div>
                         </div>
                         
-                        <!-- Quick Actions Section -->
-                        <div class="authdocs-sidebar-card authdocs-actions-card">
-                            <div class="authdocs-card-header">
-                                <div class="authdocs-card-icon">
-                                    <span class="dashicons dashicons-admin-generic"></span>
-                                </div>
-                                <div class="authdocs-card-title">
-                                    <h4><?php _e('Quick Actions', 'authdocs'); ?></h4>
-                                    <p><?php _e('Common tasks and shortcuts', 'authdocs'); ?></p>
-                                </div>
-                            </div>
-                            <div class="authdocs-card-content">
-                                <div class="authdocs-quick-actions">
-                                    <button type="button" class="authdocs-quick-action" onclick="document.querySelector('.authdocs-save-button').click();">
-                                        <span class="dashicons dashicons-saved"></span>
-                                        <span><?php _e('Save All Templates', 'authdocs'); ?></span>
-                                    </button>
-                                    <button type="button" class="authdocs-quick-action" onclick="document.querySelectorAll('.authdocs-button-preview').forEach(btn => btn.click());">
-                                        <span class="dashicons dashicons-visibility"></span>
-                                        <span><?php _e('Preview All', 'authdocs'); ?></span>
-                                    </button>
-                                    <button type="button" class="authdocs-quick-action" onclick="document.querySelectorAll('.authdocs-button-test').forEach(btn => btn.click());">
-                                        <span class="dashicons dashicons-email"></span>
-                                        <span><?php _e('Test All', 'authdocs'); ?></span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -332,6 +321,9 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                     <form method="post" action="options.php" class="authdocs-frontend-settings-form">
                         <?php
                         settings_fields('authdocs_options');
+                        ?>
+                        <input type="hidden" name="authdocs_current_tab" value="<?php echo esc_attr($current_tab); ?>" />
+                        <?php
                         
                         // Include hidden fields for all email templates to preserve their values
                         $settings->render_hidden_email_template_fields();
@@ -394,7 +386,6 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                             </button>
                             <div class="authdocs-save-status">
                                 <span class="authdocs-save-indicator"></span>
-                                <span class="authdocs-save-text"><?php _e('All changes are saved automatically', 'authdocs'); ?></span>
                             </div>
                         </div>
                     </form>
@@ -505,109 +496,137 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                             </div>
                     </div>
                     
-                        <!-- Quick Actions Section -->
-                        <div class="authdocs-sidebar-card authdocs-actions-card">
-                            <div class="authdocs-card-header">
-                                <div class="authdocs-card-icon">
-                                    <span class="dashicons dashicons-admin-generic"></span>
-                                </div>
-                                <div class="authdocs-card-title">
-                                    <h4><?php _e('Quick Actions', 'authdocs'); ?></h4>
-                                    <p><?php _e('Common tasks and shortcuts', 'authdocs'); ?></p>
-                                </div>
-                            </div>
-                            <div class="authdocs-card-content">
-                                <div class="authdocs-quick-actions">
-                                    <button type="button" class="authdocs-quick-action" onclick="document.querySelector('.authdocs-save-button').click();">
-                                        <span class="dashicons dashicons-saved"></span>
-                                        <span><?php _e('Save Settings', 'authdocs'); ?></span>
-                                    </button>
-                                    <button type="button" class="authdocs-quick-action" onclick="window.open('<?php echo home_url(); ?>', '_blank');">
-                                        <span class="dashicons dashicons-external"></span>
-                                        <span><?php _e('View Frontend', 'authdocs'); ?></span>
-                                    </button>
-                                    <button type="button" class="authdocs-quick-action" onclick="document.querySelectorAll('input[type=\"radio\"]').forEach(radio => radio.checked = false);">
-                                        <span class="dashicons dashicons-undo"></span>
-                                        <span><?php _e('Reset to Defaults', 'authdocs'); ?></span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- General Settings Tab -->
-        <div class="authdocs-tab-content" id="general-tab" style="<?php echo $current_tab === 'general' ? 'display: block;' : 'display: none;'; ?>">
+        <!-- About Plugin Tab -->
+        <div class="authdocs-tab-content" id="about-plugin-tab" style="<?php echo $current_tab === 'about-plugin' ? 'display: block;' : 'display: none;'; ?>">
             <div class="authdocs-settings-layout">
-                <div class="authdocs-settings-main authdocs-general-settings-main">
-                    <div class="authdocs-general-settings-header">
+                <div class="authdocs-settings-main authdocs-about-plugin-main">
+                    <div class="authdocs-about-plugin-header">
                         <h2 class="authdocs-main-title">
-                            <span class="dashicons dashicons-admin-settings"></span>
-                            <?php _e('General Plugin Settings', 'authdocs'); ?>
+                            <span class="dashicons dashicons-info"></span>
+                            <?php _e('About AuthDocs Plugin', 'authdocs'); ?>
                         </h2>
                         <p class="authdocs-main-description">
-                            <?php _e('Configure general plugin settings, view system information, and manage plugin preferences. These settings affect the overall behavior of the AuthDocs plugin.', 'authdocs'); ?>
+                            <?php _e('Learn about the AuthDocs plugin, its features, and how to get the most out of your document sharing system.', 'authdocs'); ?>
                         </p>
                     </div>
                     
-                    <form method="post" action="options.php" class="authdocs-general-settings-form">
-                        <?php
-                        settings_fields('authdocs_options');
-                        
-                        // Include hidden fields for all email templates to preserve their values
-                        $settings->render_hidden_email_template_fields();
-                        ?>
-                        
-                        <!-- Top Save Button -->
-                        <div class="authdocs-form-actions authdocs-form-actions-top">
-                            <button type="submit" class="button button-primary authdocs-save-button">
-                                <span class="dashicons dashicons-saved"></span>
-                                <?php _e('Save General Settings', 'authdocs'); ?>
-                            </button>
-                        </div>
-                        
-                        <div class="authdocs-general-sections">
-                            <!-- General Settings Section -->
-                            <div class="authdocs-general-section authdocs-section-general">
-                                <div class="authdocs-section-header">
-                                    <div class="authdocs-section-icon">
-                                        <span class="dashicons dashicons-admin-generic"></span>
-                                    </div>
-                                    <div class="authdocs-section-title">
-                                        <h3><?php _e('Plugin Configuration', 'authdocs'); ?></h3>
-                                        <p><?php _e('Basic plugin settings and preferences', 'authdocs'); ?></p>
-                                    </div>
+                    <div class="authdocs-about-sections">
+                        <!-- Plugin Overview Section -->
+                        <div class="authdocs-about-section authdocs-section-overview">
+                            <div class="authdocs-section-header">
+                                <div class="authdocs-section-icon">
+                                    <span class="dashicons dashicons-admin-plugins"></span>
                                 </div>
-                                <div class="authdocs-section-content">
-                                    <?php do_settings_fields('authdocs-settings', 'authdocs_general_section'); ?>
+                                <div class="authdocs-section-title">
+                                    <h3><?php _e('Plugin Overview', 'authdocs'); ?></h3>
+                                    <p><?php _e('Secure document sharing with access control', 'authdocs'); ?></p>
+                                </div>
+                            </div>
+                            <div class="authdocs-section-content">
+                                <div class="authdocs-about-content">
+                                    <p><?php _e('AuthDocs is a powerful WordPress plugin that enables secure document sharing with comprehensive access control. It allows you to protect sensitive documents while providing a seamless user experience for requesting and managing access.', 'authdocs'); ?></p>
+                                    
+                                    <h4><?php _e('Key Features:', 'authdocs'); ?></h4>
+                                    <ul class="authdocs-feature-list">
+                                        <li><span class="dashicons dashicons-lock"></span> <?php _e('Secure document protection with access control', 'authdocs'); ?></li>
+                                        <li><span class="dashicons dashicons-email-alt"></span> <?php _e('Automated email notifications and confirmations', 'authdocs'); ?></li>
+                                        <li><span class="dashicons dashicons-admin-appearance"></span> <?php _e('Customizable frontend display and color schemes', 'authdocs'); ?></li>
+                                        <li><span class="dashicons dashicons-admin-users"></span> <?php _e('User-friendly access request system', 'authdocs'); ?></li>
+                                        <li><span class="dashicons dashicons-admin-tools"></span> <?php _e('Comprehensive admin dashboard and settings', 'authdocs'); ?></li>
+                                        <li><span class="dashicons dashicons-shortcode"></span> <?php _e('Flexible shortcode system for easy integration', 'authdocs'); ?></li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Middle Save Button -->
-                        <div class="authdocs-form-actions authdocs-form-actions-middle">
-                            <button type="submit" class="button button-primary authdocs-save-button">
-                                <span class="dashicons dashicons-saved"></span>
-                                <?php _e('Save General Settings', 'authdocs'); ?>
-                            </button>
-                        </div>
-                        
-                        <div class="authdocs-form-actions authdocs-form-actions-bottom">
-                            <button type="submit" class="button button-primary authdocs-save-button">
-                                <span class="dashicons dashicons-saved"></span>
-                                <?php _e('Save General Settings', 'authdocs'); ?>
-                            </button>
-                            <div class="authdocs-save-status">
-                                <span class="authdocs-save-indicator"></span>
-                                <span class="authdocs-save-text"><?php _e('All changes are saved automatically', 'authdocs'); ?></span>
+                        <!-- Getting Started Section -->
+                        <div class="authdocs-about-section authdocs-section-getting-started">
+                            <div class="authdocs-section-header">
+                                <div class="authdocs-section-icon">
+                                    <span class="dashicons dashicons-controls-play"></span>
+                                </div>
+                                <div class="authdocs-section-title">
+                                    <h3><?php _e('Getting Started', 'authdocs'); ?></h3>
+                                    <p><?php _e('Quick setup guide for new users', 'authdocs'); ?></p>
+                                </div>
+                            </div>
+                            <div class="authdocs-section-content">
+                                <div class="authdocs-about-content">
+                                    <h4><?php _e('Step 1: Configure Email Templates', 'authdocs'); ?></h4>
+                                    <p><?php _e('Go to the Email Templates tab and customize your email notifications. Set up templates for access requests, auto-responses, and decision notifications.', 'authdocs'); ?></p>
+                                    
+                                    <h4><?php _e('Step 2: Customize Frontend Display', 'authdocs'); ?></h4>
+                                    <p><?php _e('Visit the Frontend Settings tab to choose your color scheme and pagination style. Preview how your documents will appear to users.', 'authdocs'); ?></p>
+                                    
+                                    <h4><?php _e('Step 3: Add Documents', 'authdocs'); ?></h4>
+                                    <p><?php _e('Create new documents using the "Documents" menu. Upload your files and configure access settings for each document.', 'authdocs'); ?></p>
+                                    
+                                    <h4><?php _e('Step 4: Display Documents', 'authdocs'); ?></h4>
+                                    <p><?php _e('Use the shortcode [authdocs_grid] on any page or post to display your protected documents with the configured styling.', 'authdocs'); ?></p>
+                                </div>
                             </div>
                         </div>
-                    </form>
+                        
+                        <!-- Documentation Section -->
+                        <div class="authdocs-about-section authdocs-section-documentation">
+                            <div class="authdocs-section-header">
+                                <div class="authdocs-section-icon">
+                                    <span class="dashicons dashicons-book-alt"></span>
+                                </div>
+                                <div class="authdocs-section-title">
+                                    <h3><?php _e('Documentation & Support', 'authdocs'); ?></h3>
+                                    <p><?php _e('Resources to help you succeed', 'authdocs'); ?></p>
+                                </div>
+                            </div>
+                            <div class="authdocs-section-content">
+                                <div class="authdocs-about-content">
+                                    <p><?php _e('Need help getting started or have questions about advanced features? We\'ve got you covered with comprehensive documentation and support resources.', 'authdocs'); ?></p>
+                                    
+                                    <div class="authdocs-documentation-links">
+                                        <a href="#" class="authdocs-doc-link">
+                                            <span class="dashicons dashicons-book-alt"></span>
+                                            <div class="authdocs-doc-content">
+                                                <h4><?php _e('User Guide', 'authdocs'); ?></h4>
+                                                <p><?php _e('Complete guide to using AuthDocs', 'authdocs'); ?></p>
+                                            </div>
+                                        </a>
+                                        
+                                        <a href="#" class="authdocs-doc-link">
+                                            <span class="dashicons dashicons-shortcode"></span>
+                                            <div class="authdocs-doc-content">
+                                                <h4><?php _e('Shortcode Reference', 'authdocs'); ?></h4>
+                                                <p><?php _e('All available shortcodes and parameters', 'authdocs'); ?></p>
+                                            </div>
+                                        </a>
+                                        
+                                        <a href="#" class="authdocs-doc-link">
+                                            <span class="dashicons dashicons-email-alt"></span>
+                                            <div class="authdocs-doc-content">
+                                                <h4><?php _e('Email Templates', 'authdocs'); ?></h4>
+                                                <p><?php _e('Customizing email notifications', 'authdocs'); ?></p>
+                                            </div>
+                                        </a>
+                                        
+                                        <a href="#" class="authdocs-doc-link">
+                                            <span class="dashicons dashicons-sos"></span>
+                                            <div class="authdocs-doc-content">
+                                                <h4><?php _e('Support Forum', 'authdocs'); ?></h4>
+                                                <p><?php _e('Get help from the community', 'authdocs'); ?></p>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="authdocs-settings-sidebar authdocs-general-sidebar">
+                <div class="authdocs-settings-sidebar authdocs-about-sidebar">
                     <div class="authdocs-sidebar-header">
                         <h3 class="authdocs-sidebar-title">
                             <span class="dashicons dashicons-info"></span>
@@ -684,35 +703,6 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                             </div>
                         </div>
                         
-                        <!-- Quick Actions Section -->
-                        <div class="authdocs-sidebar-card authdocs-actions-card">
-                            <div class="authdocs-card-header">
-                                <div class="authdocs-card-icon">
-                                    <span class="dashicons dashicons-admin-tools"></span>
-                                </div>
-                                <div class="authdocs-card-title">
-                                    <h4><?php _e('Quick Actions', 'authdocs'); ?></h4>
-                                    <p><?php _e('Common administrative tasks', 'authdocs'); ?></p>
-                                </div>
-                            </div>
-                            <div class="authdocs-card-content">
-                                <div class="authdocs-quick-actions">
-                                    <button type="button" class="authdocs-quick-action" onclick="document.querySelector('.authdocs-save-button').click();">
-                                        <span class="dashicons dashicons-saved"></span>
-                                        <span><?php _e('Save All Settings', 'authdocs'); ?></span>
-                                    </button>
-                                    <button type="button" class="authdocs-quick-action" onclick="window.open('<?php echo admin_url('edit.php?post_type=document&page=authdocs-requests'); ?>', '_blank');">
-                                        <span class="dashicons dashicons-list-view"></span>
-                                        <span><?php _e('View Requests', 'authdocs'); ?></span>
-                                    </button>
-                                    <button type="button" class="authdocs-quick-action" onclick="window.open('<?php echo admin_url('edit.php?post_type=document'); ?>', '_blank');">
-                                        <span class="dashicons dashicons-media-document"></span>
-                                        <span><?php _e('Manage Documents', 'authdocs'); ?></span>
-                                    </button>
-                                </div>
-                            </div>
-                    </div>
-                    
                         <!-- Plugin Status Section -->
                         <div class="authdocs-sidebar-card authdocs-status-card">
                             <div class="authdocs-card-header">
@@ -756,20 +746,7 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
             <button type="button" class="authdocs-modal-close">&times;</button>
         </div>
         <div class="authdocs-modal-body">
-            <div class="authdocs-preview-tabs">
-                <button type="button" class="authdocs-tab-button active" data-tab="html"><?php _e('HTML', 'authdocs'); ?></button>
-                <button type="button" class="authdocs-tab-button" data-tab="preview"><?php _e('Preview', 'authdocs'); ?></button>
-            </div>
-            
-            <div class="authdocs-tab-content active" id="html-tab">
-                <div class="authdocs-preview-subject">
-                    <strong><?php _e('Subject:', 'authdocs'); ?></strong>
-                    <span id="preview-subject"></span>
-                </div>
-                <textarea id="preview-body-html" readonly rows="20" class="large-text code"></textarea>
-            </div>
-            
-            <div class="authdocs-tab-content" id="preview-tab">
+            <div class="authdocs-preview-content">
                 <div class="authdocs-preview-subject">
                     <strong><?php _e('Subject:', 'authdocs'); ?></strong>
                     <span id="preview-subject-display"></span>
@@ -804,8 +781,8 @@ jQuery(document).ready(function($) {
         window.history.pushState({path: newUrl}, '', newUrl);
     });
     
-    // Sample data for previews
-    var sampleData = {
+    // Sample data for previews - Make globally accessible
+    window.sampleData = {
         name: 'John Doe',
         email: 'john.doe@example.com',
         file_name: 'Sample Document.pdf',
@@ -815,8 +792,8 @@ jQuery(document).ready(function($) {
         link: 'https://example.com/authdocs/download?hash=abc123&file=document.pdf'
     };
     
-    // Preview functions
-    function previewEmail(templateType, title) {
+    // Preview functions - Make globally accessible
+    window.previewEmail = function(templateType, title) {
         var subjectField, bodyField;
         
         switch(templateType) {
@@ -838,21 +815,19 @@ jQuery(document).ready(function($) {
         var body = $(bodyField).val();
         
         // Replace variables in preview
-        var previewSubject = replaceVariables(subject, sampleData);
-        var previewBody = replaceVariables(body, sampleData);
+        var previewSubject = window.replaceVariables(subject, window.sampleData);
+        var previewBody = window.replaceVariables(body, window.sampleData);
         
         // Update preview content
         $('#preview-modal-title').text(title);
-        $('#preview-subject').text(previewSubject);
         $('#preview-subject-display').text(previewSubject);
-        $('#preview-body-html').val(previewBody);
         $('#preview-body-display').html(previewBody);
         
         // Show modal
         $('#authdocs-email-preview-modal').show();
-    }
+    };
     
-    function replaceVariables(text, data) {
+    window.replaceVariables = function(text, data) {
         return text.replace(/\{\{name\}\}/g, data.name)
                    .replace(/\{\{email\}\}/g, data.email)
                    .replace(/\{\{file_name\}\}/g, data.file_name)
@@ -860,7 +835,7 @@ jQuery(document).ready(function($) {
                    .replace(/\{\{status\}\}/g, data.status)
                    .replace(/\{\{status_color\}\}/g, data.status_color)
                    .replace(/\{\{link\}\}/g, data.link);
-    }
+    };
     
     // Preview button handlers
     $('#preview-access-request').on('click', function() {
@@ -887,18 +862,6 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // Tab functionality
-    $('.authdocs-tab-button').on('click', function() {
-        var tab = $(this).data('tab');
-        
-        // Update active tab button
-        $('.authdocs-tab-button').removeClass('active');
-        $(this).addClass('active');
-        
-        // Update active tab content
-        $('.authdocs-tab-content').removeClass('active');
-        $('#' + tab + '-tab').addClass('active');
-    });
     
     // Test email functions
     function testEmail(action, buttonText, successMessage) {

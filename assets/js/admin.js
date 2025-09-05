@@ -1100,3 +1100,29 @@ jQuery(document).ready(function ($) {
   $(window).on("resize", handleResponsiveTable);
   handleResponsiveTable();
 });
+
+// Global function for pagination type confirmation
+function authdocsConfirmClassicPagination(radioButton) {
+  if (radioButton.checked) {
+    // Show confirmation popup
+    if (
+      confirm(
+        'You are switching to Classic Pagination. This will automatically set the pagination style to "Classic Pagination" without AJAX. The page will reload when users navigate between pages. Do you want to continue?'
+      )
+    ) {
+      // User confirmed, keep the selection
+      return true;
+    } else {
+      // User cancelled, uncheck the radio button and check AJAX instead
+      radioButton.checked = false;
+      var ajaxRadio = document.querySelector(
+        'input[name="authdocs_pagination_type"][value="ajax"]'
+      );
+      if (ajaxRadio) {
+        ajaxRadio.checked = true;
+      }
+      return false;
+    }
+  }
+  return true;
+}

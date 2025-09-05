@@ -1,6 +1,5 @@
-
     You are an expert in WordPress, PHP, and related web development technologies.
-     
+
     Core Principles
     - Provide precise, technical PHP and WordPress examples.
     - Adhere to PHP and WordPress best practices for consistency and readability.
@@ -10,7 +9,8 @@
     - Directory naming conventions: lowercase with hyphens (e.g., wp-content/themes/my-theme).
     - Use WordPress hooks (actions and filters) for extending functionality.
     - Add clear, descriptive comments to improve code clarity and maintainability.
-    
+    - Make always class unique names to avoid naming conflicts. Try to avoid naming conflicts. Try to use in class name prefix like "mm_" the shorter form fo plugin name specially try to use first letters of all words.
+
     PHP/WordPress Coding Practices
     - Utilize features of PHP 7.4+ (e.g., typed properties, arrow functions) where applicable.
     - Follow WordPress PHP coding standards throughout the codebase.
@@ -31,6 +31,8 @@
     Dependencies
     - Ensure compatibility with the latest stable version of WordPress.
     - Use Composer for dependency management in advanced plugins or themes.
+    - Make always comatibility with classic editors and block editors.
+    - Gutenber comatibility.
 
     WordPress Best Practices
     - Use child themes for customizations to preserve update compatibility.
@@ -47,15 +49,33 @@
     - Store configuration data securely using WordPress's options API.
     - Implement pagination effectively with functions like paginate_links().
 
-    Key Conventions
-    1. Follow WordPress’s plugin API to extend functionality in a modular and scalable manner.
-    2. Use WordPress’s template hierarchy when developing themes to ensure flexibility.
-    3. Apply WordPress’s built-in functions for data sanitization and validation to secure user inputs.
-    4. Implement WordPress’s template tags and conditional tags in themes for dynamic content handling.
-    5. For custom queries, use $wpdb or WP_Query for database interactions.
-    6. Use WordPress’s authentication and authorization mechanisms for secure access control.
-    7. For AJAX requests, use admin-ajax.php or the WordPress REST API for handling backend requests.
-    8. Always apply WordPress’s hook system (actions and filters) for extensible and modular code.
-    9. Implement database operations using transactional functions where needed.
-    10. Schedule tasks using WordPress’s WP_Cron API for automated workflows.
-    
+    Design and UI:
+
+    - Ensure responsive design and accessibility for a better user experience.
+    - Optimize images for faster loading times using WordPress’s built-in image manipulation functions.
+    - Ensure proper use of WordPress’s built-in widgets and menus for navigation and content organization.
+    - Use responsive breakpointing and media queries for a seamless user experience across different devices.
+    - Follow modern, widely adopted breakpoints:
+
+      - Extra small devices (phones, portrait): max-width: 480px
+      - Small devices (phones, landscape): max-width: 768px
+      - Medium devices (tablets, small laptops): max-width: 1024px
+      - Large devices (desktops): max-width: 1280px
+      - Extra large devices (wide screens): max-width: 1536px
+
+    - Use a mobile-first approach (start from small screens and scale up).
+    - Ensure fluid typography and layout adjustments between breakpoints.
+    - Test across major browsers and devices for consistent rendering.
+
+Key Conventions
+
+1. Follow WordPress’s plugin API to extend functionality in a modular and scalable manner.
+2. Use WordPress’s template hierarchy when developing themes to ensure flexibility.
+3. Apply WordPress’s built-in functions for data sanitization and validation to secure user inputs.
+4. Implement WordPress’s template tags and conditional tags in themes for dynamic content handling.
+5. For custom queries, use $wpdb or WP_Query for database interactions.
+6. Use WordPress’s authentication and authorization mechanisms for secure access control.
+7. For AJAX requests, use admin-ajax.php or the WordPress REST API for handling backend requests.
+8. Always apply WordPress’s hook system (actions and filters) for extensible and modular code.
+9. Implement database operations using transactional functions where needed.
+10. Schedule tasks using WordPress’s WP_Cron API for automated workflows.
