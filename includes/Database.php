@@ -88,14 +88,14 @@ class Database
         $results = $wpdb->get_results($wpdb->prepare(
             "SELECT r.*, p.post_title as document_title 
              FROM $table_name r 
-             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID 
+             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID
              ORDER BY r.created_at DESC"
         ));
         
         return $results ?: [];
     }
 
-    public static function get_paginated_requests(int $page = 1, int $per_page = 20): array
+    public static function get_paginated_requests(int $page = 1, int $per_page = 5): array
     {
         global $wpdb;
         
@@ -103,15 +103,25 @@ class Database
         
         $offset = ($page - 1) * $per_page;
         
-        $results = $wpdb->get_results($wpdb->prepare(
+        $query = $wpdb->prepare(
             "SELECT r.*, p.post_title as document_title 
              FROM $table_name r 
-             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID 
+             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID
              ORDER BY r.created_at DESC
              LIMIT %d OFFSET %d",
             $per_page,
             $offset
-        ));
+        );
+        
+        error_log("AuthDocs Debug - Paginated requests query: " . $query);
+        $results = $wpdb->get_results($query);
+        
+        // Debug: Log the results
+        if ($results) {
+            foreach ($results as $result) {
+                error_log("AuthDocs Debug - Result: ID={$result->id}, Document_ID={$result->document_id}, Document_Title=" . ($result->document_title ?? 'NULL'));
+            }
+        }
         
         return $results ?: [];
     }
@@ -139,35 +149,66 @@ class Database
             // Always generate a new hash when accepting
             $data['secure_hash'] = self::generate_secure_hash($request_id);
         } elseif ($status === 'declined') {
-            // Clear secure hash when revoking access
+            // Clear secure hash when declining - this ensures the link is not accessible
             $data['secure_hash'] = null;
         } elseif ($status === 'inactive') {
             // Store the current status before deactivating
             $current_status = self::get_request_status($request_id);
+            error_log("AuthDocs: Deactivating request {$request_id}, current status: {$current_status}");
             if ($current_status && $current_status !== 'inactive') {
-                update_post_meta($request_id, '_authdocs_previous_status', $current_status);
+                $meta_result = update_post_meta($request_id, '_authdocs_previous_status', $current_status);
+                error_log("AuthDocs: Saved previous status '{$current_status}' for request {$request_id}, meta result: " . ($meta_result ? 'success' : 'failed'));
+            } else {
+                error_log("AuthDocs: No previous status to save for request {$request_id} (current status: {$current_status})");
             }
         } elseif ($status === 'restore') {
             // Check if this is a reactivation and restore previous status
             $previous_status = get_post_meta($request_id, '_authdocs_previous_status', true);
             error_log("AuthDocs: Status is 'restore', checking for previous status. Previous status: {$previous_status}");
             
-            if ($previous_status && in_array($previous_status, ['accepted', 'declined'])) {
+            if ($previous_status && in_array($previous_status, ['accepted', 'declined', 'pending'])) {
                 error_log("AuthDocs: Restoring previous status: {$previous_status}");
                 $data['status'] = $previous_status;
                 // Clear the stored previous status
                 delete_post_meta($request_id, '_authdocs_previous_status');
                 
+                // Get current request to check hash status
+                $current_request = self::get_request_by_id($request_id);
+                
                 // For reactivation, preserve the existing hash instead of generating a new one
                 // The hash should already exist in the database from before deactivation
                 // No need to modify secure_hash - it should remain unchanged
                 
+                // If restoring to 'accepted' status, ensure we have a hash
+                if ($previous_status === 'accepted' && $current_request && empty($current_request->secure_hash)) {
+                    error_log("AuthDocs: Restoring to accepted but no hash found, generating new one");
+                    $data['secure_hash'] = self::generate_secure_hash($request_id);
+                }
+                
                 // Note: The status change hook will be fired from the calling method
                 // since we're changing the status to the previous status
             } else {
-                error_log("AuthDocs: No valid previous status found or status not in allowed list");
-                // If no previous status, default to 'pending'
-                $data['status'] = 'pending';
+                error_log("AuthDocs: No valid previous status found, checking current request status");
+                // If no previous status meta found, check the current request status
+                // This handles cases where the meta might not have been saved properly
+                $current_request = self::get_request_by_id($request_id);
+                if ($current_request && $current_request->status === 'inactive') {
+                    // If currently inactive, try to determine the most likely previous status
+                    // Check if there's a secure_hash, which indicates it was likely 'accepted'
+                    if (!empty($current_request->secure_hash)) {
+                        error_log("AuthDocs: Found secure_hash, assuming previous status was 'accepted'");
+                        $data['status'] = 'accepted';
+                    } else {
+                        // If no secure_hash, it could be pending or declined
+                        // Since we can't determine which, default to pending for safety
+                        // The admin can manually change it to declined if needed
+                        error_log("AuthDocs: No secure_hash found, defaulting to 'pending'");
+                        $data['status'] = 'pending';
+                    }
+                } else {
+                    error_log("AuthDocs: Request not found or not inactive, defaulting to 'pending'");
+                    $data['status'] = 'pending';
+                }
             }
         }
         // Note: For 'inactive' status, hash is preserved to maintain link consistency
@@ -249,7 +290,15 @@ class Database
         
         $sql = "SELECT * FROM $table_name WHERE " . implode(' AND ', $where_conditions);
         
+        error_log("AuthDocs: validate_secure_access SQL: " . $sql);
+        error_log("AuthDocs: validate_secure_access values: " . json_encode($where_values));
+        
         $request = $wpdb->get_row($wpdb->prepare($sql, $where_values));
+        
+        error_log("AuthDocs: validate_secure_access result: " . ($request ? 'found' : 'not found'));
+        if ($request) {
+            error_log("AuthDocs: Found request - ID: {$request->id}, Status: {$request->status}, Hash: {$request->secure_hash}");
+        }
         
         return !empty($request);
     }
@@ -286,6 +335,27 @@ class Database
     }
     
     /**
+     * Get document title with fallback
+     */
+    public static function get_document_title(int $document_id): string {
+        if ($document_id <= 0) {
+            return '';
+        }
+        
+        $title = get_the_title($document_id);
+        if (empty($title)) {
+            // Try to get from database directly
+            global $wpdb;
+            $title = $wpdb->get_var($wpdb->prepare(
+                "SELECT post_title FROM {$wpdb->posts} WHERE ID = %d",
+                $document_id
+            ));
+        }
+        
+        return $title ?: '';
+    }
+    
+    /**
      * Get request by ID
      */
     public static function get_request_by_id(int $request_id): ?object {
@@ -293,7 +363,10 @@ class Database
         $table_name = $wpdb->prefix . self::$table_name;
         
         $request = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE id = %d",
+            "SELECT r.*, p.post_title as document_title 
+             FROM $table_name r 
+             LEFT JOIN {$wpdb->posts} p ON r.document_id = p.ID
+             WHERE r.id = %d",
             $request_id
         ));
         
@@ -401,7 +474,8 @@ class Database
             'id' => $file_id,
             'url' => $file_url,
             'path' => $file_path,
-            'filename' => basename($file_path)
+            'filename' => basename($file_path),
+            'title' => get_the_title($document_id) ?: basename($file_path)
         ];
     }
     
@@ -491,5 +565,32 @@ class Database
         
         $query = new \WP_Query($args);
         return $query->found_posts;
+    }
+
+    /**
+     * Delete a request by ID
+     */
+    public static function delete_request(int $request_id): bool
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . self::$table_name;
+        
+        $result = $wpdb->delete(
+            $table_name,
+            ['id' => $request_id],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            error_log("AuthDocs: Failed to delete request ID {$request_id}");
+            return false;
+        }
+        
+        // Clean up any associated post meta
+        delete_post_meta($request_id, '_authdocs_previous_status');
+        
+        error_log("AuthDocs: Successfully deleted request ID {$request_id}");
+        return true;
     }
 }

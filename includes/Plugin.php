@@ -38,10 +38,8 @@ class Plugin
         
         // Email hooks
         add_action('authdocs/request_submitted', [$this, 'handle_request_submitted_hook']);
-        add_action('authdocs/request_status_changed', [$this, 'handle_request_status_changed_hook']);
         add_action('template_redirect', [$this, 'protect_document_files']);
         add_action('init', [$this, 'protect_media_files']);
-        add_action('wp_ajax_authdocs_debug_hash', [$this, 'debug_hash_generation']);
     }
 
     private function load_dependencies(): void
@@ -74,14 +72,6 @@ class Plugin
             [$this, 'requests_page']
         );
         
-        add_submenu_page(
-            'edit.php?post_type=document',
-            __('Debug Info', 'authdocs'),
-            __('Debug', 'authdocs'),
-            'manage_options',
-            'authdocs-debug',
-            [$this, 'debug_page']
-        );
         
         add_submenu_page(
             'edit.php?post_type=document',
@@ -133,7 +123,7 @@ class Plugin
     {
         // Only load admin assets on our specific admin pages
         $screen = get_current_screen();
-        if (!$screen || !in_array($screen->id, ['document_page_authdocs-requests', 'document_page_authdocs-debug', 'document_page_authdocs-settings'])) {
+        if (!$screen || !in_array($screen->id, ['document_page_authdocs-requests', 'document_page_authdocs-settings'])) {
             return;
         }
 
@@ -196,7 +186,7 @@ class Plugin
                     'message' => __('Failed to submit request', 'authdocs')
                 ]);
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             error_log('AuthDocs: Error in handle_access_request: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => __('An unexpected error occurred', 'authdocs')
@@ -206,18 +196,23 @@ class Plugin
 
     public function handle_request_management(): void
     {
+        error_log("AuthDocs: handle_request_management called");
+        error_log("AuthDocs: POST data: " . json_encode($_POST));
+        
         if (!current_user_can('manage_options')) {
+            error_log("AuthDocs: Insufficient permissions");
             wp_die(__('Insufficient permissions', 'authdocs'));
         }
 
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
+            error_log("AuthDocs: Security check failed");
             wp_die(__('Security check failed', 'authdocs'));
         }
 
         $request_id = intval($_POST['request_id'] ?? 0);
         $action = sanitize_text_field($_POST['action_type'] ?? '');
 
-        if (!$request_id || !in_array($action, ['accept', 'decline', 'inactive'])) {
+        if (!$request_id || !in_array($action, ['accept', 'decline', 'inactive', 'delete'])) {
             wp_send_json_error(__('Invalid request', 'authdocs'));
         }
 
@@ -225,6 +220,19 @@ class Plugin
         $current_request = Database::get_request_by_id($request_id);
         if (!$current_request) {
             wp_send_json_error(__('Request not found', 'authdocs'));
+        }
+
+        // Handle delete action separately
+        if ($action === 'delete') {
+            $result = Database::delete_request($request_id);
+            if ($result) {
+                wp_send_json_success([
+                    'message' => __('Request deleted successfully.', 'authdocs'),
+                    'deleted' => true
+                ]);
+            } else {
+                wp_send_json_error(__('Failed to delete request', 'authdocs'));
+            }
         }
 
         // Map action to database status with toggle logic for inactive
@@ -246,21 +254,89 @@ class Plugin
             $final_status = Database::get_request_status($request_id);
             error_log("AuthDocs: Request updated successfully. Old status: {$old_status}, Final status: {$final_status}");
             
-            // Fire the status change hook with the final status
+            // Fire the status change hook with the final status and capture email result
             error_log("AuthDocs: Firing status change hook with final status: {$final_status}");
-            do_action('authdocs/request_status_changed', $request_id, $old_status, $final_status);
+            $email_sent = $this->handle_status_change_with_email($request_id, $old_status, $final_status);
             
-            wp_send_json_success(__('Request updated successfully', 'authdocs'));
+            // Prepare response message based on action and email result
+            $message = $this->get_action_response_message($action, $final_status, $email_sent);
+            
+            wp_send_json_success([
+                'message' => $message,
+                'email_sent' => $email_sent,
+                'status' => $final_status
+            ]);
         } else {
             error_log("AuthDocs: Failed to update request status");
             wp_send_json_error(__('Failed to update request', 'authdocs'));
         }
     }
-
+    
+    /**
+     * Handle status change with email sending and return result
+     */
+    private function handle_status_change_with_email(int $request_id, string $old_status, string $new_status): bool {
+        $email = new Email();
+        $email_sent = false;
+        
+        // Send grant/decline email based on status
+        if ($new_status === 'accepted') {
+            error_log("AuthDocs: Status is 'accepted', sending grant email");
+            $email_sent = $email->send_grant_decline_email($request_id, true);
+        } elseif ($new_status === 'declined') {
+            error_log("AuthDocs: Status is 'declined', sending decline email");
+            $email_sent = $email->send_grant_decline_email($request_id, false);
+        } else {
+            error_log("AuthDocs: Status is not 'accepted' or 'declined' ({$new_status}), not sending email");
+        }
+        
+        return $email_sent;
+    }
+    
+    /**
+     * Get response message based on action and email result
+     */
+    private function get_action_response_message(string $action, string $status, bool $email_sent): string {
+        $base_message = '';
+        $email_message = '';
+        
+        // Base message based on action
+        switch ($action) {
+            case 'accept':
+                $base_message = $status === 'accepted' ? 
+                    __('Request accepted successfully.', 'authdocs') : 
+                    __('Request re-accepted successfully.', 'authdocs');
+                break;
+            case 'decline':
+                $base_message = $status === 'declined' ? 
+                    __('Request declined successfully.', 'authdocs') : 
+                    __('Request re-declined successfully.', 'authdocs');
+                break;
+            case 'inactive':
+                $base_message = $status === 'inactive' ? 
+                    __('Document link hidden successfully.', 'authdocs') : 
+                    __('Document link restored successfully.', 'authdocs');
+                break;
+            default:
+                $base_message = __('Request updated successfully.', 'authdocs');
+        }
+        
+        // Email message based on result
+        if ($email_sent && in_array($status, ['accepted', 'declined'])) {
+            $email_message = $status === 'accepted' ? 
+                __(' Grant email sent to requester.', 'authdocs') : 
+                __(' Decline email sent to requester.', 'authdocs');
+        } elseif (!$email_sent && in_array($status, ['accepted', 'declined'])) {
+            $email_message = __(' Warning: Email could not be sent.', 'authdocs');
+        }
+        
+        return $base_message . $email_message;
+    }
+    
     public function requests_page(): void
     {
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        $per_page = 20;
+        $per_page = 5;
         $total_requests = Database::get_total_requests_count();
         $total_pages = ceil($total_requests / $per_page);
         $requests = Database::get_paginated_requests($current_page, $per_page);
@@ -330,96 +406,7 @@ class Plugin
         }
     }
 
-    public function debug_hash_generation(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
-        }
 
-        $request_id = intval($_GET['request_id'] ?? 0);
-        
-        if (!$request_id) {
-            wp_send_json_error(__('Request ID required', 'authdocs'));
-        }
-
-        $result = Database::test_hash_generation($request_id);
-        
-        wp_send_json_success($result);
-    }
-
-    public function debug_page(): void
-    {
-        $table_info = Database::check_table_structure();
-        $requests = Database::get_all_requests();
-        
-        ?>
-        <div class="wrap">
-            <h1><?php _e('AuthDocs Debug Information', 'authdocs'); ?></h1>
-            
-            <h2><?php _e('Database Table Information', 'authdocs'); ?></h2>
-            <pre><?php print_r($table_info); ?></pre>
-            
-            <h2><?php _e('Recent Requests', 'authdocs'); ?></h2>
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Document ID</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Hash</th>
-                        <th>Created</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($requests as $request): ?>
-                        <tr>
-                            <td><?php echo esc_html($request->id); ?></td>
-                            <td><?php echo esc_html($request->document_id); ?></td>
-                            <td><?php echo esc_html($request->requester_email); ?></td>
-                            <td><?php echo esc_html($request->status); ?></td>
-                            <td><?php echo esc_html($request->secure_hash ? substr($request->secure_hash, 0, 20) . '...' : 'NULL'); ?></td>
-                            <td><?php echo esc_html($request->created_at); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            
-            <h2><?php _e('Test Hash Generation', 'authdocs'); ?></h2>
-            <p><?php _e('Enter a request ID to test hash generation:', 'authdocs'); ?></p>
-            <input type="number" id="test-request-id" placeholder="Request ID" />
-            <button type="button" id="test-hash-btn"><?php _e('Test Hash Generation', 'authdocs'); ?></button>
-            <div id="test-results"></div>
-            
-            <script>
-            jQuery(document).ready(function($) {
-                $('#test-hash-btn').on('click', function() {
-                    var requestId = $('#test-request-id').val();
-                    if (!requestId) {
-                        alert('Please enter a request ID');
-                        return;
-                    }
-                    
-                    $.ajax({
-                        url: ajaxurl,
-                        type: 'GET',
-                        data: {
-                            action: 'authdocs_debug_hash',
-                            request_id: requestId
-                        },
-                        success: function(response) {
-                            $('#test-results').html('<pre>' + JSON.stringify(response, null, 2) + '</pre>');
-                        },
-                        error: function() {
-                            $('#test-results').html('<p>Error testing hash generation</p>');
-                        }
-                    });
-                });
-            });
-            </script>
-        </div>
-        <?php
-    }
     
     public function settings_page(): void
     {
@@ -561,54 +548,6 @@ class Plugin
     }
     
     /**
-     * Handle request status changed hook
-     */
-    public function handle_request_status_changed(int $request_id, string $old_status, string $new_status): void
-    {
-        $email = new Email();
-        
-        // Send grant/decline email based on status
-        if ($new_status === 'accepted') {
-            $email->send_grant_decline_email($request_id, true);
-        } elseif ($new_status === 'declined') {
-            $email->send_grant_decline_email($request_id, false);
-        }
-    }
-    
-    /**
-     * Handle request status changed hook (WordPress hook compatibility)
-     */
-    public function handle_request_status_changed_hook($request_id, $old_status = '', $new_status = ''): void
-    {
-        error_log("AuthDocs: handle_request_status_changed_hook called - Request ID: {$request_id}, Old Status: {$old_status}, New Status: {$new_status}");
-        
-        // Ensure we have the required parameters
-        if (!is_numeric($request_id)) {
-            error_log("AuthDocs: Invalid request ID: {$request_id}");
-            return;
-        }
-        
-        $request_id = (int) $request_id;
-        $old_status = (string) $old_status;
-        $new_status = (string) $new_status;
-        
-        error_log("AuthDocs: Processed parameters - Request ID: {$request_id}, Old Status: {$old_status}, New Status: {$new_status}");
-        
-        $email = new Email();
-        
-        // Send grant/decline email based on status
-        if ($new_status === 'accepted') {
-            error_log("AuthDocs: Status is 'accepted', sending grant email");
-            $email->send_grant_decline_email($request_id, true);
-        } elseif ($new_status === 'declined') {
-            error_log("AuthDocs: Status is 'declined', sending decline email");
-            $email->send_grant_decline_email($request_id, false);
-        } else {
-            error_log("AuthDocs: Status is not 'accepted' or 'declined' ({$new_status}), not sending email");
-        }
-    }
-    
-    /**
      * Handle AJAX request to get updated request data
      */
     public function handle_get_request_data(): void
@@ -635,10 +574,14 @@ class Plugin
         // Get document file information
         $document_file = Database::get_document_file(intval($request->document_id));
         
+        // Get document title using the robust helper method
+        $document_title = Database::get_document_title(intval($request->document_id));
+        
         // Prepare response data
         $response_data = [
             'id' => $request->id,
             'document_id' => $request->document_id,
+            'document_title' => $document_title,
             'requester_name' => $request->requester_name,
             'requester_email' => $request->requester_email,
             'status' => $request->status,
@@ -651,161 +594,221 @@ class Plugin
     }
     
     /**
-     * Handle AJAX request to load more documents for grid view
+     * Generate grid items HTML with color palette styling
      */
-    public function handle_load_more_documents(): void
+    private function generate_grid_items_html(array $documents): string
     {
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
-            wp_send_json_error([
-                'message' => __('Security check failed', 'authdocs')
-            ]);
-        }
-
-        $limit = intval($_POST['limit'] ?? 12);
-        $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
+        $settings = new Settings();
+        $color_palette = $settings->get_color_palette_data();
         
-        // Validate inputs
-        if ($limit < 1) $limit = 12;
-        if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
-        
-        $documents = Database::get_published_documents($limit, $restriction);
-        
-        if (empty($documents)) {
-            wp_send_json_error([
-                'message' => __('No documents found.', 'authdocs')
-            ]);
-        }
-        
-        // Generate HTML for the grid items
         ob_start();
         foreach ($documents as $document): ?>
-            <div class="authdocs-grid-item">
-                <div class="authdocs-grid-item-content">
-                    <div class="authdocs-grid-item-header">
-                        <h3 class="authdocs-grid-item-title">
-                            <?php echo esc_html($document['title']); ?>
-                        </h3>
-                        <div class="authdocs-grid-item-date">
-                            <?php echo esc_html($document['date']); ?>
+            <!-- Card -->
+            <article class="card">
+                <div class="card-body">
+                    <?php if (has_post_thumbnail($document['id'])): ?>
+                        <div class="card-featured-image">
+                            <?php echo get_the_post_thumbnail($document['id'], 'medium', ['class' => 'authdocs-card-thumbnail']); ?>
                         </div>
-                    </div>
-                    
-                    <?php if (!empty($document['description'])): ?>
-                        <div class="authdocs-grid-item-description">
-                            <?php echo wp_kses_post(wp_trim_words($document['description'], 20)); ?>
-                        </div>
+                    <?php else: ?>
+                        <span class="card-icon" aria-hidden="true">📄</span>
                     <?php endif; ?>
-                    
-                    <div class="authdocs-grid-item-actions">
+                    <h3 class="card-title"><?php echo esc_html($document['title']); ?></h3>
+                    <?php if (!empty($document['description'])): ?>
+                        <p class="card-desc"><?php echo wp_kses_post(wp_trim_words($document['description'], 15)); ?></p>
+                    <?php endif; ?>
+                    <div class="card-date"><?php echo esc_html($document['date']); ?></div>
+                </div>
+
+                <!-- Overlay -->
+                <div class="card-overlay" aria-hidden="true">
+                    <div class="overlay-content">
                         <?php if ($document['restricted']): ?>
-                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>">
-                                <?php _e('Request Access', 'authdocs'); ?>
+                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'authdocs'); ?>">
+                                <svg class="authdocs-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                                </svg>
                             </button>
                         <?php else: ?>
-                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download>
-                                <?php _e('Download', 'authdocs'); ?>
+                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download title="<?php _e('Open Document', 'authdocs'); ?>">
+                                <svg class="authdocs-open-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                                </svg>
                             </a>
                         <?php endif; ?>
                     </div>
                 </div>
-            </div>
+            </article>
         <?php endforeach;
         $html = ob_get_clean();
         
-        // Check if there are more documents available
-        $total_documents = Database::get_total_requests_count();
-        $has_more = $total_documents > $limit;
+        // Add inline styles for color palette
+        $css = $this->generate_ajax_color_css($color_palette);
         
-        wp_send_json_success([
-            'html' => $html,
-            'has_more' => $has_more,
-            'total' => $total_documents,
-            'current_limit' => $limit
-        ]);
+        return $css . $html;
     }
     
     /**
-     * Handle AJAX request to paginate documents for grid view
+     * Generate CSS for AJAX-loaded content
      */
-    public function handle_paginate_documents(): void
+    private function generate_ajax_color_css(array $color_palette): string
     {
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
-            wp_send_json_error([
-                'message' => __('Security check failed', 'authdocs')
-            ]);
-        }
-
-        $page = intval($_POST['page'] ?? 1);
-        $limit = intval($_POST['limit'] ?? 12);
-        $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
-        $orderby = sanitize_text_field($_POST['orderby'] ?? 'date');
-        $order = sanitize_text_field($_POST['order'] ?? 'DESC');
-        
-        // Validate inputs
-        if ($page < 1) $page = 1;
-        if ($limit < 1) $limit = 12;
-        if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
-        if (!in_array($orderby, ['date', 'title'])) $orderby = 'date';
-        if (!in_array($order, ['ASC', 'DESC'])) $order = 'DESC';
-        
-        $documents = Database::get_published_documents($limit, $restriction, $page, $orderby, $order);
-        $total_documents = Database::get_published_documents_count($restriction);
-        $total_pages = ceil($total_documents / $limit);
-        
-        if (empty($documents)) {
-            wp_send_json_error([
-                'message' => __('No documents found.', 'authdocs')
-            ]);
+        return "<style>
+        .card {
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
+            position: relative !important;
+            overflow: hidden !important;
+            transition: transform 0.3s ease, box-shadow 0.3s ease !important;
         }
         
-        // Generate HTML for the grid items
+        .card:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+        
+        .card-body {
+            padding: 20px !important;
+            position: relative !important;
+            z-index: 2 !important;
+        }
+        
+        .card-icon {
+            font-size: 24px !important;
+            display: block !important;
+            margin-bottom: 12px !important;
+        }
+        
+        .card-title {
+            color: {$color_palette['text']} !important;
+            margin: 0 0 8px 0 !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            line-height: 1.3 !important;
+        }
+        
+        .card-desc {
+            color: {$color_palette['text_secondary']} !important;
+            margin: 0 0 8px 0 !important;
+            font-size: 14px !important;
+            line-height: 1.4 !important;
+        }
+        
+        .card-date {
+            color: {$color_palette['text_secondary']} !important;
+            font-size: 12px !important;
+            margin-top: 8px !important;
+        }
+        
+        .card-overlay {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: rgba(0,0,0,0.8) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            opacity: 0 !important;
+            transition: opacity 0.3s ease !important;
+            z-index: 3 !important;
+        }
+        
+        .card:hover .card-overlay {
+            opacity: 1 !important;
+        }
+        
+        .overlay-content {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        .card-overlay .authdocs-request-access-btn,
+        .card-overlay .authdocs-download-btn {
+            background: transparent !important;
+            border: 2px solid {$color_palette['secondary']} !important;
+            color: {$color_palette['secondary']} !important;
+            padding: 12px 16px !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.3s ease !important;
+            text-decoration: none !important;
+        }
+        
+        .card-overlay .authdocs-request-access-btn:hover,
+        .card-overlay .authdocs-download-btn:hover {
+            background: {$color_palette['secondary']} !important;
+            color: {$color_palette['primary']} !important;
+            transform: scale(1.05) !important;
+        }
+        </style>";
+    }
+    
+    /**
+     * Generate pagination HTML with color palette
+     */
+    private function generate_pagination_html(int $page, int $total_pages, int $limit, int $total_documents): string
+    {
+        $settings = new Settings();
+        $color_palette = $settings->get_color_palette_data();
+        $pagination_style = $settings->get_pagination_style();
+        
+        if ($total_pages <= 1) {
+            return '';
+        }
+        
         ob_start();
-        foreach ($documents as $document): ?>
-            <div class="authdocs-grid-item">
-                <div class="authdocs-grid-item-content">
-                    <div class="authdocs-grid-item-header">
-                        <h3 class="authdocs-grid-item-title">
-                            <?php echo esc_html($document['title']); ?>
-                        </h3>
-                        <div class="authdocs-grid-item-date">
-                            <?php echo esc_html($document['date']); ?>
-                        </div>
-                    </div>
-                    
-                    <?php if (!empty($document['description'])): ?>
-                        <div class="authdocs-grid-item-description">
-                            <?php echo wp_kses_post(wp_trim_words($document['description'], 20)); ?>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <div class="authdocs-grid-item-actions">
-                        <?php if ($document['restricted']): ?>
-                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>">
-                                <?php _e('Request Access', 'authdocs'); ?>
-                            </button>
-                        <?php else: ?>
-                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download>
-                                <?php _e('Download', 'authdocs'); ?>
-                            </a>
-                        <?php endif; ?>
-                    </div>
-                </div>
+        ?>
+        <style>
+        .authdocs-pagination {
+            background: <?php echo $color_palette['background_secondary']; ?> !important;
+            border-radius: <?php echo $color_palette['border_radius']; ?> !important;
+        }
+        
+        .authdocs-pagination-info {
+            color: <?php echo $color_palette['text_secondary']; ?> !important;
+        }
+        
+        .authdocs-pagination-btn {
+            background: <?php echo $color_palette['background']; ?> !important;
+            color: <?php echo $color_palette['text']; ?> !important;
+            border: 1px solid <?php echo $color_palette['border']; ?> !important;
+            border-radius: <?php echo $color_palette['border_radius']; ?> !important;
+        }
+        
+        .authdocs-pagination-btn:hover {
+            background: <?php echo $color_palette['background_secondary']; ?> !important;
+            color: <?php echo $color_palette['primary']; ?> !important;
+        }
+        
+        .authdocs-pagination-btn.active {
+            background: <?php echo $color_palette['primary']; ?> !important;
+            color: <?php echo $color_palette['secondary']; ?> !important;
+        }
+        </style>
+        
+        <div class="authdocs-pagination <?php echo $pagination_style === 'load_more' ? 'authdocs-load-more-pagination' : 'authdocs-classic-pagination'; ?>">
+            <div class="authdocs-pagination-info">
+                <?php 
+                $start = (($page - 1) * $limit) + 1;
+                $end = min($page * $limit, $total_documents);
+                printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                ?>
             </div>
-        <?php endforeach;
-        $html = ob_get_clean();
-        
-        // Generate pagination HTML
-        ob_start();
-        if ($total_pages > 1): ?>
-            <div class="authdocs-pagination">
-                <div class="authdocs-pagination-info">
-                    <?php 
-                    $start = (($page - 1) * $limit) + 1;
-                    $end = min($page * $limit, $total_documents);
-                    printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
-                    ?>
-                </div>
-                
+            
+            <?php if ($pagination_style === 'load_more'): ?>
+                <?php if ($page < $total_pages): ?>
+                    <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="all">
+                        <?php _e('Load More Documents', 'authdocs'); ?>
+                    </button>
+                <?php endif; ?>
+            <?php else: ?>
                 <div class="authdocs-pagination-links">
                     <?php if ($page > 1): ?>
                         <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($page - 1); ?>">
@@ -845,9 +848,109 @@ class Plugin
                         </button>
                     <?php endif; ?>
                 </div>
-            </div>
-        <?php endif;
-        $pagination_html = ob_get_clean();
+            <?php endif; ?>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Handle AJAX request to load more documents for grid view
+     */
+    public function handle_load_more_documents(): void
+    {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed', 'authdocs')
+            ]);
+        }
+
+        $current_limit = intval($_POST['limit'] ?? 12);
+        $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
+        $load_more_count = intval($_POST['load_more_limit'] ?? 12); // Number of additional documents to load
+        
+        // Validate inputs
+        if ($current_limit < 1) $current_limit = 12;
+        if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
+        if ($load_more_count < 1) $load_more_count = 12;
+        
+        // Get total documents count for this restriction
+        $total_documents = Database::get_published_documents_count($restriction);
+        
+        // Calculate new limit
+        $new_limit = $current_limit + $load_more_count;
+        
+        // Get documents with the new limit
+        $documents = Database::get_published_documents($new_limit, $restriction);
+        
+        if (empty($documents)) {
+            wp_send_json_error([
+                'message' => __('No documents found.', 'authdocs')
+            ]);
+        }
+        
+        // Get only the additional documents (skip the ones already shown)
+        $additional_documents = array_slice($documents, $current_limit);
+        
+        if (empty($additional_documents)) {
+            wp_send_json_error([
+                'message' => __('No more documents to load.', 'authdocs')
+            ]);
+        }
+        
+        // Generate HTML for the additional grid items (without CSS to avoid JSON issues)
+        $html = $this->generate_grid_items_html_clean($additional_documents);
+        
+        // Check if there are more documents available
+        $has_more = $new_limit < $total_documents;
+        
+        wp_send_json_success([
+            'html' => $html,
+            'has_more' => $has_more,
+            'total' => $total_documents,
+            'current_limit' => $new_limit
+        ]);
+    }
+    
+    /**
+     * Handle AJAX request to paginate documents for grid view
+     */
+    public function handle_paginate_documents(): void
+    {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed', 'authdocs')
+            ]);
+        }
+
+        $page = intval($_POST['page'] ?? 1);
+        $limit = intval($_POST['limit'] ?? 12);
+        $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
+        $orderby = sanitize_text_field($_POST['orderby'] ?? 'date');
+        $order = sanitize_text_field($_POST['order'] ?? 'DESC');
+        
+        // Validate inputs
+        if ($page < 1) $page = 1;
+        if ($limit < 1) $limit = 12;
+        if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
+        if (!in_array($orderby, ['date', 'title'])) $orderby = 'date';
+        if (!in_array($order, ['ASC', 'DESC'])) $order = 'DESC';
+        
+        $documents = Database::get_published_documents($limit, $restriction, $page, $orderby, $order);
+        $total_documents = Database::get_published_documents_count($restriction);
+        $total_pages = (int) ceil($total_documents / $limit);
+        
+        if (empty($documents)) {
+            wp_send_json_error([
+                'message' => __('No documents found.', 'authdocs')
+            ]);
+        }
+        
+        // Generate HTML for the grid items (without CSS to avoid JSON issues)
+        $html = $this->generate_grid_items_html_clean($documents);
+        
+        // Generate pagination HTML (without CSS to avoid JSON issues)
+        $pagination_html = $this->generate_pagination_html_clean($page, $total_pages, $limit, $total_documents);
         
         wp_send_json_success([
             'html' => $html,
@@ -856,5 +959,127 @@ class Plugin
             'total_pages' => $total_pages,
             'total_documents' => $total_documents
         ]);
+    }
+    
+    /**
+     * Generate grid items HTML without CSS (for AJAX responses)
+     */
+    private function generate_grid_items_html_clean(array $documents): string
+    {
+        ob_start();
+        foreach ($documents as $document): ?>
+            <!-- Card -->
+            <article class="card">
+                <div class="card-body">
+                    <?php if (has_post_thumbnail($document['id'])): ?>
+                        <div class="card-featured-image">
+                            <?php echo get_the_post_thumbnail($document['id'], 'medium', ['class' => 'authdocs-card-thumbnail']); ?>
+                        </div>
+                    <?php else: ?>
+                        <span class="card-icon" aria-hidden="true">📄</span>
+                    <?php endif; ?>
+                    <h3 class="card-title"><?php echo esc_html($document['title']); ?></h3>
+                    <?php if (!empty($document['description'])): ?>
+                        <p class="card-desc"><?php echo wp_kses_post(wp_trim_words($document['description'], 15)); ?></p>
+                    <?php endif; ?>
+                    <div class="card-date"><?php echo esc_html($document['date']); ?></div>
+                </div>
+
+                <!-- Overlay -->
+                <div class="card-overlay" aria-hidden="true">
+                    <div class="overlay-content">
+                        <?php if ($document['restricted']): ?>
+                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'authdocs'); ?>">
+                                <svg class="authdocs-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                                </svg>
+                            </button>
+                        <?php else: ?>
+                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download title="<?php _e('Open Document', 'authdocs'); ?>">
+                                <svg class="authdocs-open-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                                </svg>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </article>
+        <?php endforeach;
+        return ob_get_clean();
+    }
+    
+    /**
+     * Generate pagination HTML without CSS (for AJAX responses)
+     */
+    private function generate_pagination_html_clean(int $page, int $total_pages, int $limit, int $total_documents): string
+    {
+        if ($total_pages <= 1) {
+            return '';
+        }
+        
+        $settings = new Settings();
+        $pagination_style = $settings->get_pagination_style();
+        
+        ob_start();
+        ?>
+        <div class="authdocs-pagination <?php echo $pagination_style === 'load_more' ? 'authdocs-load-more-pagination' : 'authdocs-classic-pagination'; ?>">
+            <div class="authdocs-pagination-info">
+                <?php 
+                $start = (($page - 1) * $limit) + 1;
+                $end = min($page * $limit, $total_documents);
+                printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                ?>
+            </div>
+            
+            <?php if ($pagination_style === 'load_more'): ?>
+                <?php if ($page < $total_pages): ?>
+                    <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="all">
+                        <?php _e('Load More Documents', 'authdocs'); ?>
+                    </button>
+                <?php endif; ?>
+            <?php else: ?>
+                <div class="authdocs-pagination-links">
+                    <?php if ($page > 1): ?>
+                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($page - 1); ?>">
+                            <?php _e('Previous', 'authdocs'); ?>
+                        </button>
+                    <?php endif; ?>
+                    
+                    <div class="authdocs-pagination-numbers">
+                        <?php
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        if ($start_page > 1): ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
+                            <?php if ($start_page > 2): ?>
+                                <span class="authdocs-pagination-ellipsis">...</span>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        
+                        <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number <?php echo $i === $page ? 'active' : ''; ?>" data-page="<?php echo esc_attr($i); ?>">
+                                <?php echo $i; ?>
+                            </button>
+                        <?php endfor; ?>
+                        
+                        <?php if ($end_page < $total_pages): ?>
+                            <?php if ($end_page < $total_pages - 1): ?>
+                                <span class="authdocs-pagination-ellipsis">...</span>
+                            <?php endif; ?>
+                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <?php if ($page < $total_pages): ?>
+                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($page + 1); ?>">
+                            <?php _e('Next', 'authdocs'); ?>
+                        </button>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        return ob_get_clean();
     }
 }

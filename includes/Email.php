@@ -181,7 +181,7 @@ class Email {
         
         error_log("AuthDocs: Email variables: " . json_encode($variables));
         
-        $processed_template = $this->settings->process_template($template, $variables);
+        $processed_template = $this->process_grant_decline_template($template, $variables, $granted);
         error_log("AuthDocs: Processed template: " . json_encode($processed_template));
         
         $subject = $processed_template['subject'];
@@ -204,9 +204,15 @@ class Email {
             }
             
             error_log("AuthDocs: Attempting to send grant/decline email to: {$resolved_recipient}");
+            error_log("AuthDocs: Email subject: {$subject}");
+            error_log("AuthDocs: Email body length: " . strlen($body));
+            
             $result = wp_mail($resolved_recipient, $subject, $body, $headers);
             
             error_log("AuthDocs: wp_mail result: " . ($result ? 'true' : 'false'));
+            if (!$result) {
+                error_log("AuthDocs: wp_mail failed. Last error: " . (function_exists('wp_mail') ? 'wp_mail function exists' : 'wp_mail function not available'));
+            }
             
             $this->log_email_attempt($request_id, 'grant_decline', $resolved_recipient, $result, $result ? '' : 'wp_mail failed');
             
@@ -216,6 +222,70 @@ class Email {
         }
         
         return $success;
+    }
+    
+    /**
+     * Process grant/decline template with conditional logic
+     */
+    private function process_grant_decline_template(array $template, array $variables, bool $granted): array {
+        $subject = $template['subject'] ?? '';
+        $body = $template['body'] ?? '';
+        
+        // Replace variables in subject
+        $subject = $this->replace_variables($subject, $variables);
+        
+        // Process conditional logic in body
+        $body = $this->process_conditional_template($body, $variables, $granted);
+        
+        return [
+            'subject' => $subject,
+            'body' => $body
+        ];
+    }
+    
+    /**
+     * Process conditional template logic
+     */
+    private function process_conditional_template(string $template, array $variables, bool $granted): string {
+        // Replace simple variables first
+        $template = $this->replace_variables($template, $variables);
+        
+        // Process {{#if granted}} blocks
+        $template = preg_replace_callback(
+            '/\{\{#if granted\}\}(.*?)\{\{else\}\}(.*?)\{\{\/if\}\}/s',
+            function($matches) use ($granted) {
+                return $granted ? $matches[1] : $matches[2];
+            },
+            $template
+        );
+        
+        // Process {{#if granted}} blocks without else
+        $template = preg_replace_callback(
+            '/\{\{#if granted\}\}(.*?)\{\{\/if\}\}/s',
+            function($matches) use ($granted) {
+                return $granted ? $matches[1] : '';
+            },
+            $template
+        );
+        
+        return $template;
+    }
+    
+    /**
+     * Replace variables in text
+     */
+    private function replace_variables(string $text, array $variables): string {
+        $replacements = [
+            '{{name}}' => $variables['name'] ?? '',
+            '{{email}}' => $variables['email'] ?? '',
+            '{{file_name}}' => $variables['file_name'] ?? '',
+            '{{site_name}}' => $variables['site_name'] ?? get_bloginfo('name'),
+            '{{status}}' => $variables['status'] ?? '',
+            '{{status_color}}' => $variables['status_color'] ?? '',
+            '{{link}}' => $variables['link'] ?? ''
+        ];
+        
+        return str_replace(array_keys($replacements), array_values($replacements), $text);
     }
     
     /**
@@ -230,7 +300,9 @@ class Email {
         return add_query_arg([
             'authdocs_download' => $request->document_id,
             'hash' => $request->secure_hash,
-            'filename' => $this->get_document_filename($request->document_id)
+            'email' => $request->requester_email,
+            'request_id' => $request->id,
+            'filename' => $this->get_document_filename((int) $request->document_id)
         ], home_url());
     }
     
@@ -349,7 +421,7 @@ class Email {
             'link' => $granted ? 'https://example.com/authdocs/download?hash=test123&file=sample.pdf' : ''
         ];
         
-        $processed_template = $this->settings->process_template($template, $variables);
+        $processed_template = $this->process_grant_decline_template($template, $variables, $granted);
         
         $subject = $processed_template['subject'];
         $body = $processed_template['body'];
