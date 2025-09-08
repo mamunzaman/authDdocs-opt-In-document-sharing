@@ -14,19 +14,32 @@ jQuery(document).ready(function ($) {
     const $btn = $(this);
     const currentLimit = parseInt($btn.data("current-limit"));
     const restriction = $btn.data("restriction");
+    const featuredImage = $btn.data("featured-image");
     const $grid = $btn
       .closest(".authdocs-grid-load-more")
       .prev(".authdocs-grid");
 
-    loadMoreDocuments($grid, currentLimit, restriction, $btn);
+    loadMoreDocuments($grid, currentLimit, restriction, $btn, featuredImage);
   });
 
   // Handle pagination button clicks
   $(document).on("click", ".authdocs-pagination-btn", function (e) {
-    e.preventDefault();
     const $btn = $(this);
-    const page = parseInt($btn.data("page"));
     const $container = $btn.closest(".authdocs-grid-container");
+    const $pagination = $btn.closest(".authdocs-pagination");
+
+    // Check pagination type from data attribute
+    const paginationType = $pagination.data("pagination-type");
+
+    // If this is classic pagination (no AJAX), let the link work normally
+    if (paginationType === "classic" || ($btn.is("a") && $btn.attr("href"))) {
+      // Let the link work normally for classic pagination
+      return;
+    }
+
+    // Only prevent default and use AJAX for AJAX pagination
+    e.preventDefault();
+    const page = parseInt($btn.data("page"));
 
     if (page && $container.length) {
       loadPageDocuments($container, page);
@@ -301,8 +314,77 @@ jQuery(document).ready(function ($) {
     });
   }
 
+  // Load more documents automatically
+  function loadMoreDocumentsAuto(
+    $grid,
+    currentLimit,
+    restriction,
+    loadMoreLimit,
+    $loadingIndicator,
+    $container
+  ) {
+    // Show loading indicator
+    $loadingIndicator.show();
+
+    // Get featured image setting from container
+    const featuredImage = $container.data("featured-image") || "yes";
+
+    $.ajax({
+      url: authdocs_frontend.ajax_url,
+      type: "POST",
+      data: {
+        action: "authdocs_load_more_documents",
+        limit: currentLimit,
+        restriction: restriction,
+        load_more_limit: loadMoreLimit,
+        featured_image: featuredImage,
+        nonce: authdocs_frontend.nonce,
+      },
+      success: function (response) {
+        if (response.success) {
+          // Append new content to existing grid
+          $grid.append(response.data.html);
+
+          // Update container data with new limit
+          $container.data("limit", response.data.current_limit);
+
+          // Update pagination info
+          $container
+            .find(".authdocs-pagination-info")
+            .text(
+              `Showing 1-${response.data.current_limit} of ${response.data.total_documents} documents`
+            );
+
+          // Hide loading indicator if no more documents
+          if (response.data.has_more === false) {
+            $loadingIndicator.hide();
+            $container
+              .find(".authdocs-auto-pagination")
+              .attr("data-auto-loading", "false");
+          }
+        } else {
+          showErrorMessage(
+            response.data.message || "Failed to load more documents."
+          );
+        }
+      },
+      error: function () {
+        showErrorMessage("An error occurred while loading more documents.");
+      },
+      complete: function () {
+        $loadingIndicator.hide();
+      },
+    });
+  }
+
   // Load more documents
-  function loadMoreDocuments($grid, currentLimit, restriction, $btn) {
+  function loadMoreDocuments(
+    $grid,
+    currentLimit,
+    restriction,
+    $btn,
+    featuredImage = "yes"
+  ) {
     const $loadMoreContainer = $btn.closest(".authdocs-grid-load-more");
     const loadMoreLimit = parseInt($btn.data("load-more-limit")) || 12;
 
@@ -319,6 +401,7 @@ jQuery(document).ready(function ($) {
         limit: currentLimit,
         restriction: restriction,
         load_more_limit: loadMoreLimit,
+        featured_image: featuredImage,
         nonce: authdocs_frontend.nonce,
       },
       success: function (response) {
@@ -365,6 +448,9 @@ jQuery(document).ready(function ($) {
     const restriction = $container.data("restriction") || "all";
     const orderby = $container.data("orderby") || "date";
     const order = $container.data("order") || "DESC";
+    const featuredImage = $container.data("featured-image") || "yes";
+    const paginationStyle = $container.data("pagination-style") || "classic";
+    const paginationType = $container.data("pagination-type") || "ajax";
 
     $.ajax({
       url: authdocs_frontend.ajax_url,
@@ -376,6 +462,9 @@ jQuery(document).ready(function ($) {
         restriction: restriction,
         orderby: orderby,
         order: order,
+        featured_image: featuredImage,
+        pagination_style: paginationStyle,
+        pagination_type: paginationType,
         nonce: authdocs_frontend.nonce,
       },
       success: function (response) {

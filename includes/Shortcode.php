@@ -41,7 +41,8 @@ class Shortcode
         // Get color palette settings
         $settings = new Settings();
         $color_palette = $settings->get_color_palette_data();
-        $this->enqueue_dynamic_styles($instance_id, $color_palette);
+        $text_alignment = $settings->get_card_text_alignment();
+        $this->enqueue_dynamic_styles($instance_id, $color_palette, $text_alignment);
 
         ob_start();
         ?>
@@ -91,6 +92,7 @@ class Shortcode
      * [authdocs_grid limit="20" columns="4"]
      * [authdocs_grid limit="20" columns="4" load_more_limit="8"]
      * [authdocs_grid restriction="restricted" load_more_limit="6"]
+     * [authdocs_grid featured_image="no" columns="2"]
      */
     public function render_grid_shortcode(array $atts): string
     {
@@ -103,7 +105,10 @@ class Shortcode
             'orderby' => 'date', // date, title
             'order' => 'DESC',
             'pagination' => 'yes', // yes, no
-            'load_more_limit' => 12 // Number of additional items to load each time Load More is clicked
+            'pagination_style' => 'classic', // classic, load_more
+            'pagination_type' => 'ajax', // ajax, classic
+            'load_more_limit' => 12, // Number of additional items to load each time Load More is clicked
+            'featured_image' => 'yes' // yes, no - whether to show featured image as card background
         ], $atts, 'authdocs_grid');
         
         $limit = intval($atts['limit']);
@@ -114,7 +119,10 @@ class Shortcode
         $orderby = sanitize_text_field($atts['orderby']);
         $order = sanitize_text_field($atts['order']);
         $pagination = $atts['pagination'] === 'yes';
+        $pagination_style = sanitize_text_field($atts['pagination_style']);
+        $pagination_type = sanitize_text_field($atts['pagination_type']);
         $load_more_limit = intval($atts['load_more_limit']);
+        $show_featured_image = $atts['featured_image'] === 'yes';
         $instance_id = 'authdocs-grid-' . uniqid();
         
         // Validate inputs
@@ -139,7 +147,8 @@ class Shortcode
         // Get color palette settings
         $settings = new Settings();
         $color_palette = $settings->get_color_palette_data();
-        $this->enqueue_dynamic_styles($instance_id, $color_palette);
+        $text_alignment = $settings->get_card_text_alignment();
+        $this->enqueue_dynamic_styles($instance_id, $color_palette, $text_alignment);
         
         ob_start();
         ?>
@@ -151,17 +160,32 @@ class Shortcode
              data-show-date="<?php echo esc_attr($show_date ? 'yes' : 'no'); ?>"
              data-orderby="<?php echo esc_attr($orderby); ?>"
              data-order="<?php echo esc_attr($order); ?>"
+             data-featured-image="<?php echo esc_attr($show_featured_image ? 'yes' : 'no'); ?>"
+             data-pagination-style="<?php echo esc_attr($pagination_style); ?>"
+             data-pagination-type="<?php echo esc_attr($pagination_type); ?>"
              data-current-page="<?php echo esc_attr($current_page); ?>"
              data-total-pages="<?php echo esc_attr($total_pages); ?>"
              data-total-documents="<?php echo esc_attr($total_documents); ?>"
              data-load-more-limit="<?php echo esc_attr($load_more_limit); ?>">
             
             <div class="authdocs-grid" data-columns="<?php echo esc_attr($columns); ?>">
-                <?php foreach ($documents as $document): ?>
+                <?php foreach ($documents as $document): 
+                    // Get featured image for background (only if enabled)
+                    $featured_image = '';
+                    $card_style = '';
+                    if ($show_featured_image) {
+                        $featured_image = get_the_post_thumbnail_url($document['id'], 'large');
+                        if ($featured_image) {
+                            $card_style = 'style="background-image: url(' . esc_url($featured_image) . '); background-size: cover; background-position: center; background-repeat: no-repeat;"';
+                        }
+                    }
+                ?>
                     <!-- Card -->
-                    <article class="card">
+                    <article class="card" <?php echo $card_style; ?>>
                         <div class="card-body">
-                            <span class="card-icon" aria-hidden="true">📄</span>
+                            <?php if (!$featured_image): ?>
+                                <span class="card-icon" aria-hidden="true">📄</span>
+                            <?php endif; ?>
                             <h3 class="card-title"><?php echo esc_html($document['title']); ?></h3>
                             <?php if ($show_description && !empty($document['description'])): ?>
                                 <p class="card-desc"><?php echo wp_kses_post(wp_trim_words($document['description'], 15)); ?></p>
@@ -195,8 +219,10 @@ class Shortcode
             
             <?php if ($pagination && $total_pages > 1): ?>
                 <?php 
-                $settings = new Settings();
-                $pagination_style = $settings->get_pagination_style();
+                // Use shortcode parameters instead of global settings
+                // $settings = new Settings();
+                // $pagination_style = $settings->get_pagination_style();
+                // $pagination_type = $settings->get_pagination_type();
                 ?>
                 <?php if ($pagination_style === 'load_more'): ?>
                     <!-- Load More Pagination -->
@@ -210,14 +236,14 @@ class Shortcode
                         </div>
                         
                         <?php if ($current_page < $total_pages): ?>
-                            <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="<?php echo esc_attr($restriction); ?>" data-load-more-limit="<?php echo esc_attr($load_more_limit); ?>">
+                            <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="<?php echo esc_attr($restriction); ?>" data-load-more-limit="<?php echo esc_attr($load_more_limit); ?>" data-featured-image="<?php echo esc_attr($show_featured_image ? 'yes' : 'no'); ?>">
                                 <?php _e('Load More Documents', 'authdocs'); ?>
                             </button>
                         <?php endif; ?>
                     </div>
                 <?php else: ?>
                     <!-- Classic Pagination -->
-                    <div class="authdocs-pagination authdocs-classic-pagination">
+                    <div class="authdocs-pagination authdocs-classic-pagination" data-pagination-type="<?php echo esc_attr($pagination_type); ?>">
                         <div class="authdocs-pagination-info">
                             <?php 
                             $start = (($current_page - 1) * $limit) + 1;
@@ -227,42 +253,95 @@ class Shortcode
                         </div>
                         
                         <div class="authdocs-pagination-links">
-                            <?php if ($current_page > 1): ?>
-                                <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($current_page - 1); ?>">
-                                    <?php _e('Previous', 'authdocs'); ?>
-                                </button>
-                            <?php endif; ?>
-                            
-                            <div class="authdocs-pagination-numbers">
-                                <?php
-                                $start_page = max(1, $current_page - 2);
-                                $end_page = min($total_pages, $current_page + 2);
-                                
-                                if ($start_page > 1): ?>
-                                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
-                                    <?php if ($start_page > 2): ?>
-                                        <span class="authdocs-pagination-ellipsis">...</span>
-                                    <?php endif; ?>
-                                <?php endif; ?>
-                                
-                                <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-number <?php echo $i === $current_page ? 'active' : ''; ?>" data-page="<?php echo esc_attr($i); ?>">
-                                        <?php echo $i; ?>
+                            <?php if ($pagination_type === 'ajax'): ?>
+                                <!-- AJAX Pagination with buttons -->
+                                <?php if ($current_page > 1): ?>
+                                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($current_page - 1); ?>">
+                                        <?php _e('Previous', 'authdocs'); ?>
                                     </button>
-                                <?php endfor; ?>
-                                
-                                <?php if ($end_page < $total_pages): ?>
-                                    <?php if ($end_page < $total_pages - 1): ?>
-                                        <span class="authdocs-pagination-ellipsis">...</span>
-                                    <?php endif; ?>
-                                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
                                 <?php endif; ?>
-                            </div>
-                            
-                            <?php if ($current_page < $total_pages): ?>
-                                <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($current_page + 1); ?>">
-                                    <?php _e('Next', 'authdocs'); ?>
-                                </button>
+                                
+                                <div class="authdocs-pagination-numbers">
+                                    <?php
+                                    $start_page = max(1, $current_page - 2);
+                                    $end_page = min($total_pages, $current_page + 2);
+                                    
+                                    if ($start_page > 1): ?>
+                                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
+                                        <?php if ($start_page > 2): ?>
+                                            <span class="authdocs-pagination-ellipsis">...</span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    
+                                    <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                                        <?php if ($i === $current_page): ?>
+                                            <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $i; ?></span>
+                                        <?php else: ?>
+                                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($i); ?>"><?php echo $i; ?></button>
+                                        <?php endif; ?>
+                                    <?php endfor; ?>
+                                    
+                                    <?php if ($end_page < $total_pages): ?>
+                                        <?php if ($end_page < $total_pages - 1): ?>
+                                            <span class="authdocs-pagination-ellipsis">...</span>
+                                        <?php endif; ?>
+                                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <?php if ($current_page < $total_pages): ?>
+                                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($current_page + 1); ?>">
+                                        <?php _e('Next', 'authdocs'); ?>
+                                    </button>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <!-- Classic Pagination with links -->
+                                <?php 
+                                // Build the base URL for pagination links
+                                $current_url = add_query_arg([
+                                    'authdocs_page' => false,
+                                    'paged' => false
+                                ]);
+                                ?>
+                                <?php if ($current_page > 1): ?>
+                                    <a href="<?php echo esc_url(add_query_arg('authdocs_page', $current_page - 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-prev">
+                                        <?php _e('Previous', 'authdocs'); ?>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <div class="authdocs-pagination-numbers">
+                                    <?php
+                                    $start_page = max(1, $current_page - 2);
+                                    $end_page = min($total_pages, $current_page + 2);
+                                    
+                                    if ($start_page > 1): ?>
+                                        <a href="<?php echo esc_url(add_query_arg('authdocs_page', 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number">1</a>
+                                        <?php if ($start_page > 2): ?>
+                                            <span class="authdocs-pagination-ellipsis">...</span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    
+                                    <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                                        <?php if ($i === $current_page): ?>
+                                            <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $i; ?></span>
+                                        <?php else: ?>
+                                            <a href="<?php echo esc_url(add_query_arg('authdocs_page', $i, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number"><?php echo $i; ?></a>
+                                        <?php endif; ?>
+                                    <?php endfor; ?>
+                                    
+                                    <?php if ($end_page < $total_pages): ?>
+                                        <?php if ($end_page < $total_pages - 1): ?>
+                                            <span class="authdocs-pagination-ellipsis">...</span>
+                                        <?php endif; ?>
+                                        <a href="<?php echo esc_url(add_query_arg('authdocs_page', $total_pages, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number"><?php echo $total_pages; ?></a>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <?php if ($current_page < $total_pages): ?>
+                                    <a href="<?php echo esc_url(add_query_arg('authdocs_page', $current_page + 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-next">
+                                        <?php _e('Next', 'authdocs'); ?>
+                                    </a>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -300,9 +379,9 @@ class Shortcode
     /**
      * Enqueue dynamic styles based on color palette
      */
-    private function enqueue_dynamic_styles(string $instance_id, array $color_palette): void
+    private function enqueue_dynamic_styles(string $instance_id, array $color_palette, string $text_alignment = 'left'): void
     {
-        $css = $this->generate_dynamic_css($instance_id, $color_palette);
+        $css = $this->generate_dynamic_css($instance_id, $color_palette, $text_alignment);
         
         // Add inline styles using wp_add_inline_style to avoid output issues
         wp_add_inline_style('authdocs-frontend', $css);
@@ -311,29 +390,29 @@ class Shortcode
     /**
      * Generate dynamic CSS based on color palette
      */
-    private function generate_dynamic_css(string $instance_id, array $color_palette): string
+    private function generate_dynamic_css(string $instance_id, array $color_palette, string $text_alignment = 'left'): string
     {
         $css = "
         #{$instance_id} .authdocs-document {
-            background: {$color_palette['background']};
-            border: 1px solid {$color_palette['border']};
-            border-radius: {$color_palette['border_radius']};
-            box-shadow: {$color_palette['shadow']};
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
         }
         
         #{$instance_id} .authdocs-document-title {
-            color: {$color_palette['text']};
+            color: {$color_palette['text']} !important;
         }
         
         #{$instance_id} .authdocs-document-description {
-            color: {$color_palette['text_secondary']};
+            color: {$color_palette['text_secondary']} !important;
         }
         
         #{$instance_id} .authdocs-request-access-btn,
         #{$instance_id} .authdocs-download-btn {
-            background: {$color_palette['primary']};
-            color: {$color_palette['secondary']};
-            border-radius: {$color_palette['border_radius']};
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
         }
         
         #{$instance_id} .authdocs-request-access-btn {
@@ -354,15 +433,30 @@ class Shortcode
         
         #{$instance_id} .authdocs-request-access-btn:hover,
         #{$instance_id} .authdocs-download-btn:hover {
-            background: {$color_palette['text']};
-            color: {$color_palette['background']};
+            background: {$color_palette['text']} !important;
+            color: {$color_palette['background']} !important;
+        }
+        
+        /* Blue lock icon hover effects */
+        #{$instance_id} .card:hover .authdocs-request-access-btn .authdocs-lock-icon {
+            color: #2563eb !important;
+        }
+        
+        #{$instance_id} .card:hover .card-overlay {
+            background: rgba(37, 99, 235, 0.1) !important;
+            backdrop-filter: blur(2px);
+        }
+        
+        #{$instance_id} .card:hover .card-title {
+            filter: blur(1px);
+            transition: filter 0.3s ease;
         }
         
         #{$instance_id} .card {
-            background: {$color_palette['background']};
-            border: 1px solid {$color_palette['border']};
-            border-radius: {$color_palette['border_radius']};
-            box-shadow: {$color_palette['shadow']};
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
             position: relative;
             overflow: hidden;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -377,6 +471,28 @@ class Shortcode
             padding: 20px;
             position: relative;
             z-index: 2;
+            text-align: {$text_alignment} !important;
+        }
+        
+        #{$instance_id} .card[style*='background-image'] .card-body {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(2px);
+            border-radius: {$color_palette['border_radius']};
+        }
+        
+        #{$instance_id} .card[style*='background-image'] .card-title {
+            color: {$color_palette['text']} !important;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        #{$instance_id} .card[style*='background-image'] .card-desc {
+            color: {$color_palette['text_secondary']} !important;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        #{$instance_id} .card[style*='background-image'] .card-date {
+            color: {$color_palette['text_secondary']} !important;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
         }
         
         #{$instance_id} .card-icon {
@@ -386,7 +502,7 @@ class Shortcode
         }
         
         #{$instance_id} .card-title {
-            color: {$color_palette['text']};
+            color: {$color_palette['text']} !important;
             margin: 0 0 8px 0;
             font-size: 16px;
             font-weight: 600;
@@ -394,14 +510,14 @@ class Shortcode
         }
         
         #{$instance_id} .card-desc {
-            color: {$color_palette['text_secondary']};
+            color: {$color_palette['text_secondary']} !important;
             margin: 0 0 8px 0;
             font-size: 14px;
             line-height: 1.4;
         }
         
         #{$instance_id} .card-date {
-            color: {$color_palette['text_secondary']};
+            color: {$color_palette['text_secondary']} !important;
             font-size: 12px;
             margin-top: 8px;
         }

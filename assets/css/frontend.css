@@ -1077,3 +1077,37 @@
     padding: 12px 20px;
   }
 }
+
+/* Automatic Loading Styles */
+.authdocs-auto-pagination {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.authdocs-auto-loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+.authdocs-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007cba;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+}
+
+@keyframes authdocs-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

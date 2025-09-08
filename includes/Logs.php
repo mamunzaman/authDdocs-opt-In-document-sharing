@@ -49,7 +49,7 @@ class Logs
             <div class="authdocs-logs-container">
                 <?php if (empty($filtered_logs)): ?>
                     <div class="notice notice-info">
-                        <p><?php _e('No email logs found.', 'authdocs'); ?></p>
+                        <p><?php _e('No logs found.', 'authdocs'); ?></p>
                     </div>
                 <?php else: ?>
                     <?php $this->render_logs_table($filtered_logs, $pagination); ?>

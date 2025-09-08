@@ -132,7 +132,7 @@ if (!defined('ABSPATH')) {
     
     <?php if (empty($requests)): ?>
         <div class="notice notice-info">
-            <p><?php _e('No document requests found.', 'authdocs'); ?></p>
+            <p><?php _e('No requests found.', 'authdocs'); ?></p>
         </div>
     <?php else: ?>
         <div class="authdocs-table-section">
@@ -274,7 +274,25 @@ if (!defined('ABSPATH')) {
                                 $icon = $status_icons[$request->status] ?? 'dashicons-info';
                                 $color = $status_colors[$request->status] ?? '#6c757d';
                                 ?>
-                                <div class="authdocs-status-modern authdocs-status-<?php echo esc_attr($request->status); ?>">
+                                <div class="authdocs-status-modern authdocs-status-<?php echo esc_attr($request->status); ?>" 
+                                     title="<?php 
+                                       switch($request->status) {
+                                         case 'pending':
+                                           echo __('Request is waiting for approval', 'authdocs');
+                                           break;
+                                         case 'accepted':
+                                           echo __('Request has been approved and document access granted', 'authdocs');
+                                           break;
+                                         case 'declined':
+                                           echo __('Request has been declined and document access denied', 'authdocs');
+                                           break;
+                                         case 'inactive':
+                                           echo __('Document link is temporarily hidden', 'authdocs');
+                                           break;
+                                         default:
+                                           echo __('Unknown status', 'authdocs');
+                                       }
+                                     ?>">
                                     <span class="authdocs-status-icon" style="color: <?php echo esc_attr($color); ?>">
                                         <span class="dashicons <?php echo esc_attr($icon); ?>"></span>
                                     </span>
@@ -302,11 +320,11 @@ if (!defined('ABSPATH')) {
                                        data-action="accept" data-request-id="<?php echo esc_attr($request->id); ?>"
                                        title="<?php 
                                          if ($request->status === 'accepted') {
-                                           echo __('Already accepted', 'authdocs');
+                                           echo __('✓ Request already approved - Document access granted', 'authdocs');
                                          } elseif ($request->status === 'inactive') {
-                                           echo __('Link is hidden - Show link first', 'authdocs');
+                                           echo __('⚠️ Cannot accept - Document link is currently hidden. Show the link first to enable this action.', 'authdocs');
                                          } else {
-                                           echo __('Accept', 'authdocs');
+                                           echo __('✅ Approve this request and grant document access to the requester', 'authdocs');
                                          }
                                        ?>"
                                        <?php echo $accept_disabled ? 'disabled' : ''; ?>>
@@ -318,11 +336,11 @@ if (!defined('ABSPATH')) {
                                        data-action="decline" data-request-id="<?php echo esc_attr($request->id); ?>"
                                        title="<?php 
                                          if ($request->status === 'declined') {
-                                           echo __('Already declined', 'authdocs');
+                                           echo __('✗ Request already declined - Document access denied', 'authdocs');
                                          } elseif ($request->status === 'inactive') {
-                                           echo __('Link is hidden - Show link first', 'authdocs');
+                                           echo __('⚠️ Cannot decline - Document link is currently hidden. Show the link first to enable this action.', 'authdocs');
                                          } else {
-                                           echo __('Decline', 'authdocs');
+                                           echo __('❌ Decline this request and deny document access to the requester', 'authdocs');
                                          }
                                        ?>"
                                        <?php echo $decline_disabled ? 'disabled' : ''; ?>>
@@ -332,7 +350,7 @@ if (!defined('ABSPATH')) {
                                     <!-- Toggle Link Visibility -->
                                     <button type="button" class="authdocs-action-link authdocs-action-inactive <?php echo $toggle_disabled ? 'disabled' : ''; ?>" 
                                        data-action="inactive" data-request-id="<?php echo esc_attr($request->id); ?>"
-                                       title="<?php echo $request->status === 'inactive' ? __('Link is hidden - Click to show', 'authdocs') : __('Link is visible - Click to hide', 'authdocs'); ?>"
+                                       title="<?php echo $request->status === 'inactive' ? __('👁️ Document link is hidden - Click to make it visible and accessible', 'authdocs') : __('🙈 Document link is visible - Click to hide it temporarily', 'authdocs'); ?>"
                                        <?php echo $toggle_disabled ? 'disabled' : ''; ?>>
                                         <span class="dashicons <?php echo $request->status === 'inactive' ? 'dashicons-visibility' : 'dashicons-hidden'; ?>"></span>
                                     </button>
@@ -340,7 +358,7 @@ if (!defined('ABSPATH')) {
                                     <!-- Delete Link -->
                                     <button type="button" class="authdocs-action-link authdocs-action-delete" 
                                        data-action="delete" data-request-id="<?php echo esc_attr($request->id); ?>"
-                                       title="<?php _e('Delete request', 'authdocs'); ?>">
+                                       title="<?php _e('🗑️ Permanently delete this request and all associated data', 'authdocs'); ?>">
                                         <span class="dashicons dashicons-trash"></span>
                                     </button>
                                 </div>

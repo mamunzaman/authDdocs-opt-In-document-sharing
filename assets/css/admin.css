@@ -528,7 +528,7 @@
 
 .authdocs-notice-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   padding: 20px 24px;
 }
@@ -3788,7 +3788,7 @@ fieldset input[type="radio"]:checked {
   /* Settings Notification - Mobile */
   .authdocs-notice-content {
     flex-direction: column;
-    text-align: center;
+    text-align: left;
     gap: 12px;
     padding: 16px 20px;
   }
@@ -5130,3 +5130,128 @@ fieldset input[type="radio"]:checked {
     transform: translateY(0) scale(1);
   }
 }
+
+/* Settings Navigation Cards */
+.authdocs-settings-navigation {
+  margin: 24px 0;
+}
+
+.authdocs-nav-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+}
+
+.authdocs-nav-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.authdocs-nav-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2271b1 0%, #135e96 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.authdocs-nav-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-color: #2271b1;
+}
+
+.authdocs-nav-card:hover::before {
+  opacity: 1;
+}
+
+.authdocs-nav-card-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #2271b1;
+}
+
+.authdocs-nav-card-icon .dashicons {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.authdocs-nav-card-content {
+  flex: 1;
+}
+
+.authdocs-nav-card-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2327;
+}
+
+.authdocs-nav-card-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #646970;
+  line-height: 1.4;
+}
+
+.authdocs-nav-card-arrow {
+  flex-shrink: 0;
+  color: #c3c4c7;
+  transition: color 0.3s ease;
+}
+
+.authdocs-nav-card:hover .authdocs-nav-card-arrow {
+  color: #2271b1;
+}
+
+.authdocs-nav-card-arrow .dashicons {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Mobile responsive for navigation cards */
+@media (max-width: 768px) {
+  .authdocs-nav-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .authdocs-nav-card {
+    padding: 20px;
+  }
+  
+  .authdocs-nav-card-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .authdocs-nav-card-icon .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+

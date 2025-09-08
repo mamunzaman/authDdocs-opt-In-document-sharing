@@ -157,6 +157,21 @@ jQuery(document).ready(function ($) {
       });
     }
 
+    // Handle pagination style changes
+    $(document).on(
+      "change",
+      'input[name="authdocs_pagination_style"]',
+      function () {
+        const selectedStyle = $(this).val();
+        const $paginationType = $('input[name="authdocs_pagination_type"]');
+
+        if (selectedStyle === "load_more") {
+          // When Load More is selected, automatically set pagination type to AJAX
+          $paginationType.filter('[value="ajax"]').prop("checked", true);
+        }
+      }
+    );
+
     if ($clearFiltersBtn.length > 0) {
       $clearFiltersBtn.on("click", function () {
         $statusFilter.val("");
@@ -321,7 +336,7 @@ jQuery(document).ready(function ($) {
       "AuthDocs: About to call showConfirmDialog with action:",
       action
     );
-    showConfirmDialog(
+    window.showConfirmDialog(
       confirmMessage,
       function () {
         // User confirmed, proceed with action
@@ -358,8 +373,10 @@ jQuery(document).ready(function ($) {
         "</p></div>"
     );
 
-    // Remove any existing notices
-    $(".notice").remove();
+    // Remove any existing notices (but preserve WordPress core notices)
+    $(
+      ".notice:not(.lost-connection-notice):not(.local-storage-notice)"
+    ).remove();
 
     // Add notice to the top of the page
     $(".wrap h1").after($notice);
@@ -372,8 +389,39 @@ jQuery(document).ready(function ($) {
     });
   }
 
+  // Prevent false connection notices
+  function preventFalseConnectionNotices() {
+    // Remove any existing false connection notices
+    $(".lost-connection-notice, .local-storage-notice").remove();
+
+    // Monitor connection status
+    if (typeof navigator !== "undefined" && navigator.onLine !== undefined) {
+      // If we're online, remove any connection notices
+      if (navigator.onLine) {
+        $(".lost-connection-notice").remove();
+      }
+    }
+
+    // Check localStorage availability
+    try {
+      localStorage.setItem("test", "test");
+      localStorage.removeItem("test");
+      // If localStorage works, remove any storage notices
+      $(".local-storage-notice").remove();
+    } catch (e) {
+      // localStorage not available, but don't show notice unless actually needed
+    }
+  }
+
+  // Run connection check on page load
+  preventFalseConnectionNotices();
+
   // Modern flat design confirmation popup matching frontend style
-  function showConfirmDialog(message, onConfirm, actionType = "confirm") {
+  window.showConfirmDialog = function (
+    message,
+    onConfirm,
+    actionType = "confirm"
+  ) {
     console.log(
       "AuthDocs: Creating modern confirmation dialog with message:",
       message
@@ -383,7 +431,7 @@ jQuery(document).ready(function ($) {
     $(".authdocs-confirm-overlay").remove();
 
     // Get action-specific styling
-    var actionConfig = getActionConfig(actionType);
+    var actionConfig = window.getActionConfig(actionType);
 
     var $overlay = $('<div class="authdocs-confirm-overlay"></div>');
     var $dialog = $(
@@ -479,10 +527,10 @@ jQuery(document).ready(function ($) {
         $(document).off("keydown.authdocs-confirm");
       }
     });
-  }
+  };
 
   // Get action-specific configuration for styling
-  function getActionConfig(actionType) {
+  window.getActionConfig = function (actionType) {
     var configs = {
       accept: {
         title: "Accept Request",
@@ -532,7 +580,7 @@ jQuery(document).ready(function ($) {
     };
 
     return configs[actionType] || configs["confirm"];
-  }
+  };
 
   // Function to refresh row data after status change
   function refreshRowData($row, requestId) {
@@ -857,7 +905,7 @@ jQuery(document).ready(function ($) {
       console.error(
         "AuthDocs: No nonce available, cannot proceed with AJAX request"
       );
-      showNotice("Security error: No nonce available.", "error");
+      showNotice("Security error. Please refresh the page.", "error");
       $btn.removeClass("loading").prop("disabled", false);
       return;
     }
@@ -979,10 +1027,7 @@ jQuery(document).ready(function ($) {
             refreshRowData($row, requestId);
           }
         } else {
-          showNotice(
-            "Error: " + (response.data || "Unknown error occurred"),
-            "error"
-          );
+          showNotice("Error occurred. Please try again.", "error");
           $btn.removeClass("loading").prop("disabled", false);
         }
       },
@@ -991,7 +1036,7 @@ jQuery(document).ready(function ($) {
         console.error("AuthDocs: Response text:", xhr.responseText);
         console.error("AuthDocs: XHR status:", xhr.status);
         console.error("AuthDocs: XHR readyState:", xhr.readyState);
-        showNotice("Network error. Please try again.", "error");
+        showNotice("Connection error. Please try again.", "error");
         $btn.removeClass("loading").prop("disabled", false);
       },
     });
@@ -1104,25 +1149,36 @@ jQuery(document).ready(function ($) {
 // Global function for pagination type confirmation
 function authdocsConfirmClassicPagination(radioButton) {
   if (radioButton.checked) {
-    // Show confirmation popup
-    if (
-      confirm(
-        'You are switching to Classic Pagination. This will automatically set the pagination style to "Classic Pagination" without AJAX. The page will reload when users navigate between pages. Do you want to continue?'
-      )
-    ) {
-      // User confirmed, keep the selection
-      return true;
-    } else {
-      // User cancelled, uncheck the radio button and check AJAX instead
-      radioButton.checked = false;
-      var ajaxRadio = document.querySelector(
-        'input[name="authdocs_pagination_type"][value="ajax"]'
-      );
-      if (ajaxRadio) {
-        ajaxRadio.checked = true;
-      }
-      return false;
+    // Show modern confirmation popup instead of browser confirm
+    var message =
+      'You are switching to Classic Pagination. This will automatically set the pagination style to "Classic Pagination" without AJAX. The page will reload when users navigate between pages. Do you want to continue?';
+
+    // Use the same popup system as the request page
+    window.showConfirmDialog(
+      message,
+      function () {
+        // User confirmed, keep the selection
+        radioButton.checked = true;
+        // Also update the pagination style to classic
+        var classicStyleRadio = document.querySelector(
+          'input[name="authdocs_pagination_style"][value="classic"]'
+        );
+        if (classicStyleRadio) {
+          classicStyleRadio.checked = true;
+        }
+      },
+      "confirm"
+    );
+
+    // Uncheck the radio button initially since we're showing a confirmation
+    radioButton.checked = false;
+    var ajaxRadio = document.querySelector(
+      'input[name="authdocs_pagination_type"][value="ajax"]'
+    );
+    if (ajaxRadio) {
+      ajaxRadio.checked = true;
     }
+    return false;
   }
   return true;
 }

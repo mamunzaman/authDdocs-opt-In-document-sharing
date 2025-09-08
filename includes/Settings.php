@@ -13,22 +13,21 @@ namespace AuthDocs;
  */
 class Settings {
     
-    private const OPTION_GROUP = 'authdocs_options';
-    private const ACCESS_REQUEST_TEMPLATE_NAME = 'authdocs_access_request_template';
-    private const AUTO_RESPONSE_TEMPLATE_NAME = 'authdocs_auto_response_template';
-    private const GRANT_DECLINE_TEMPLATE_NAME = 'authdocs_grant_decline_template';
-    private const ACCESS_REQUEST_RECIPIENTS_NAME = 'authdocs_access_request_recipients';
-    private const GRANT_DECLINE_RECIPIENTS_NAME = 'authdocs_grant_decline_recipients';
-    private const SECRET_KEY_OPTION_NAME = 'authdocs_secret_key';
-    private const FRONTEND_COLOR_PALETTE_NAME = 'authdocs_frontend_color_palette';
-    private const PAGINATION_STYLE_NAME = 'authdocs_pagination_style';
-    private const PAGINATION_TYPE_NAME = 'authdocs_pagination_type';
+    public const OPTION_GROUP = 'authdocs_options';
+    public const ACCESS_REQUEST_TEMPLATE_NAME = 'authdocs_access_request_template';
+    public const AUTO_RESPONSE_TEMPLATE_NAME = 'authdocs_auto_response_template';
+    public const GRANT_DECLINE_TEMPLATE_NAME = 'authdocs_grant_decline_template';
+    public const ACCESS_REQUEST_RECIPIENTS_NAME = 'authdocs_access_request_recipients';
+    public const GRANT_DECLINE_RECIPIENTS_NAME = 'authdocs_grant_decline_recipients';
+    public const SECRET_KEY_OPTION_NAME = 'authdocs_secret_key';
+    public const FRONTEND_COLOR_PALETTE_NAME = 'authdocs_frontend_color_palette';
+    public const PAGINATION_STYLE_NAME = 'authdocs_pagination_style';
+    public const PAGINATION_TYPE_NAME = 'authdocs_pagination_type';
+    public const CARD_TEXT_ALIGNMENT_NAME = 'authdocs_card_text_alignment';
     
     public function __construct() {
         add_action('admin_init', [$this, 'init_settings']);
         add_action('admin_init', [$this, 'ensure_default_templates']);
-        add_action('admin_init', [$this, 'handle_tab_preservation']);
-        add_filter('wp_redirect', [$this, 'preserve_tab_in_redirect'], 10, 2);
     }
     
     /**
@@ -79,6 +78,11 @@ class Settings {
         // Check and set default pagination type
         if (empty(get_option(self::PAGINATION_TYPE_NAME, ''))) {
             update_option(self::PAGINATION_TYPE_NAME, 'ajax');
+        }
+        
+        // Check and set default card text alignment
+        if (empty(get_option(self::CARD_TEXT_ALIGNMENT_NAME, ''))) {
+            update_option(self::CARD_TEXT_ALIGNMENT_NAME, 'left');
         }
     }
     
@@ -171,6 +175,16 @@ class Settings {
                 'type' => 'string',
                 'sanitize_callback' => [$this, 'sanitize_pagination_type'],
                 'default' => 'ajax'
+            ]
+        );
+        
+        register_setting(
+            self::OPTION_GROUP,
+            self::CARD_TEXT_ALIGNMENT_NAME,
+            [
+                'type' => 'string',
+                'sanitize_callback' => [$this, 'sanitize_card_text_alignment'],
+                'default' => 'left'
             ]
         );
         
@@ -330,6 +344,14 @@ class Settings {
             'pagination_style',
             '<span class="authdocs-pagination-style-label">' . __('Pagination Style', 'authdocs') . '</span>',
             [$this, 'render_pagination_style_field'],
+            'authdocs-settings',
+            'authdocs_pagination_section'
+        );
+        
+        add_settings_field(
+            'card_text_alignment',
+            '<span class="authdocs-card-text-alignment-label">' . __('Card Text Alignment', 'authdocs') . '</span>',
+            [$this, 'render_card_text_alignment_field'],
             'authdocs-settings',
             'authdocs_pagination_section'
         );
@@ -572,6 +594,16 @@ class Settings {
         return in_array($input, $allowed_types) ? $input : 'ajax';
     }
     
+    public function sanitize_card_text_alignment($input): string {
+        // Handle null or non-string input
+        if (!is_string($input)) {
+            return 'left';
+        }
+        
+        $allowed_alignments = ['left', 'center', 'right'];
+        return in_array($input, $allowed_alignments) ? $input : 'left';
+    }
+    
     public function render_pagination_section_description(): void
     {
         echo '<p>' . __('Configure how pagination is displayed on the frontend.', 'authdocs') . '</p>';
@@ -663,6 +695,45 @@ class Settings {
                     <div class="authdocs-option-content">
                         <strong class="authdocs-option-title"><?php _e('Load More (AJAX)', 'authdocs'); ?></strong>
                         <p class="authdocs-option-description"><?php _e('Progressive loading with a "Load More" button for seamless browsing.', 'authdocs'); ?></p>
+                    </div>
+                </label>
+            </div>
+        </fieldset>
+        <?php
+    }
+    
+    public function render_card_text_alignment_field(): void
+    {
+        $current_alignment = $this->get_card_text_alignment();
+        ?>
+        <fieldset>
+            <legend class="screen-reader-text"><?php _e('Card Text Alignment', 'authdocs'); ?></legend>
+            
+            <div class="authdocs-card-alignment-options">
+                <label class="authdocs-card-alignment-option">
+                    <input type="radio" name="<?php echo self::CARD_TEXT_ALIGNMENT_NAME; ?>" value="left" 
+                           <?php checked($current_alignment, 'left'); ?> />
+                    <div class="authdocs-option-content">
+                        <strong class="authdocs-option-title"><?php _e('Left Aligned', 'authdocs'); ?></strong>
+                        <p class="authdocs-option-description"><?php _e('Text aligned to the left side of the card.', 'authdocs'); ?></p>
+                    </div>
+                </label>
+                
+                <label class="authdocs-card-alignment-option">
+                    <input type="radio" name="<?php echo self::CARD_TEXT_ALIGNMENT_NAME; ?>" value="center" 
+                           <?php checked($current_alignment, 'center'); ?> />
+                    <div class="authdocs-option-content">
+                        <strong class="authdocs-option-title"><?php _e('Center Aligned', 'authdocs'); ?></strong>
+                        <p class="authdocs-option-description"><?php _e('Text centered within the card.', 'authdocs'); ?></p>
+                    </div>
+                </label>
+                
+                <label class="authdocs-card-alignment-option">
+                    <input type="radio" name="<?php echo self::CARD_TEXT_ALIGNMENT_NAME; ?>" value="right" 
+                           <?php checked($current_alignment, 'right'); ?> />
+                    <div class="authdocs-option-content">
+                        <strong class="authdocs-option-title"><?php _e('Right Aligned', 'authdocs'); ?></strong>
+                        <p class="authdocs-option-description"><?php _e('Text aligned to the right side of the card.', 'authdocs'); ?></p>
                     </div>
                 </label>
             </div>
@@ -1144,53 +1215,13 @@ class Settings {
     }
     
     /**
-     * Handle tab preservation after form submission
+     * Get the selected card text alignment
      */
-    public function handle_tab_preservation(): void {
-        // Only handle POST requests from our settings page
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['authdocs_current_tab'])) {
-            $current_tab = sanitize_text_field($_POST['authdocs_current_tab']);
-            $allowed_tabs = ['email-templates', 'frontend-settings', 'about-plugin'];
-            
-            if (in_array($current_tab, $allowed_tabs)) {
-                // Store the current tab in a transient for the next page load
-                set_transient('authdocs_preserve_tab', $current_tab, 30); // 30 seconds
-            }
-        }
+    public function get_card_text_alignment(): string
+    {
+        return get_option(self::CARD_TEXT_ALIGNMENT_NAME, 'left');
     }
     
-    /**
-     * Get preserved tab from transient
-     */
-    public function get_preserved_tab(): string {
-        $preserved_tab = get_transient('authdocs_preserve_tab');
-        if ($preserved_tab) {
-            // Clear the transient after use
-            delete_transient('authdocs_preserve_tab');
-            return $preserved_tab;
-        }
-        return '';
-    }
-    
-    /**
-     * Preserve tab parameter in settings redirect
-     */
-    public function preserve_tab_in_redirect($location, $status) {
-        // Only handle redirects from our settings page that are settings updates
-        if (strpos($location, 'page=authdocs-settings') !== false && strpos($location, 'settings-updated=true') !== false) {
-            // Get the preserved tab from transient
-            $preserved_tab = get_transient('authdocs_preserve_tab');
-            if ($preserved_tab) {
-                $allowed_tabs = ['email-templates', 'frontend-settings', 'about-plugin'];
-                if (in_array($preserved_tab, $allowed_tabs)) {
-                    // Add tab parameter to the redirect URL
-                    $separator = strpos($location, '?') !== false ? '&' : '?';
-                    $location .= $separator . 'tab=' . urlencode($preserved_tab);
-                }
-            }
-        }
-        return $location;
-    }
     
     /**
      * Get color palette data
