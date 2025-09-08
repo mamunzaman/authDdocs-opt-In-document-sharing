@@ -164,7 +164,7 @@ class LinkHandler
         http_response_code($status_code);
         
         // Get the current color palette from settings
-        $settings = new \AuthDocs\Settings();
+        $settings = new Settings();
         $color_palette = $settings->get_color_palette_colors();
         
         // Get recipient email for contact information

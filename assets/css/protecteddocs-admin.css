@@ -533,13 +533,227 @@
   height: 16px;
 }
 
-/* Featured Image Column Styling */
-.wp-list-table .column-featured_image {
-  width: 80px;
+/* Documents List Table - Clean Flat Design */
+
+/* Override WordPress default styles for document post type list */
+.post-type-document .wp-list-table,
+.post-type-document .wp-list-table.widefat,
+.post-type-document .wp-list-table.striped {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
 }
 
-.wp-list-table .column-pdf_file {
-  width: 200px;
+.post-type-document .wp-list-table thead th,
+.post-type-document .wp-list-table.widefat thead th,
+.post-type-document .wp-list-table.striped thead th {
+  background: #f8f9fa !important;
+  border: none !important;
+  border-bottom: 2px solid #e9ecef !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  padding: 16px 12px !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+}
+
+.post-type-document .wp-list-table tbody tr,
+.post-type-document .wp-list-table.widefat tbody tr,
+.post-type-document .wp-list-table.striped tbody tr {
+  border: 1px solid #e9ecef !important;
+  border-bottom: 1px solid #e9ecef !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.post-type-document .wp-list-table tbody tr:hover,
+.post-type-document .wp-list-table.widefat tbody tr:hover,
+.post-type-document .wp-list-table.striped tbody tr:hover {
+  background: #f8f9fa !important;
+}
+
+.post-type-document .wp-list-table tbody tr:nth-child(even),
+.post-type-document .wp-list-table.widefat tbody tr:nth-child(even),
+.post-type-document .wp-list-table.striped tbody tr:nth-child(even) {
+  background: #fafbfc !important;
+}
+
+.post-type-document .wp-list-table tbody tr:nth-child(even):hover,
+.post-type-document .wp-list-table.widefat tbody tr:nth-child(even):hover,
+.post-type-document .wp-list-table.striped tbody tr:nth-child(even):hover {
+  background: #f1f3f4 !important;
+}
+
+.post-type-document .wp-list-table tbody td,
+.post-type-document .wp-list-table.widefat tbody td,
+.post-type-document .wp-list-table.striped tbody td {
+  border: none !important;
+  padding: 16px 12px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #f1f3f4 !important;
+}
+
+/* ID Column Styling */
+.post-type-document .wp-list-table .column-id {
+  width: 60px !important;
+  text-align: center !important;
+  font-weight: 600 !important;
+  color: #007cba !important;
+}
+
+/* Document Status Column Styling */
+.post-type-document .wp-list-table .column-document_status {
+  width: 120px !important;
+  text-align: center !important;
+}
+
+.post-type-document .wp-list-table .authdocs-status-locked,
+.post-type-document .wp-list-table .authdocs-status-unlocked {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  min-width: 80px !important;
+}
+
+.post-type-document .wp-list-table .authdocs-status-locked {
+  background-color: #fce8e6 !important;
+  color: #d63638 !important;
+  border: 1px solid #f1aeb5 !important;
+}
+
+.post-type-document .wp-list-table .authdocs-status-unlocked {
+  background-color: #e6f7e6 !important;
+  color: #00a32a !important;
+  border: 1px solid #a7d4a7 !important;
+}
+
+.post-type-document .wp-list-table .authdocs-status-locked .dashicons,
+.post-type-document .wp-list-table .authdocs-status-unlocked .dashicons {
+  margin-right: 4px !important;
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Featured Image Column Styling */
+.post-type-document .wp-list-table .column-featured_image {
+  width: 80px !important;
+  text-align: center !important;
+}
+
+.post-type-document .wp-list-table .column-featured_image img {
+  border-radius: 4px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.post-type-document .wp-list-table .column-pdf_file {
+  width: 200px !important;
+}
+
+/* Document File Link Styling */
+.post-type-document .authdocs-pdf-link {
+  color: #007cba !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+.post-type-document .authdocs-pdf-link:hover {
+  color: #005a87 !important;
+  background: #f0f6fc !important;
+  text-decoration: none !important;
+}
+
+.post-type-document .authdocs-pdf-link .dashicons {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Title Column Enhancement */
+.post-type-document .wp-list-table .column-title {
+  font-weight: 600 !important;
+}
+
+.post-type-document .wp-list-table .column-title a {
+  color: #1a1a1a !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+}
+
+.post-type-document .wp-list-table .column-title a:hover {
+  color: #007cba !important;
+  text-decoration: none !important;
+}
+
+/* Date Column Styling */
+.post-type-document .wp-list-table .column-date {
+  color: #6c757d !important;
+  font-size: 13px !important;
+}
+
+/* Status Column Enhancement */
+.post-type-document .wp-list-table .column-status {
+  text-align: center !important;
+}
+
+/* Row Actions Styling */
+.post-type-document .row-actions {
+  opacity: 0.7 !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.post-type-document .wp-list-table tbody tr:hover .row-actions {
+  opacity: 1 !important;
+}
+
+.post-type-document .row-actions a {
+  color: #007cba !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+.post-type-document .row-actions a:hover {
+  color: #005a87 !important;
+  text-decoration: underline !important;
+}
+
+/* Bulk Actions Styling */
+.post-type-document .bulkactions {
+  margin-bottom: 16px !important;
+}
+
+.post-type-document .bulkactions select,
+.post-type-document .bulkactions input[type="submit"] {
+  border-radius: 4px !important;
+  border: 1px solid #ddd !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+}
+
+.post-type-document .bulkactions input[type="submit"] {
+  background: #007cba !important;
+  color: #ffffff !important;
+  border-color: #007cba !important;
+  font-weight: 500 !important;
+}
+
+.post-type-document .bulkactions input[type="submit"]:hover {
+  background: #005a87 !important;
+  border-color: #005a87 !important;
 }
 
 /* Settings Success Notification */
@@ -1312,23 +1526,23 @@
 
 .authdocs-frontend-settings-header {
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border-bottom: 1px solid #000000;
-  padding: 20px;
-  /*margin: -20px -20px 30px -20px;*/
-  min-height: 120px;
+  border-bottom: 1px solid #e1e5e9;
+  padding: 16px 20px;
+  min-height: 80px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .authdocs-frontend-settings-form {
-  padding: 0px;
+  padding: 0;
 }
 
 .authdocs-frontend-sections {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 20px;
+  padding: 20px;
 }
 
 .authdocs-frontend-section {
@@ -3005,6 +3219,107 @@ fieldset input[type="radio"]:checked {
   }
 }
 
+/* Temporarily hide sidebar content on Frontend and Email Settings pages */
+.authdocs-frontend-sidebar .authdocs-sidebar-content,
+.authdocs-email-sidebar .authdocs-sidebar-content {
+  display: none;
+}
+
+/* Frontend Settings Responsive - Hide sidebar from 990px */
+@media (max-width: 990px) {
+  .authdocs-frontend-settings-main {
+    flex: 1;
+    width: 100%;
+  }
+  
+  .authdocs-frontend-sidebar {
+    display: none;
+  }
+  
+  .authdocs-settings-layout {
+    gap: 15px;
+    padding: 12px;
+  }
+  
+  /* Make frontend settings more compact */
+  .authdocs-frontend-settings-header {
+    padding: 12px 16px;
+    min-height: 60px;
+  }
+  
+  .authdocs-frontend-sections {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  /* Adjust single-column layout for frontend settings */
+  .authdocs-single-column-layout {
+    gap: 16px;
+  }
+  
+  .authdocs-settings-group-header {
+    padding: 12px 16px;
+  }
+  
+  .authdocs-settings-group-content {
+    padding: 16px;
+  }
+  
+  /* Adjust two-column layout for other pages */
+  .authdocs-two-column-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .authdocs-pagination-color-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .authdocs-column {
+    padding: 16px;
+  }
+  
+  .authdocs-pagination-column {
+    order: 1;
+  }
+  
+  .authdocs-color-column {
+    order: 2;
+  }
+  
+  /* Email Templates Responsive */
+  .authdocs-email-templates-main {
+    flex: 1;
+    width: 100%;
+  }
+  
+  .authdocs-email-sidebar {
+    display: none;
+  }
+  
+  /* Improve form elements for mobile */
+  .authdocs-form-field input[type="text"],
+  .authdocs-form-field input[type="email"],
+  .authdocs-form-field select,
+  .authdocs-form-field textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  /* Stack form actions vertically on mobile */
+  .authdocs-form-actions {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  
+  .authdocs-save-button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 24px !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .authdocs-settings-layout {
     gap: 15px;
@@ -3249,8 +3564,63 @@ fieldset input[type="radio"]:checked {
 
 @media (max-width: 600px) {
   .authdocs-settings-layout {
-    padding: 10px;
-    gap: 15px;
+    padding: 8px;
+    gap: 12px;
+  }
+  
+  /* Ultra-compact frontend settings for small screens */
+  .authdocs-frontend-settings-header {
+    padding: 8px 10px;
+    min-height: 40px;
+  }
+  
+  .authdocs-frontend-sections {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .authdocs-single-column-layout {
+    gap: 8px;
+  }
+  
+  .authdocs-settings-group-header {
+    padding: 8px 10px;
+  }
+  
+  .authdocs-settings-group-content {
+    padding: 8px;
+  }
+  
+  .authdocs-settings-group-title {
+    font-size: 14px;
+  }
+  
+  .authdocs-settings-group-description {
+    font-size: 11px;
+  }
+  
+  .authdocs-two-column-layout {
+    gap: 8px;
+  }
+  
+  .authdocs-column {
+    padding: 8px;
+  }
+  
+  .authdocs-main-title {
+    font-size: 16px;
+  }
+  
+  .authdocs-main-description {
+    font-size: 12px;
+  }
+  
+  .authdocs-column-title {
+    font-size: 14px;
+  }
+  
+  .authdocs-column-description {
+    font-size: 12px;
   }
   
   .authdocs-page-header {
@@ -4347,30 +4717,82 @@ fieldset input[type="radio"]:checked {
   color: #383d41;
 }
 
-/* Flat Table Design */
+/* Override WordPress Default Table Styles */
+.wp-list-table,
+.wp-list-table.widefat,
+.wp-list-table.striped {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+/* Flat Table Design - Custom Plugin Styles */
 .authdocs-requests-table-wrapper .wp-list-table {
-  border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
 }
 
+/* Override WordPress default table header styles */
+.wp-list-table thead th,
+.wp-list-table.widefat thead th,
+.wp-list-table.striped thead th {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  font-weight: normal !important;
+  color: inherit !important;
+  padding: 0 !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+  text-transform: none !important;
+  font-size: inherit !important;
+  letter-spacing: normal !important;
+}
+
+/* Custom Plugin Table Header Styles */
 .authdocs-requests-table-wrapper .wp-list-table thead th {
-  background: #f8f9fa;
-  border: none;
-  border-bottom: 2px solid #e9ecef;
-  font-weight: 700;
-  color: #000000;
-  padding: 16px 12px;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.5px;
+  background: #f8f9fa !important;
+  border: none !important;
+  border-bottom: 2px solid #e9ecef !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  padding: 16px 12px !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
 }
 
+/* Override WordPress default table body styles */
+.wp-list-table tbody tr,
+.wp-list-table.widefat tbody tr,
+.wp-list-table.striped tbody tr {
+  border: none !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  transition: none !important;
+}
+
+.wp-list-table tbody tr:nth-child(even),
+.wp-list-table.widefat tbody tr:nth-child(even),
+.wp-list-table.striped tbody tr:nth-child(even) {
+  background: transparent !important;
+}
+
+.wp-list-table tbody tr:hover,
+.wp-list-table.widefat tbody tr:hover,
+.wp-list-table.striped tbody tr:hover {
+  background: transparent !important;
+}
+
+/* Custom Plugin Table Body Styles */
 .authdocs-requests-table-wrapper .wp-list-table tbody tr {
-  border: 1px solid #e9ecef;
-  border-bottom: 1px solid #e9ecef;
-  transition: background-color 0.2s ease;
+  border: 1px solid #e9ecef !important;
+  border-bottom: 1px solid #e9ecef !important;
+  transition: background-color 0.2s ease !important;
 }
 
 .authdocs-requests-table-wrapper .wp-list-table tbody tr:hover {
@@ -4385,11 +4807,69 @@ fieldset input[type="radio"]:checked {
   background: #f1f3f4;
 }
 
+/* Override WordPress default table cell styles */
+.wp-list-table tbody td,
+.wp-list-table.widefat tbody td,
+.wp-list-table.striped tbody td {
+  border: none !important;
+  border-bottom: none !important;
+  padding: 0 !important;
+  vertical-align: middle !important;
+  background: transparent !important;
+}
+
+/* Custom Plugin Table Cell Styles */
 .authdocs-requests-table-wrapper .wp-list-table tbody td {
-  border: none;
-  padding: 16px 12px;
-  vertical-align: middle;
-  border-bottom: 1px solid #f1f3f4;
+  border: none !important;
+  padding: 16px 12px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #f1f3f4 !important;
+}
+
+/* High Specificity Override for Plugin Tables */
+.authdocs-table-section .authdocs-requests-table-wrapper .wp-list-table.widefat.striped {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+.authdocs-table-section .authdocs-requests-table-wrapper .wp-list-table.widefat.striped thead th {
+  background: #f8f9fa !important;
+  border: none !important;
+  border-bottom: 2px solid #e9ecef !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  padding: 16px 12px !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+}
+
+.authdocs-table-section .authdocs-requests-table-wrapper .wp-list-table.widefat.striped tbody tr {
+  border: 1px solid #e9ecef !important;
+  border-bottom: 1px solid #e9ecef !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.authdocs-table-section .authdocs-requests-table-wrapper .wp-list-table.widefat.striped tbody tr:hover {
+  background: #f8f9fa !important;
+}
+
+.authdocs-table-section .authdocs-requests-table-wrapper .wp-list-table.widefat.striped tbody tr:nth-child(even) {
+  background: #fafbfc !important;
+}
+
+.authdocs-table-section .authdocs-requests-table-wrapper .wp-list-table.widefat.striped tbody tr:nth-child(even):hover {
+  background: #f1f3f4 !important;
+}
+
+.authdocs-table-section .authdocs-requests-table-wrapper .wp-list-table.widefat.striped tbody td {
+  border: none !important;
+  padding: 16px 12px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #f1f3f4 !important;
 }
 
 /* First column width */
@@ -4789,6 +5269,433 @@ fieldset input[type="radio"]:checked {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   border: 1px solid #e9ecef;
+  position: relative;
+}
+
+/* Ensure table is not fixed */
+.authdocs-requests-table,
+.authdocs-requests-table-wrapper,
+.authdocs-table-section {
+  position: relative !important;
+}
+
+/* Tablet Layout - Horizontal Scrolling (881px to 1024px) */
+@media (min-width: 881px) and (max-width: 1024px) {
+  .authdocs-table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+  }
+  
+  .authdocs-requests-table {
+    min-width: 900px; /* Ensure table doesn't compress too much */
+  }
+  
+  .authdocs-requests-table th,
+  .authdocs-requests-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  
+  .authdocs-col-id {
+    width: 50px;
+    min-width: 50px;
+  }
+  
+  .authdocs-col-name {
+    min-width: 120px;
+  }
+  
+  .authdocs-col-email {
+    min-width: 150px;
+  }
+  
+  .authdocs-col-document {
+    min-width: 150px;
+  }
+  
+  .authdocs-col-file {
+    min-width: 100px;
+  }
+  
+  .authdocs-col-status {
+    min-width: 100px;
+  }
+  
+  .authdocs-col-date {
+    min-width: 120px;
+  }
+  
+  .authdocs-col-actions {
+    min-width: 120px;
+  }
+  
+  /* Smooth scrolling for tablets */
+  .authdocs-table-responsive::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .authdocs-table-responsive::-webkit-scrollbar-track {
+    background: #f1f3f4;
+    border-radius: 4px;
+  }
+  
+  .authdocs-table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c8cd;
+    border-radius: 4px;
+  }
+  
+  .authdocs-table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8b2ba;
+  }
+  
+  /* Add scroll indicator for tablets */
+  .authdocs-table-responsive::after {
+    content: "← Scroll horizontally to see more columns →";
+    display: block;
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+  }
+}
+
+/* Desktop Layout - Full Table (above 1024px) */
+@media (min-width: 1025px) {
+  .authdocs-table-responsive {
+    overflow-x: visible;
+  }
+  
+  .authdocs-requests-table {
+    width: 100%;
+  }
+  
+  .authdocs-requests-table th,
+  .authdocs-requests-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    white-space: normal;
+  }
+}
+
+/* Mobile Layout - Stacked List Format (below 880px) */
+@media (max-width: 880px) {
+  .authdocs-table-responsive {
+    overflow-x: visible;
+  }
+  
+  .authdocs-requests-table,
+  .authdocs-requests-table thead,
+  .authdocs-requests-table tbody,
+  .authdocs-requests-table th,
+  .authdocs-requests-table td,
+  .authdocs-requests-table tr {
+    display: block;
+  }
+  
+  .authdocs-requests-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  .authdocs-requests-table tr {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+  }
+  
+  .authdocs-requests-table td {
+    border: none;
+    position: relative;
+    padding: 10px 0;
+    padding-left: 35%;
+    text-align: left;
+    border-bottom: 1px solid #f1f3f4;
+    line-height: 1.4;
+  }
+  
+  .authdocs-requests-table td:last-child {
+    border-bottom: none;
+  }
+  
+  .authdocs-requests-table td:before {
+    /*content: attr(data-label) ": ";
+    position: absolute;
+    left: 0;
+    width: 32%;
+    padding-right: 8px;
+    white-space: nowrap;
+    font-weight: 600;
+    color: #495057;
+    font-size: 13px;
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;*/
+  }
+  
+  /* Special handling for actions column */
+  .authdocs-requests-table td[data-label="Actions"] {
+    padding-left: 0;
+    text-align: center;
+    border-bottom: none;
+  }
+  
+  .authdocs-requests-table td[data-label="Actions"]:before {
+    display: none;
+  }
+  
+  /* Status badges in mobile */
+  .authdocs-requests-table td[data-label="Status"] .authdocs-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* Action buttons in mobile */
+  .authdocs-requests-table td[data-label="Actions"] .authdocs-action-links {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .authdocs-requests-table td[data-label="Actions"] .authdocs-action-link {
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    min-height: 36px;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Mobile-specific improvements */
+  .authdocs-requests-table tr:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Better spacing for mobile cards */
+  .authdocs-requests-table td[data-label="Request ID"] {
+    font-weight: 600;
+    color: #007cba;
+    font-size: 14px;
+  }
+  
+  .authdocs-requests-table td[data-label="Requester Name"] {
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  
+  .authdocs-requests-table td[data-label="Email"] {
+    color: #6c757d;
+    word-break: break-all;
+  }
+  
+  .authdocs-requests-table td[data-label="Document"] {
+    font-weight: 500;
+    color: #495057;
+  }
+  
+  .authdocs-requests-table td[data-label="Date"] {
+    color: #6c757d;
+    font-size: 12px;
+  }
+}
+
+/* Enhanced Mobile Layout - Optimized for screens below 768px */
+@media (max-width: 768px) {
+  .authdocs-table-responsive {
+    overflow-x: visible;
+    margin: 0 -10px;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  
+  .authdocs-requests-table,
+  .authdocs-requests-table thead,
+  .authdocs-requests-table tbody,
+  .authdocs-requests-table th,
+  .authdocs-requests-table td,
+  .authdocs-requests-table tr {
+    display: block;
+  }
+  
+  .authdocs-requests-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  .authdocs-requests-table tr {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  .authdocs-requests-table tr:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .authdocs-requests-table td {
+    border: none;
+    position: relative;
+    padding: 8px 0;
+    padding-left: 40%;
+    text-align: left;
+    border-bottom: 1px solid #f1f3f4;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  .authdocs-requests-table td:last-child {
+    border-bottom: none;
+  }
+  
+  .authdocs-requests-table td:before {
+    content: attr(data-label) ": ";
+    position: absolute;
+    left: 0;
+    width: 38%;
+    padding-right: 8px;
+    white-space: nowrap;
+    font-weight: 600;
+    color: #495057;
+    font-size: 12px;
+    line-height: 1.5;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Special handling for actions column */
+  .authdocs-requests-table td[data-label="Actions"] {
+    padding-left: 0;
+    text-align: center;
+    border-bottom: none;
+    margin-top: 8px;
+  }
+  
+  .authdocs-requests-table td[data-label="Actions"]:before {
+    display: none;
+  }
+  
+  /* Status badges in mobile */
+  .authdocs-requests-table td[data-label="Status"] .authdocs-status-badge {
+    display: inline-block;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Action buttons in mobile */
+  .authdocs-requests-table td[data-label="Actions"] .authdocs-action-links {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .authdocs-requests-table td[data-label="Actions"] .authdocs-action-link {
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    min-height: 32px;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Long text handling */
+  .authdocs-requests-table td[data-label="Document Title"],
+  .authdocs-requests-table td[data-label="User Email"],
+  .authdocs-requests-table td[data-label="Request Message"] {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+  
+  /* File link handling */
+  .authdocs-requests-table td[data-label="File Link"] a {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    display: inline-block;
+  }
+  
+  /* Date formatting for mobile */
+  .authdocs-requests-table td[data-label="Request Date"],
+  .authdocs-requests-table td[data-label="Status Date"] {
+    font-size: 11px;
+    color: #666;
+  }
+  
+  /* Enhanced mobile-specific improvements */
+  .authdocs-requests-table td[data-label="Request ID"] {
+    font-weight: 600;
+    color: #007cba;
+    font-size: 13px;
+  }
+  
+  .authdocs-requests-table td[data-label="Requester Name"] {
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 14px;
+  }
+  
+  .authdocs-requests-table td[data-label="Email"] {
+    color: #6c757d;
+    word-break: break-all;
+    font-size: 12px;
+  }
+  
+  .authdocs-requests-table td[data-label="Document"] {
+    font-weight: 500;
+    color: #495057;
+    font-size: 13px;
+  }
+  
+  .authdocs-requests-table td[data-label="Date"] {
+    color: #6c757d;
+    font-size: 11px;
+  }
 }
 
 .authdocs-requests-table {
@@ -4810,9 +5717,6 @@ fieldset input[type="radio"]:checked {
   font-weight: 600;
   color: #1a1a1a;
   border-bottom: 2px solid #e9ecef;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .authdocs-requests-table tbody tr:hover {
@@ -5306,15 +6210,66 @@ fieldset input[type="radio"]:checked {
 
 
 
-/* Two-Column Layout for Display & Navigation Section */
+/* Single-Column Layout for Display & Navigation Section */
+.authdocs-single-column-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+/* Settings Groups within Single Column */
+.authdocs-settings-group {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.authdocs-settings-group-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-bottom: 1px solid #e9ecef;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.authdocs-settings-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.authdocs-settings-group-title .dashicons {
+  font-size: 18px;
+  color: #6c757d;
+}
+
+.authdocs-settings-group-description {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.authdocs-settings-group-content {
+  padding: 20px;
+}
+
+/* Two-Column Layout for Display & Navigation Section (Legacy - kept for other pages) */
 .authdocs-two-column-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 32px;
-  margin-top: 20px;
+  gap: 24px;
+  margin-top: 16px;
 }
 
-/* Special Layout for Pagination Settings (2/3) and Color Palette (1/3) */
+/* Special Layout for Pagination Settings (2/3) and Color Palette (1/3) (Legacy) */
 .authdocs-pagination-color-layout {
   grid-template-columns: 2fr 1fr;
 }
@@ -5393,7 +6348,7 @@ fieldset input[type="radio"]:checked {
 
 @media (max-width: 768px) {
   .authdocs-two-column-layout {
-    gap: 20px;
+    gap: 16px;
   }
   
   /* Stack columns on mobile for better usability */
@@ -5402,11 +6357,50 @@ fieldset input[type="radio"]:checked {
   }
   
   .authdocs-column {
-    padding: 16px;
+    padding: 12px;
   }
   
   .authdocs-column-title {
     font-size: 15px;
+  }
+  
+  /* Frontend Settings Mobile Optimizations */
+  .authdocs-frontend-settings-header {
+    padding: 10px 12px;
+    min-height: 50px;
+  }
+  
+  .authdocs-frontend-sections {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .authdocs-single-column-layout {
+    gap: 12px;
+  }
+  
+  .authdocs-settings-group-header {
+    padding: 10px 12px;
+  }
+  
+  .authdocs-settings-group-content {
+    padding: 12px;
+  }
+  
+  .authdocs-settings-group-title {
+    font-size: 15px;
+  }
+  
+  .authdocs-settings-group-description {
+    font-size: 12px;
+  }
+  
+  .authdocs-main-title {
+    font-size: 18px;
+  }
+  
+  .authdocs-main-description {
+    font-size: 13px;
   }
   
   .authdocs-column-description {

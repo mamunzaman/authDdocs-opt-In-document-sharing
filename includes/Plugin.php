@@ -45,6 +45,7 @@ class Plugin
         add_action('template_redirect', [$this, 'protect_document_files']);
         add_action('init', [$this, 'protect_media_files']);
         add_action('robots_txt', [$this, 'add_robots_txt_rules']);
+        add_action('template_redirect', [$this, 'handle_access_request_page']);
     }
 
     private function load_dependencies(): void
@@ -561,6 +562,373 @@ class Plugin
                 }
             }
         }
+    }
+
+    /**
+     * Handle access request page
+     */
+    public function handle_access_request_page(): void
+    {
+        // Check if this is an access request page
+        if (!isset($_GET['authdocs_access']) || !isset($_GET['document_id'])) {
+            return;
+        }
+
+        $document_id = intval($_GET['document_id']);
+        $hash = sanitize_text_field($_GET['hash'] ?? '');
+        $email = sanitize_email($_GET['email'] ?? '');
+        $request_id = intval($_GET['request_id'] ?? 0);
+
+        // Get document information
+        $document = get_post($document_id);
+        if (!$document || $document->post_type !== 'document') {
+            LinkHandler::render_error_page(
+                __('Document not found', 'protecteddocs'),
+                __('Access Denied', 'protecteddocs'),
+                404
+            );
+            return;
+        }
+
+        // Check if document is restricted
+        $is_restricted = get_post_meta($document_id, '_authdocs_restricted', true) === 'yes';
+        
+        if (!$is_restricted) {
+            // Document is not restricted, redirect to download
+            $download_url = $this->get_document_download_url($document_id);
+            wp_redirect($download_url);
+            exit;
+        }
+
+        // Check if user has valid access
+        if (!empty($hash) && !empty($email)) {
+            $has_access = Database::validate_secure_access($hash, $email, $document_id, $request_id > 0 ? $request_id : null);
+            
+            if ($has_access) {
+                // User has access, redirect to download
+                $download_url = $this->get_document_download_url($document_id);
+                wp_redirect($download_url);
+                exit;
+            }
+        }
+
+        // User doesn't have access, show access request page
+        $this->render_access_request_page($document_id, $document);
+        exit;
+    }
+
+    /**
+     * Get document download URL
+     */
+    private function get_document_download_url(int $document_id): string
+    {
+        $token = Tokens::generate_download_token($document_id);
+        return add_query_arg([
+            'authdocs_download' => $document_id,
+            'token' => $token
+        ], home_url('/'));
+    }
+
+    /**
+     * Get access request URL for a document
+     */
+    private function get_access_request_url(int $document_id): string
+    {
+        return add_query_arg([
+            'authdocs_access' => '1',
+            'document_id' => $document_id
+        ], home_url('/'));
+    }
+
+    /**
+     * Render access request page
+     */
+    private function render_access_request_page(int $document_id, \WP_Post $document): void
+    {
+        $settings = new Settings();
+        $color_palette = $settings->get_color_palette_colors();
+        
+        // Get document file information
+        $file_data = Database::get_document_file($document_id);
+        $file_name = $file_data['filename'] ?? __('Unknown file', 'protecteddocs');
+        $file_size = $file_data['size'] ?? 0;
+        $file_size_formatted = $file_size ? size_format($file_size) : '';
+
+        http_response_code(200);
+        ?>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title><?php _e('Request Access', 'protecteddocs'); ?> - <?php echo esc_html($document->post_title); ?></title>
+            
+            <!-- SEO Protection -->
+            <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+            <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+            <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+            
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                    background: <?php echo esc_attr($color_palette['background']); ?>;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                    line-height: 1.6;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                }
+                
+                .request-container {
+                    background: <?php echo esc_attr($color_palette['secondary']); ?>;
+                    border: 2px solid <?php echo esc_attr($color_palette['border']); ?>;
+                    border-radius: 16px;
+                    padding: 48px 32px;
+                    text-align: center;
+                    max-width: 480px;
+                    width: 100%;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+                }
+                
+                .document-icon {
+                    width: 72px;
+                    height: 72px;
+                    background: <?php echo esc_attr($color_palette['primary']); ?>;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 24px;
+                    font-size: 32px;
+                    color: white;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+                }
+                
+                .document-title {
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    margin-bottom: 12px;
+                    letter-spacing: -0.3px;
+                }
+                
+                .document-info {
+                    background: <?php echo esc_attr($color_palette['secondary']); ?>;
+                    border: 1px solid <?php echo esc_attr($color_palette['border']); ?>;
+                    border-radius: 8px;
+                    padding: 16px;
+                    margin: 20px 0;
+                    text-align: left;
+                }
+                
+                .document-info h3 {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    margin: 0 0 8px 0;
+                }
+                
+                .document-info p {
+                    font-size: 13px;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    opacity: 0.8;
+                    margin: 4px 0;
+                }
+                
+                .request-form {
+                    margin-top: 32px;
+                }
+                
+                .form-group {
+                    margin-bottom: 20px;
+                    text-align: left;
+                }
+                
+                .form-group label {
+                    display: block;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    margin-bottom: 8px;
+                }
+                
+                .form-group input {
+                    width: 100%;
+                    padding: 12px 16px;
+                    border: 2px solid <?php echo esc_attr($color_palette['border']); ?>;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    background: <?php echo esc_attr($color_palette['background']); ?>;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    transition: border-color 0.2s ease;
+                }
+                
+                .form-group input:focus {
+                    outline: none;
+                    border-color: <?php echo esc_attr($color_palette['primary']); ?>;
+                }
+                
+                .btn {
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 500;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                    border: none;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    width: 100%;
+                    justify-content: center;
+                }
+                
+                .btn-primary {
+                    background: <?php echo esc_attr($color_palette['primary']); ?>;
+                    color: white;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }
+                
+                .btn-primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    opacity: 0.9;
+                }
+                
+                .btn-primary:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+                
+                .back-link {
+                    margin-top: 24px;
+                }
+                
+                .back-link a {
+                    color: <?php echo esc_attr($color_palette['primary']); ?>;
+                    text-decoration: none;
+                    font-size: 14px;
+                }
+                
+                .back-link a:hover {
+                    text-decoration: underline;
+                }
+                
+                @media (max-width: 480px) {
+                    .request-container {
+                        padding: 32px 20px;
+                        margin: 10px;
+                    }
+                    
+                    .document-title {
+                        font-size: 20px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="request-container">
+                <div class="document-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="currentColor"/>
+                        <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                
+                <h1 class="document-title"><?php echo esc_html($document->post_title); ?></h1>
+                
+                <div class="document-info">
+                    <h3><?php _e('Document Information', 'protecteddocs'); ?></h3>
+                    <p><strong><?php _e('File:', 'protecteddocs'); ?></strong> <?php echo esc_html($file_name); ?></p>
+                    <?php if ($file_size_formatted): ?>
+                        <p><strong><?php _e('Size:', 'protecteddocs'); ?></strong> <?php echo esc_html($file_size_formatted); ?></p>
+                    <?php endif; ?>
+                    <p><strong><?php _e('Status:', 'protecteddocs'); ?></strong> <?php _e('Restricted Access', 'protecteddocs'); ?></p>
+                </div>
+                
+                <div class="request-form">
+                    <form id="authdocs-request-form" method="post">
+                        <div class="form-group">
+                            <label for="authdocs-name"><?php _e('Your Name', 'protecteddocs'); ?> *</label>
+                            <input type="text" id="authdocs-name" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="authdocs-email"><?php _e('Your Email', 'protecteddocs'); ?> *</label>
+                            <input type="email" id="authdocs-email" name="email" required>
+                        </div>
+                        
+                        <input type="hidden" name="document_id" value="<?php echo esc_attr($document_id); ?>">
+                        <input type="hidden" name="action" value="protecteddocs_request_access">
+                        <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('protecteddocs_frontend_nonce'); ?>">
+                        
+                        <button type="submit" class="btn btn-primary" id="authdocs-submit-request">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
+                            </svg>
+                            <?php _e('Request Access', 'protecteddocs'); ?>
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="back-link">
+                    <a href="<?php echo esc_url(home_url('/')); ?>">← <?php _e('Back to Home', 'protecteddocs'); ?></a>
+                </div>
+            </div>
+            
+            <script>
+                // Add form submission handling
+                document.getElementById('authdocs-request-form').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    const submitBtn = document.getElementById('authdocs-submit-request');
+                    
+                    // Disable button and show loading
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span style="display: inline-block; width: 16px; height: 16px; border: 2px solid transparent; border-top: 2px solid currentColor; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></span><?php _e('Submitting...', 'protecteddocs'); ?>';
+                    
+                    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.data.message || '<?php _e('Access request submitted successfully!', 'protecteddocs'); ?>');
+                            window.location.href = '<?php echo esc_url(home_url('/')); ?>';
+                        } else {
+                            alert(data.data.message || '<?php _e('Failed to submit request. Please try again.', 'protecteddocs'); ?>');
+                        }
+                    })
+                    .catch(error => {
+                        alert('<?php _e('An error occurred. Please try again.', 'protecteddocs'); ?>');
+                    })
+                    .finally(() => {
+                        // Re-enable button
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/></svg><?php _e('Request Access', 'protecteddocs'); ?>';
+                    });
+                });
+                
+                // Add spin animation
+                const style = document.createElement('style');
+                style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+            </script>
+        </body>
+        </html>
+        <?php
     }
 
     /**
@@ -1449,53 +1817,79 @@ class Plugin
             if ($show_featured_image) {
                 $featured_image = get_the_post_thumbnail_url($document['id'], 'large');
                 if ($featured_image) {
-                    $card_style = 'style="background-image: url(' . esc_url($featured_image) . '); background-size: cover; background-position: center; background-repeat: no-repeat;"';
+                    $card_style = 'style="background-image: url(' . esc_url($featured_image) . ');"';
                 }
             }
         ?>
-            <!-- Card -->
-            <article class="card" <?php echo $card_style; ?>>
-                <div class="card-body">
-                    <?php if (!$featured_image): ?>
-                        <div class="card-icon" aria-hidden="true">
-                            <?php 
-                            $file_type = $document['file_data']['type'] ?? 'file';
-                            echo Database::get_file_type_icon_svg($file_type);
-                            ?>
-                        </div>
-                    <?php endif; ?>
-                    <h3 class="card-title"><?php echo esc_html($document['title']); ?></h3>
-                    <?php if (!empty($document['description'])): ?>
-                        <p class="card-desc"><?php echo wp_kses_post(wp_trim_words($document['description'], 15)); ?></p>
-                    <?php endif; ?>
-                    <div class="card-date"><?php echo esc_html($document['date']); ?></div>
+            <!-- Fresh Clean Card -->
+            <article class="authdocs-card" <?php echo $card_style; ?> data-color-palette="<?php echo esc_attr($document['restricted'] ? 'locked' : 'unlocked'); ?>">
+                <!-- Card Content Overlay -->
+                <div class="authdocs-card-content">
+                    <h3 class="authdocs-card-title"><?php echo esc_html($document['title']); ?></h3>
+                    <div class="authdocs-card-date"><?php echo esc_html($document['date']); ?></div>
                 </div>
 
-                <!-- Overlay -->
-                <div class="card-overlay" aria-hidden="true">
-                    <div class="overlay-content">
+                <!-- Status Indicator -->
+                <div class="authdocs-card-status">
+                    <?php if ($document['restricted']): ?>
+                        <div class="authdocs-status-badge authdocs-status-locked">
+                            <svg class="authdocs-lock-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <span><?php _e('Locked', 'protecteddocs'); ?></span>
+                        </div>
+                    <?php else: ?>
+                        <div class="authdocs-status-badge authdocs-status-unlocked">
+                            <svg class="authdocs-unlock-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h4c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
+                            </svg>
+                            <span><?php _e('Unlocked', 'protecteddocs'); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Hover Overlay with Icon -->
+                <div class="authdocs-card-hover-overlay">
+                    <div class="authdocs-overlay-icon">
                         <?php if ($document['restricted']): ?>
-                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'protecteddocs'); ?>">
-                                <svg class="authdocs-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-                                </svg>
-                            </button>
+                            <svg class="authdocs-lock-icon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <span class="authdocs-overlay-text"><?php _e('Request Access', 'protecteddocs'); ?></span>
                         <?php else: ?>
-                            <?php 
-                            $file_type = $document['file_data']['type'] ?? 'file';
-                            $link_behavior = Database::get_file_link_behavior($file_type);
-                            $link_attributes = 'target="' . esc_attr($link_behavior['target']) . '" title="' . esc_attr($link_behavior['title']) . '"';
-                            if ($link_behavior['download']) {
-                                $link_attributes .= ' download';
-                            }
-                            ?>
-                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" <?php echo $link_attributes; ?>>
-                                <svg class="authdocs-open-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
-                                </svg>
-                            </a>
+                            <svg class="authdocs-download-icon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            <span class="authdocs-overlay-text"><?php _e('Download', 'protecteddocs'); ?></span>
                         <?php endif; ?>
                     </div>
+                </div>
+                
+                <!-- Action Overlay -->
+                <div class="authdocs-card-action-overlay">
+                    <?php if ($document['restricted']): ?>
+                        <a href="<?php echo esc_url($this->get_access_request_url($document['id'])); ?>" class="authdocs-request-access-btn" title="<?php _e('Request Access', 'protecteddocs'); ?>">
+                            <svg class="authdocs-lock-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <span><?php _e('Request Access', 'protecteddocs'); ?></span>
+                        </a>
+                    <?php else: ?>
+                        <?php 
+                        $file_type = $document['file_data']['type'] ?? 'file';
+                        $link_behavior = Database::get_file_link_behavior($file_type);
+                        $link_attributes = 'target="' . esc_attr($link_behavior['target']) . '" title="' . esc_attr($link_behavior['title']) . '"';
+                        if ($link_behavior['download']) {
+                            $link_attributes .= ' download';
+                        }
+                        ?>
+                        <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" <?php echo $link_attributes; ?>>
+                            <svg class="authdocs-download-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            <span><?php _e('Download', 'protecteddocs'); ?></span>
+                        </a>
+                    <?php endif; ?>
                 </div>
             </article>
         <?php endforeach;

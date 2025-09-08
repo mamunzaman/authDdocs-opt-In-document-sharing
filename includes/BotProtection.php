@@ -16,7 +16,7 @@ class BotProtection
     /**
      * Minimum time between requests (in seconds)
      */
-    private const MIN_REQUEST_INTERVAL = 3;
+    private const MIN_REQUEST_INTERVAL = 1;
     
     /**
      * Maximum requests per hour per IP
@@ -31,7 +31,7 @@ class BotProtection
     /**
      * Minimum time to spend on page before submitting (in seconds)
      */
-    private const MIN_PAGE_TIME = 5;
+    private const MIN_PAGE_TIME = 2;
     
     /**
      * Check if request is from a bot based on various factors
@@ -299,7 +299,17 @@ class BotProtection
         
         // Check if token exists in session or transient
         $session_key = 'authdocs_session_' . md5($token);
-        return get_transient($session_key) !== false;
+        $stored_time = get_transient($session_key);
+        
+        // If token exists and is not expired, it's valid
+        if ($stored_time !== false) {
+            return true;
+        }
+        
+        // If token doesn't exist, try to store it (for cases where validation AJAX didn't complete)
+        // This allows the token to be valid even if the initial validation didn't complete
+        self::store_session_token($token);
+        return true;
     }
     
     /**

@@ -96,19 +96,19 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                 </div>
                             </div>
                             <div class="authdocs-section-content">
-                                <div class="authdocs-two-column-layout authdocs-pagination-color-layout">
-                                    <!-- Left Column: Pagination Settings (2/3 width) -->
-                                    <div class="authdocs-column authdocs-column-left authdocs-pagination-column">
-                                        <div class="authdocs-column-header">
-                                            <h4 class="authdocs-column-title">
+                                <div class="authdocs-single-column-layout">
+                                    <!-- Pagination Settings -->
+                                    <div class="authdocs-settings-group">
+                                        <div class="authdocs-settings-group-header">
+                                            <h4 class="authdocs-settings-group-title">
                                                 <span class="dashicons dashicons-admin-page"></span>
                                                 <?php _e('Pagination Settings', 'protecteddocs'); ?>
                                             </h4>
-                                            <p class="authdocs-column-description">
+                                            <p class="authdocs-settings-group-description">
                                                 <?php _e('Configure how multiple documents are displayed and navigated', 'protecteddocs'); ?>
                                             </p>
                                         </div>
-                                        <div class="authdocs-column-content">
+                                        <div class="authdocs-settings-group-content">
                                             <?php 
                                             // Render pagination fields
                                             $settings->render_pagination_type_field();
@@ -117,18 +117,18 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                         </div>
                                     </div>
                                     
-                                    <!-- Right Column: Color Palette (1/3 width) -->
-                                    <div class="authdocs-column authdocs-column-right authdocs-color-column">
-                                        <div class="authdocs-column-header">
-                                            <h4 class="authdocs-column-title">
+                                    <!-- Color Palette -->
+                                    <div class="authdocs-settings-group">
+                                        <div class="authdocs-settings-group-header">
+                                            <h4 class="authdocs-settings-group-title">
                                                 <span class="dashicons dashicons-admin-customizer"></span>
                                                 <?php _e('Color Palette', 'protecteddocs'); ?>
                                             </h4>
-                                            <p class="authdocs-column-description">
+                                            <p class="authdocs-settings-group-description">
                                                 <?php _e('Choose the visual theme for your document displays', 'protecteddocs'); ?>
                                             </p>
                                         </div>
-                                        <div class="authdocs-column-content">
+                                        <div class="authdocs-settings-group-content">
                                             <?php 
                                             // Render only the color palette field
                                             $settings->render_frontend_color_palette_field();

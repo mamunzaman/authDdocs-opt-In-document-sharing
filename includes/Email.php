@@ -298,11 +298,11 @@ class Email {
         }
         
         return add_query_arg([
-            'authdocs_download' => $request->document_id,
+            'authdocs_access' => '1',
+            'document_id' => $request->document_id,
             'hash' => $request->secure_hash,
             'email' => $request->requester_email,
-            'request_id' => $request->id,
-            'filename' => $this->get_document_filename((int) $request->document_id)
+            'request_id' => $request->id
         ], home_url());
     }
     

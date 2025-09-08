@@ -147,4 +147,87 @@ class Tokens
             'token' => $token
         ], home_url('/'));
     }
+    
+    /**
+     * Generate download token for document
+     */
+    public static function generate_download_token(int $document_id): string
+    {
+        $issued_at = time();
+        $data = [
+            'document_id' => $document_id,
+            'action' => 'download',
+            'issued_at' => $issued_at,
+            'ttl' => self::TOKEN_TTL
+        ];
+        
+        $signature = self::generate_download_signature($data);
+        $token = base64_encode(json_encode($data) . '.' . $signature);
+        
+        return $token;
+    }
+    
+    /**
+     * Verify download token
+     */
+    public static function verify_download_token(int $document_id, string $token): bool
+    {
+        // Decode token
+        $decoded = base64_decode($token);
+        if ($decoded === false) {
+            return false;
+        }
+        
+        // Split data and signature
+        $parts = explode('.', $decoded);
+        if (count($parts) !== 2) {
+            return false;
+        }
+        
+        $data_json = $parts[0];
+        $signature = $parts[1];
+        
+        // Parse data
+        $data = json_decode($data_json, true);
+        if (!$data || !isset($data['document_id'], $data['action'], $data['issued_at'], $data['ttl'])) {
+            return false;
+        }
+        
+        // Verify document ID and action
+        if ($data['document_id'] !== $document_id || $data['action'] !== 'download') {
+            return false;
+        }
+        
+        // Check expiration
+        if (time() > $data['issued_at'] + $data['ttl']) {
+            return false;
+        }
+        
+        // Verify signature
+        if (!self::verify_download_signature($data, $signature)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Generate HMAC signature for download token data
+     */
+    private static function generate_download_signature(array $data): string
+    {
+        $message = $data['document_id'] . ':' . $data['action'] . ':' . $data['issued_at'];
+        $key = get_option('authdocs_secret_key', 'default_secret_key');
+        
+        return hash_hmac('sha256', $message, $key);
+    }
+    
+    /**
+     * Verify HMAC signature for download token
+     */
+    private static function verify_download_signature(array $data, string $signature): bool
+    {
+        $expected = self::generate_download_signature($data);
+        return hash_equals($expected, $signature);
+    }
 }

@@ -348,15 +348,43 @@ class CustomPostType
      */
     public function add_document_columns(array $columns): array
     {
-        // Insert featured image column after title
+        // Create custom column order: ID → Featured Image → Title → Document File → Date
         $new_columns = [];
+        
+        // Add ID column first (if it exists)
+        if (isset($columns['cb'])) {
+            $new_columns['cb'] = $columns['cb'];
+        }
+        
+        // Add ID column
+        $new_columns['id'] = __('ID', 'protecteddocs');
+        
+        // Add Featured Image column
+        $new_columns['featured_image'] = __('Featured Image', 'protecteddocs');
+        
+        // Add Title column
+        if (isset($columns['title'])) {
+            $new_columns['title'] = $columns['title'];
+        }
+        
+        // Add Document File column (renamed from pdf_file for clarity)
+        $new_columns['pdf_file'] = __('Document File', 'protecteddocs');
+        
+        // Add Document Status column
+        $new_columns['document_status'] = __('Document Status', 'protecteddocs');
+        
+        // Add Date column
+        if (isset($columns['date'])) {
+            $new_columns['date'] = $columns['date'];
+        }
+        
+        // Add any remaining columns (like status, author, etc.)
         foreach ($columns as $key => $value) {
-            $new_columns[$key] = $value;
-            if ($key === 'title') {
-                $new_columns['featured_image'] = __('Featured Image', 'protecteddocs');
-                $new_columns['pdf_file'] = __('Document File', 'protecteddocs');
+            if (!isset($new_columns[$key]) && !in_array($key, ['cb', 'title', 'date'])) {
+                $new_columns[$key] = $value;
             }
         }
+        
         return $new_columns;
     }
 
@@ -366,6 +394,10 @@ class CustomPostType
     public function display_document_columns(string $column, int $post_id): void
     {
         switch ($column) {
+            case 'id':
+                echo '<strong>' . esc_html($post_id) . '</strong>';
+                break;
+
             case 'featured_image':
                 if (has_post_thumbnail($post_id)) {
                     $thumbnail = get_the_post_thumbnail($post_id, [50, 50], ['style' => 'max-width: 50px; height: auto;']);
@@ -390,6 +422,21 @@ class CustomPostType
                     }
                 } else {
                     echo '<span style="color: #999;">' . __('No file attached', 'protecteddocs') . '</span>';
+                }
+                break;
+
+            case 'document_status':
+                $restricted = get_post_meta($post_id, '_authdocs_restricted', true);
+                if ($restricted === 'yes') {
+                    echo '<span class="authdocs-status-locked" style="display: inline-flex; align-items: center; color: #d63638; font-weight: 500;">';
+                    echo '<span class="dashicons dashicons-lock" style="margin-right: 5px; font-size: 16px;"></span>';
+                    echo __('Locked', 'protecteddocs');
+                    echo '</span>';
+                } else {
+                    echo '<span class="authdocs-status-unlocked" style="display: inline-flex; align-items: center; color: #00a32a; font-weight: 500;">';
+                    echo '<span class="dashicons dashicons-unlock" style="margin-right: 5px; font-size: 16px;"></span>';
+                    echo __('Unlocked', 'protecteddocs');
+                    echo '</span>';
                 }
                 break;
         }

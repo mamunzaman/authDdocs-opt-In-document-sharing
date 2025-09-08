@@ -1,117 +1,130 @@
-jQuery(document).ready(function ($) {
+(function ($) {
   "use strict";
 
-  // Initialize bot protection
-  initializeBotProtection();
-
-  // Replace Gutenberg block placeholders with actual shortcode content
-  $(".authdocs-block-placeholder").each(function () {
-    const $placeholder = $(this);
-    const shortcode = $placeholder.data("shortcode");
-
-    if (shortcode) {
-      // Execute the shortcode via AJAX to get the content
-      $.ajax({
-        url: protecteddocs_frontend.ajax_url,
-        type: "POST",
-        data: {
-          action: "protecteddocs_render_shortcode",
-          shortcode: shortcode,
-          nonce: protecteddocs_frontend.nonce,
-        },
-        success: function (response) {
-          if (response.success) {
-            $placeholder.replaceWith(response.data.html);
-          }
-        },
-        error: function () {
-          $placeholder.html("<p>Error loading content</p>");
-        },
-      });
-    }
-  });
-
-  // Get limit from container data attributes
-  function getLimit($container, type = "limit") {
-    let limit;
-
-    if (type === "limit") {
-      limit = $container.data("limit") || 12;
-    } else if (type === "load-more") {
-      limit = $container.data("load-more-limit") || 12;
-    }
-
-    return parseInt(limit) || 12;
+  // Ensure jQuery is available and document is ready
+  if (typeof $ === "undefined") {
+    console.error("ProtectedDocs: jQuery is not available");
+    return;
   }
 
-  // Apply dynamic CSS from AJAX responses
-  function applyDynamicCSS(css) {
-    // Remove any existing dynamic CSS
-    $("#authdocs-dynamic-ajax").remove();
-
-    // Add new CSS
-    $("<style>")
-      .attr("id", "authdocs-dynamic-ajax")
-      .attr("type", "text/css")
-      .html(css)
-      .appendTo("head");
-  }
-
-  // Apply popup color palette
-  function applyPopupColorPalette(colorPalette) {
-    // Color palette definitions
-    const palettes = {
-      default: {
-        primary: "#2271b1",
-        secondary: "#ffffff",
-        text: "#1d2327",
-        text_secondary: "#646970",
-        background: "#ffffff",
-        background_secondary: "#f6f7f7",
-        border: "#e5e5e5",
-        border_radius: "6px",
-        shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-      },
-      black_white_blue: {
-        primary: "#2563eb",
-        secondary: "#ffffff",
-        text: "#000000",
-        text_secondary: "#666666",
-        background: "#ffffff",
-        background_secondary: "#f9f9f9",
-        border: "#e5e5e5",
-        border_radius: "4px",
-        shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-      },
-      black_gray: {
-        primary: "#374151",
-        secondary: "#f9fafb",
-        text: "#111827",
-        text_secondary: "#6b7280",
-        background: "#ffffff",
-        background_secondary: "#f3f4f6",
-        border: "#d1d5db",
-        border_radius: "4px",
-        shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-      },
-    };
-
-    const palette = palettes[colorPalette];
-    if (!palette) return;
-
-    // Convert hex to RGB
-    function hexToRgb(hex) {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result
-        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(
-            result[3],
-            16
-          )}`
-        : "0, 0, 0";
+  $(document).ready(function () {
+    // Ensure required objects are available
+    if (typeof protecteddocs_frontend === "undefined") {
+      console.error("ProtectedDocs: Frontend configuration not available");
+      return;
     }
 
-    // Generate CSS for popup
-    const css = `
+    // Initialize bot protection
+    initializeBotProtection();
+
+    // Replace Gutenberg block placeholders with actual shortcode content
+    $(".authdocs-block-placeholder").each(function () {
+      const $placeholder = $(this);
+      const shortcode = $placeholder.data("shortcode");
+
+      if (shortcode) {
+        // Execute the shortcode via AJAX to get the content
+        $.ajax({
+          url: protecteddocs_frontend.ajax_url,
+          type: "POST",
+          data: {
+            action: "protecteddocs_render_shortcode",
+            shortcode: shortcode,
+            nonce: protecteddocs_frontend.nonce,
+          },
+          success: function (response) {
+            if (response.success) {
+              $placeholder.replaceWith(response.data.html);
+            }
+          },
+          error: function () {
+            $placeholder.html("<p>Error loading content</p>");
+          },
+        });
+      }
+    });
+
+    // Get limit from container data attributes
+    function getLimit($container, type = "limit") {
+      let limit;
+
+      if (type === "limit") {
+        limit = $container.data("limit") || 12;
+      } else if (type === "load-more") {
+        limit = $container.data("load-more-limit") || 12;
+      }
+
+      return parseInt(limit) || 12;
+    }
+
+    // Apply dynamic CSS from AJAX responses
+    function applyDynamicCSS(css) {
+      // Remove any existing dynamic CSS
+      $("#authdocs-dynamic-ajax").remove();
+
+      // Add new CSS
+      $("<style>")
+        .attr("id", "authdocs-dynamic-ajax")
+        .attr("type", "text/css")
+        .html(css)
+        .appendTo("head");
+    }
+
+    // Apply popup color palette
+    function applyPopupColorPalette(colorPalette) {
+      // Color palette definitions
+      const palettes = {
+        default: {
+          primary: "#2271b1",
+          secondary: "#ffffff",
+          text: "#1d2327",
+          text_secondary: "#646970",
+          background: "#ffffff",
+          background_secondary: "#f6f7f7",
+          border: "#e5e5e5",
+          border_radius: "6px",
+          shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        },
+        black_white_blue: {
+          primary: "#2563eb",
+          secondary: "#ffffff",
+          text: "#000000",
+          text_secondary: "#666666",
+          background: "#ffffff",
+          background_secondary: "#f9f9f9",
+          border: "#e5e5e5",
+          border_radius: "4px",
+          shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        },
+        black_gray: {
+          primary: "#374151",
+          secondary: "#f9fafb",
+          text: "#111827",
+          text_secondary: "#6b7280",
+          background: "#ffffff",
+          background_secondary: "#f3f4f6",
+          border: "#d1d5db",
+          border_radius: "4px",
+          shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        },
+      };
+
+      const palette = palettes[colorPalette];
+      if (!palette) return;
+
+      // Convert hex to RGB
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+          ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(
+              result[3],
+              16
+            )}`
+          : "0, 0, 0";
+      }
+
+      // Generate CSS for popup
+      const css = `
       #authdocs-request-modal .authdocs-modal-card {
         background: ${palette.background} !important;
         border: 1px solid ${palette.border} !important;
@@ -202,79 +215,78 @@ jQuery(document).ready(function ($) {
       }
     `;
 
-    // Remove any existing popup CSS
-    $("#authdocs-popup-dynamic").remove();
+      // Remove any existing popup CSS
+      $("#authdocs-popup-dynamic").remove();
 
-    // Add new CSS
-    $("<style>")
-      .attr("id", "authdocs-popup-dynamic")
-      .attr("type", "text/css")
-      .html(css)
-      .appendTo("head");
-  }
-
-  // Handle request access button clicks
-  $(document).on("click", ".authdocs-request-access-btn", function (e) {
-    e.preventDefault();
-    const documentId = $(this).data("document-id");
-    const $container = $(this).closest(".authdocs-grid-container");
-    const colorPalette = $container.data("color-palette") || "default";
-    showRequestAccessModal(documentId, colorPalette);
-  });
-
-  // Handle load more button clicks
-  $(document).on("click", ".authdocs-load-more-btn", function (e) {
-    e.preventDefault();
-    const $btn = $(this);
-    const $container = $btn.closest(".authdocs-grid-container");
-    const currentLimit = parseInt($btn.data("current-limit"));
-    const restriction = $btn.data("restriction");
-    const featuredImage = $btn.data("featured-image");
-    const $grid = $btn
-      .closest(".authdocs-grid-load-more")
-      .prev(".authdocs-grid");
-
-    // Get load more limit
-    const loadMoreLimit = getLimit($container, "load-more");
-
-    loadMoreDocuments(
-      $grid,
-      currentLimit,
-      restriction,
-      $btn,
-      featuredImage,
-      loadMoreLimit,
-      colorPalette
-    );
-  });
-
-  // Handle pagination button clicks
-  $(document).on("click", ".authdocs-pagination-btn", function (e) {
-    const $btn = $(this);
-    const $container = $btn.closest(".authdocs-grid-container");
-    const $pagination = $btn.closest(".authdocs-pagination");
-
-    // Check pagination type from data attribute
-    const paginationType = $pagination.data("pagination-type");
-
-    // If this is classic pagination (no AJAX), let the link work normally
-    if (paginationType === "classic" || ($btn.is("a") && $btn.attr("href"))) {
-      // Let the link work normally for classic pagination
-      return;
+      // Add new CSS
+      $("<style>")
+        .attr("id", "authdocs-popup-dynamic")
+        .attr("type", "text/css")
+        .html(css)
+        .appendTo("head");
     }
 
-    // Only prevent default and use AJAX for AJAX pagination
-    e.preventDefault();
-    const page = parseInt($btn.data("page"));
+    // Handle request access button clicks
+    $(document).on("click", ".authdocs-request-access-btn", function (e) {
+      e.preventDefault();
+      const documentId = $(this).data("document-id");
+      const $container = $(this).closest(".authdocs-grid-container");
+      const colorPalette = $container.data("color-palette") || "default";
+      showRequestAccessModal(documentId, colorPalette);
+    });
 
-    if (page && $container.length) {
-      loadPageDocuments($container, page);
-    }
-  });
+    // Handle load more button clicks
+    $(document).on("click", ".authdocs-load-more-btn", function (e) {
+      e.preventDefault();
+      const $btn = $(this);
+      const $container = $btn.closest(".authdocs-grid-container");
+      const currentLimit = parseInt($btn.data("current-limit"));
+      const restriction = $btn.data("restriction");
+      const featuredImage = $btn.data("featured-image");
+      const colorPalette = $container.data("color-palette") || "default";
+      const $grid = $btn.closest(".authdocs-load-more").prev(".authdocs-grid");
 
-  // Show request access modal
-  function showRequestAccessModal(documentId, colorPalette = "default") {
-    const modalHtml = `
+      // Get load more limit
+      const loadMoreLimit = getLimit($container, "load-more");
+
+      loadMoreDocuments(
+        $grid,
+        currentLimit,
+        restriction,
+        $btn,
+        featuredImage,
+        loadMoreLimit,
+        colorPalette
+      );
+    });
+
+    // Handle pagination button clicks
+    $(document).on("click", ".authdocs-pagination-btn", function (e) {
+      const $btn = $(this);
+      const $container = $btn.closest(".authdocs-grid-container");
+      const $pagination = $btn.closest(".authdocs-pagination");
+
+      // Check pagination type from data attribute
+      const paginationType = $pagination.data("pagination-type");
+
+      // If this is classic pagination (no AJAX), let the link work normally
+      if (paginationType === "classic" || ($btn.is("a") && $btn.attr("href"))) {
+        // Let the link work normally for classic pagination
+        return;
+      }
+
+      // Only prevent default and use AJAX for AJAX pagination
+      e.preventDefault();
+      const page = parseInt($btn.data("page"));
+
+      if (page && $container.length) {
+        loadPageDocuments($container, page);
+      }
+    });
+
+    // Show request access modal
+    function showRequestAccessModal(documentId, colorPalette = "default") {
+      const modalHtml = `
             <div class="authdocs-modal" id="authdocs-request-modal" data-color-palette="${colorPalette}">
                 <div class="authdocs-modal-backdrop"></div>
                 <div class="authdocs-modal-container">
@@ -357,435 +369,474 @@ jQuery(document).ready(function ($) {
             </div>
         `;
 
-    $("body").append(modalHtml);
+      $("body").append(modalHtml);
 
-    // Apply dynamic CSS for the popup based on color palette
-    applyPopupColorPalette(colorPalette);
+      // Apply dynamic CSS for the popup based on color palette
+      applyPopupColorPalette(colorPalette);
 
-    $("#authdocs-request-modal").fadeIn(300);
+      $("#authdocs-request-modal").fadeIn(300);
 
-    // Focus on first input
-    $("#authdocs-name").focus();
+      // Focus on first input
+      $("#authdocs-name").focus();
 
-    // Handle close button clicks
-    $("#authdocs-request-modal .authdocs-modal-close").on(
-      "click",
-      function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeRequestModal();
-      }
-    );
-
-    // Handle backdrop clicks
-    $("#authdocs-request-modal .authdocs-modal-backdrop").on(
-      "click",
-      function (e) {
-        if (e.target === this) {
+      // Handle close button clicks
+      $("#authdocs-request-modal .authdocs-modal-close").on(
+        "click",
+        function (e) {
+          e.preventDefault();
+          e.stopPropagation();
           closeRequestModal();
         }
-      }
-    );
+      );
 
-    // Initialize form validation
-    initializeFormValidation();
+      // Handle backdrop clicks
+      $("#authdocs-request-modal .authdocs-modal-backdrop").on(
+        "click",
+        function (e) {
+          if (e.target === this) {
+            closeRequestModal();
+          }
+        }
+      );
 
-    // Handle form submission
-    $("#authdocs-submit-request").on("click", function () {
-      if (validateForm()) {
-        submitAccessRequest();
-      }
-    });
+      // Initialize form validation
+      initializeFormValidation();
 
-    // Handle Enter key in form
-    $("#authdocs-request-form").on("keypress", function (e) {
-      if (e.which === 13) {
-        e.preventDefault();
+      // Handle form submission
+      $("#authdocs-submit-request").on("click", function () {
         if (validateForm()) {
           submitAccessRequest();
         }
-      }
-    });
-  }
+      });
 
-  // Initialize form validation
-  function initializeFormValidation() {
-    const $nameInput = $("#authdocs-name");
-    const $emailInput = $("#authdocs-email");
-    const $submitBtn = $("#authdocs-submit-request");
-
-    // Real-time validation on input
-    $nameInput.on("input blur", function () {
-      validateNameField($(this));
-      updateSubmitButton();
-    });
-
-    $emailInput.on("input blur", function () {
-      validateEmailField($(this));
-      updateSubmitButton();
-    });
-
-    function updateSubmitButton() {
-      const isNameValid = validateNameField($nameInput, false);
-      const isEmailValid = validateEmailField($emailInput, false);
-      $submitBtn.prop("disabled", !(isNameValid && isEmailValid));
-    }
-  }
-
-  // Validate name field
-  function validateNameField($field, showError = true) {
-    const value = $field.val().trim();
-    const isValid = value.length >= 2;
-
-    if (showError) {
-      if (isValid) {
-        clearFieldError($field);
-      } else {
-        showFieldError($field, "Name must be at least 2 characters long");
-      }
-    }
-
-    return isValid;
-  }
-
-  // Validate email field
-  function validateEmailField($field, showError = true) {
-    const value = $field.val().trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValid = emailRegex.test(value);
-
-    if (showError) {
-      if (isValid) {
-        clearFieldError($field);
-      } else if (value.length === 0) {
-        showFieldError($field, "Email address is required");
-      } else {
-        showFieldError($field, "Please enter a valid email address");
-      }
-    }
-
-    return isValid;
-  }
-
-  // Show field error
-  function showFieldError($field, message) {
-    clearFieldError($field);
-
-    $field.addClass("authdocs-field-error");
-
-    const $errorDiv = $(
-      "<div class='authdocs-field-error-message'></div>"
-    ).text(message);
-    $field.after($errorDiv);
-  }
-
-  // Clear field error
-  function clearFieldError($field) {
-    $field.removeClass("authdocs-field-error");
-    $field.siblings(".authdocs-field-error-message").remove();
-  }
-
-  // Validate entire form
-  function validateForm() {
-    const $nameInput = $("#authdocs-name");
-    const $emailInput = $("#authdocs-email");
-
-    const isNameValid = validateNameField($nameInput);
-    const isEmailValid = validateEmailField($emailInput);
-
-    return isNameValid && isEmailValid;
-  }
-
-  // Close request modal
-  function closeRequestModal() {
-    $("#authdocs-request-modal").fadeOut(300, function () {
-      $(this).remove();
-    });
-  }
-
-  // Submit access request
-  function submitAccessRequest() {
-    const $form = $("#authdocs-request-form");
-    const $submitBtn = $("#authdocs-submit-request");
-    const formData = new FormData($form[0]);
-
-    // Enhanced bot protection: Check if form was submitted too quickly
-    const now = Date.now();
-    const lastSubmission = localStorage.getItem("authdocs_last_submission");
-    const minInterval = 3000; // 3 seconds minimum between submissions
-
-    if (lastSubmission && now - parseInt(lastSubmission) < minInterval) {
-      showErrorMessage(
-        "Please wait a moment before submitting another request."
-      );
-      return;
-    }
-
-    // Store submission time
-    localStorage.setItem("authdocs_last_submission", now.toString());
-
-    // Add bot protection data
-    const pageLoadTime = localStorage.getItem("authdocs_page_load_time") || "0";
-    const sessionToken = localStorage.getItem("authdocs_session_token") || "";
-
-    formData.append("last_request_time", lastSubmission || "0");
-    formData.append("page_load_time", pageLoadTime);
-    formData.append("session_token", sessionToken);
-
-    // Add action for AJAX
-    formData.append("action", "protecteddocs_request_access");
-
-    // Disable submit button and show loading
-    $submitBtn
-      .prop("disabled", true)
-      .text(protecteddocs_frontend.submitting_label || "Submitting...");
-
-    $.ajax({
-      url: protecteddocs_frontend.ajax_url,
-      type: "POST",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        if (response.success) {
-          showSuccessMessage(
-            response.data.message || "Access request submitted successfully!"
-          );
-          closeRequestModal();
-        } else {
-          showErrorMessage(
-            response.data.message ||
-              "Failed to submit request. Please try again."
-          );
+      // Handle Enter key in form
+      $("#authdocs-request-form").on("keypress", function (e) {
+        if (e.which === 13) {
+          e.preventDefault();
+          if (validateForm()) {
+            submitAccessRequest();
+          }
         }
-      },
-      error: function (xhr, status, error) {
-        showErrorMessage("An error occurred. Please try again.");
-      },
-      complete: function () {
-        $submitBtn
-          .prop("disabled", false)
-          .text(protecteddocs_frontend.submit_label || "Submit Request");
-      },
-    });
-  }
+      });
+    }
 
-  // Load more documents automatically
-  function loadMoreDocumentsAuto(
-    $grid,
-    currentLimit,
-    restriction,
-    loadMoreLimit,
-    $loadingIndicator,
-    $container
-  ) {
-    // Show loading indicator
-    $loadingIndicator.show();
+    // Initialize form validation
+    function initializeFormValidation() {
+      const $nameInput = $("#authdocs-name");
+      const $emailInput = $("#authdocs-email");
+      const $submitBtn = $("#authdocs-submit-request");
 
-    // Get featured image setting from container
-    const featuredImage = $container.data("featured-image") || "yes";
-    const colorPalette = $container.data("color-palette") || "default";
+      // Real-time validation on input
+      $nameInput.on("input blur", function () {
+        validateNameField($(this));
+        updateSubmitButton();
+      });
 
-    $.ajax({
-      url: protecteddocs_frontend.ajax_url,
-      type: "POST",
-      data: {
-        action: "protecteddocs_load_more_documents",
-        limit: currentLimit,
-        restriction: restriction,
-        load_more_limit: loadMoreLimit,
-        featured_image: featuredImage,
-        color_palette: colorPalette,
-        nonce: protecteddocs_frontend.nonce,
-      },
-      success: function (response) {
-        if (response.success) {
-          // Append new content to existing grid
-          $grid.append(response.data.html);
+      $emailInput.on("input blur", function () {
+        validateEmailField($(this));
+        updateSubmitButton();
+      });
 
-          // Update container data with new limit
-          $container.data("limit", response.data.current_limit);
+      function updateSubmitButton() {
+        const isNameValid = validateNameField($nameInput, false);
+        const isEmailValid = validateEmailField($emailInput, false);
+        $submitBtn.prop("disabled", !(isNameValid && isEmailValid));
+      }
+    }
 
-          // Update pagination info
-          $container
-            .find(".authdocs-pagination-info")
+    // Validate name field
+    function validateNameField($field, showError = true) {
+      const value = $field.val().trim();
+      const isValid = value.length >= 2;
+
+      if (showError) {
+        if (isValid) {
+          clearFieldError($field);
+        } else {
+          showFieldError($field, "Name must be at least 2 characters long");
+        }
+      }
+
+      return isValid;
+    }
+
+    // Validate email field
+    function validateEmailField($field, showError = true) {
+      const value = $field.val().trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isValid = emailRegex.test(value);
+
+      if (showError) {
+        if (isValid) {
+          clearFieldError($field);
+        } else if (value.length === 0) {
+          showFieldError($field, "Email address is required");
+        } else {
+          showFieldError($field, "Please enter a valid email address");
+        }
+      }
+
+      return isValid;
+    }
+
+    // Show field error
+    function showFieldError($field, message) {
+      clearFieldError($field);
+
+      $field.addClass("authdocs-field-error");
+
+      const $errorDiv = $(
+        "<div class='authdocs-field-error-message'></div>"
+      ).text(message);
+      $field.after($errorDiv);
+    }
+
+    // Clear field error
+    function clearFieldError($field) {
+      $field.removeClass("authdocs-field-error");
+      $field.siblings(".authdocs-field-error-message").remove();
+    }
+
+    // Validate entire form
+    function validateForm() {
+      const $nameInput = $("#authdocs-name");
+      const $emailInput = $("#authdocs-email");
+
+      const isNameValid = validateNameField($nameInput);
+      const isEmailValid = validateEmailField($emailInput);
+
+      return isNameValid && isEmailValid;
+    }
+
+    // Close request modal
+    function closeRequestModal() {
+      $("#authdocs-request-modal").fadeOut(300, function () {
+        $(this).remove();
+      });
+    }
+
+    // Submit access request
+    function submitAccessRequest() {
+      const $form = $("#authdocs-request-form");
+      const $submitBtn = $("#authdocs-submit-request");
+      const formData = new FormData($form[0]);
+
+      // Enhanced bot protection: Check if form was submitted too quickly
+      const now = Date.now();
+      const lastSubmission = localStorage.getItem("authdocs_last_submission");
+      const minInterval = 1000; // 1 second minimum between submissions
+
+      if (lastSubmission && now - parseInt(lastSubmission) < minInterval) {
+        showErrorMessage(
+          "Please wait a moment before submitting another request."
+        );
+        return;
+      }
+
+      // Store submission time
+      localStorage.setItem("authdocs_last_submission", now.toString());
+
+      // Add bot protection data
+      const pageLoadTime =
+        localStorage.getItem("authdocs_page_load_time") || "0";
+      let sessionToken = localStorage.getItem("authdocs_session_token") || "";
+
+      // Generate session token if missing
+      if (!sessionToken) {
+        sessionToken = generateSessionToken();
+        localStorage.setItem("authdocs_session_token", sessionToken);
+      }
+
+      formData.append(
+        "last_request_time",
+        lastSubmission
+          ? Math.floor(parseInt(lastSubmission) / 1000).toString()
+          : "0"
+      );
+      formData.append("page_load_time", pageLoadTime);
+      formData.append("session_token", sessionToken);
+
+      // Add action for AJAX
+      formData.append("action", "protecteddocs_request_access");
+
+      // Disable submit button and show loading
+      $submitBtn
+        .prop("disabled", true)
+        .addClass("loading")
+        .html(
+          '<span class="authdocs-loading-spinner"></span>' +
+            (protecteddocs_frontend.submitting_label || "Submitting...")
+        );
+
+      $.ajax({
+        url: protecteddocs_frontend.ajax_url,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+          if (response.success) {
+            showSuccessMessage(
+              response.data.message || "Access request submitted successfully!"
+            );
+            closeRequestModal();
+          } else {
+            // Handle specific error types
+            if (response.data.session_invalid) {
+              // Regenerate session token and retry
+              const newSessionToken = generateSessionToken();
+              localStorage.setItem("authdocs_session_token", newSessionToken);
+              showErrorMessage("Session expired. Please try submitting again.");
+            } else {
+              showErrorMessage(
+                response.data.message ||
+                  "Failed to submit request. Please try again."
+              );
+            }
+          }
+        },
+        error: function (xhr, status, error) {
+          showErrorMessage("An error occurred. Please try again.");
+        },
+        complete: function () {
+          $submitBtn
+            .prop("disabled", false)
+            .removeClass("loading")
+            .text(protecteddocs_frontend.submit_label || "Submit Request");
+        },
+      });
+    }
+
+    // Load more documents automatically
+    function loadMoreDocumentsAuto(
+      $grid,
+      currentLimit,
+      restriction,
+      loadMoreLimit,
+      $loadingIndicator,
+      $container
+    ) {
+      // Show loading indicator
+      $loadingIndicator.show();
+
+      // Get featured image setting from container
+      const featuredImage = $container.data("featured-image") || "yes";
+      const colorPalette = $container.data("color-palette") || "default";
+
+      $.ajax({
+        url: protecteddocs_frontend.ajax_url,
+        type: "POST",
+        data: {
+          action: "protecteddocs_load_more_documents",
+          limit: currentLimit,
+          restriction: restriction,
+          load_more_limit: loadMoreLimit,
+          featured_image: featuredImage,
+          color_palette: colorPalette,
+          nonce: protecteddocs_frontend.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            // Append new content to existing grid
+            $grid.append(response.data.html);
+
+            // Update container data with new limit
+            $container.data("limit", response.data.current_limit);
+
+            // Update pagination info
+            $container
+              .find(".authdocs-pagination-info")
+              .text(
+                `Showing 1-${response.data.current_limit} of ${response.data.total_documents} documents`
+              );
+
+            // Hide loading indicator if no more documents
+            if (response.data.has_more === false) {
+              $loadingIndicator.hide();
+              $container
+                .find(".authdocs-auto-pagination")
+                .attr("data-auto-loading", "false");
+            }
+          } else {
+            showErrorMessage(
+              response.data.message || "Failed to load more documents."
+            );
+          }
+        },
+        error: function () {
+          showErrorMessage("An error occurred while loading more documents.");
+        },
+        complete: function () {
+          $loadingIndicator.hide();
+        },
+      });
+    }
+
+    // Load more documents
+    function loadMoreDocuments(
+      $grid,
+      currentLimit,
+      restriction,
+      $btn,
+      featuredImage = "yes",
+      loadMoreLimit = null,
+      colorPalette = "default"
+    ) {
+      const $loadMoreContainer = $btn.closest(".authdocs-load-more");
+      // Use provided loadMoreLimit or fallback to data attribute
+      if (!loadMoreLimit) {
+        loadMoreLimit = parseInt($btn.data("load-more-limit")) || 12;
+      }
+
+      // Show loading state
+      $btn
+        .prop("disabled", true)
+        .addClass("loading")
+        .text(protecteddocs_frontend.loading_label || "Loading...");
+
+      // Add loading class to grid and container
+      $grid.addClass("loading");
+      $grid.closest(".authdocs-grid-container").addClass("loading");
+
+      $.ajax({
+        url: protecteddocs_frontend.ajax_url,
+        type: "POST",
+        data: {
+          action: "protecteddocs_load_more_documents",
+          limit: currentLimit,
+          restriction: restriction,
+          load_more_limit: loadMoreLimit,
+          featured_image: featuredImage,
+          color_palette: colorPalette,
+          nonce: protecteddocs_frontend.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            // Apply CSS if provided
+            if (response.data.css) {
+              applyDynamicCSS(response.data.css);
+            }
+
+            // Append new content to existing grid
+            $grid.append(response.data.html);
+
+            // Update button data and text
+            $btn.data("current-limit", response.data.current_limit);
+
+            // Hide load more button if no more documents
+            if (response.data.has_more === false) {
+              $loadMoreContainer.hide();
+            }
+          } else {
+            showErrorMessage(
+              response.data.message || "Failed to load more documents."
+            );
+          }
+        },
+        error: function () {
+          showErrorMessage("An error occurred while loading documents.");
+        },
+        complete: function () {
+          $btn
+            .prop("disabled", false)
+            .removeClass("loading")
             .text(
-              `Showing 1-${response.data.current_limit} of ${response.data.total_documents} documents`
+              protecteddocs_frontend.load_more_label || "Load More Documents"
             );
 
-          // Hide loading indicator if no more documents
-          if (response.data.has_more === false) {
-            $loadingIndicator.hide();
-            $container
-              .find(".authdocs-auto-pagination")
-              .attr("data-auto-loading", "false");
-          }
-        } else {
-          showErrorMessage(
-            response.data.message || "Failed to load more documents."
-          );
-        }
-      },
-      error: function () {
-        showErrorMessage("An error occurred while loading more documents.");
-      },
-      complete: function () {
-        $loadingIndicator.hide();
-      },
-    });
-  }
-
-  // Load more documents
-  function loadMoreDocuments(
-    $grid,
-    currentLimit,
-    restriction,
-    $btn,
-    featuredImage = "yes",
-    loadMoreLimit = null,
-    colorPalette = "default"
-  ) {
-    const $loadMoreContainer = $btn.closest(".authdocs-grid-load-more");
-    // Use provided loadMoreLimit or fallback to data attribute
-    if (!loadMoreLimit) {
-      loadMoreLimit = parseInt($btn.data("load-more-limit")) || 12;
+          // Remove loading class from grid and container
+          $grid.removeClass("loading");
+          $grid.closest(".authdocs-grid-container").removeClass("loading");
+        },
+      });
     }
 
-    // Show loading state
-    $btn
-      .prop("disabled", true)
-      .text(protecteddocs_frontend.loading_label || "Loading...");
+    // Load page documents with pagination
+    function loadPageDocuments($container, page) {
+      const $grid = $container.find(".authdocs-grid");
+      const $pagination = $container.find(".authdocs-pagination");
+      const $paginationBtns = $container.find(".authdocs-pagination-btn");
 
-    $.ajax({
-      url: protecteddocs_frontend.ajax_url,
-      type: "POST",
-      data: {
-        action: "protecteddocs_load_more_documents",
-        limit: currentLimit,
-        restriction: restriction,
-        load_more_limit: loadMoreLimit,
-        featured_image: featuredImage,
-        color_palette: colorPalette,
-        nonce: protecteddocs_frontend.nonce,
-      },
-      success: function (response) {
-        if (response.success) {
-          // Apply CSS if provided
-          if (response.data.css) {
-            applyDynamicCSS(response.data.css);
+      // Show loading state
+      $paginationBtns.prop("disabled", true).addClass("loading");
+      $grid.addClass("loading");
+
+      // Add loading class to container for CSS targeting
+      $container.addClass("loading");
+
+      // Get container data attributes
+      const limit = getLimit($container, "limit");
+      const restriction = $container.data("restriction") || "all";
+      const orderby = $container.data("orderby") || "date";
+      const order = $container.data("order") || "DESC";
+      const featuredImage = $container.data("featured-image") || "yes";
+      const paginationStyle = $container.data("pagination-style") || "classic";
+      const paginationType = $container.data("pagination-type") || "ajax";
+      const colorPalette = $container.data("color-palette") || "default";
+
+      $.ajax({
+        url: protecteddocs_frontend.ajax_url,
+        type: "POST",
+        data: {
+          action: "protecteddocs_paginate_documents",
+          page: page,
+          limit: limit,
+          restriction: restriction,
+          orderby: orderby,
+          order: order,
+          featured_image: featuredImage,
+          pagination_style: paginationStyle,
+          pagination_type: paginationType,
+          color_palette: colorPalette,
+          nonce: protecteddocs_frontend.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            // Apply CSS if provided
+            if (response.data.css) {
+              applyDynamicCSS(response.data.css);
+            }
+
+            // Update grid content
+            $grid.html(response.data.html);
+
+            // Update pagination
+            if (response.data.pagination_html) {
+              $pagination.html(response.data.pagination_html);
+            }
+
+            // Update container data attributes
+            $container.data("current-page", response.data.current_page);
+            $container.data("total-pages", response.data.total_pages);
+            $container.data("total-documents", response.data.total_documents);
+
+            // Scroll to top of grid
+            $("html, body").animate(
+              {
+                scrollTop: $container.offset().top - 100,
+              },
+              500
+            );
+          } else {
+            showErrorMessage(
+              response.data.message || "Failed to load documents."
+            );
           }
+        },
+        error: function () {
+          showErrorMessage("An error occurred while loading documents.");
+        },
+        complete: function () {
+          $paginationBtns.prop("disabled", false).removeClass("loading");
+          $grid.removeClass("loading");
+          $container.removeClass("loading");
+        },
+      });
+    }
 
-          // Append new content to existing grid
-          $grid.append(response.data.html);
-
-          // Update button data and text
-          $btn.data("current-limit", response.data.current_limit);
-
-          // Hide load more button if no more documents
-          if (response.data.has_more === false) {
-            $loadMoreContainer.hide();
-          }
-        } else {
-          showErrorMessage(
-            response.data.message || "Failed to load more documents."
-          );
-        }
-      },
-      error: function () {
-        showErrorMessage("An error occurred while loading documents.");
-      },
-      complete: function () {
-        $btn
-          .prop("disabled", false)
-          .text(
-            protecteddocs_frontend.load_more_label || "Load More Documents"
-          );
-      },
-    });
-  }
-
-  // Load page documents with pagination
-  function loadPageDocuments($container, page) {
-    const $grid = $container.find(".authdocs-grid");
-    const $pagination = $container.find(".authdocs-pagination");
-    const $paginationBtns = $container.find(".authdocs-pagination-btn");
-
-    // Show loading state
-    $paginationBtns.prop("disabled", true);
-    $grid.addClass("loading");
-
-    // Get container data attributes
-    const limit = getLimit($container, "limit");
-    const restriction = $container.data("restriction") || "all";
-    const orderby = $container.data("orderby") || "date";
-    const order = $container.data("order") || "DESC";
-    const featuredImage = $container.data("featured-image") || "yes";
-    const paginationStyle = $container.data("pagination-style") || "classic";
-    const paginationType = $container.data("pagination-type") || "ajax";
-    const colorPalette = $container.data("color-palette") || "default";
-
-    $.ajax({
-      url: protecteddocs_frontend.ajax_url,
-      type: "POST",
-      data: {
-        action: "protecteddocs_paginate_documents",
-        page: page,
-        limit: limit,
-        restriction: restriction,
-        orderby: orderby,
-        order: order,
-        featured_image: featuredImage,
-        pagination_style: paginationStyle,
-        pagination_type: paginationType,
-        color_palette: colorPalette,
-        nonce: protecteddocs_frontend.nonce,
-      },
-      success: function (response) {
-        if (response.success) {
-          // Apply CSS if provided
-          if (response.data.css) {
-            applyDynamicCSS(response.data.css);
-          }
-
-          // Update grid content
-          $grid.html(response.data.html);
-
-          // Update pagination
-          if (response.data.pagination_html) {
-            $pagination.html(response.data.pagination_html);
-          }
-
-          // Update container data attributes
-          $container.data("current-page", response.data.current_page);
-          $container.data("total-pages", response.data.total_pages);
-          $container.data("total-documents", response.data.total_documents);
-
-          // Scroll to top of grid
-          $("html, body").animate(
-            {
-              scrollTop: $container.offset().top - 100,
-            },
-            500
-          );
-        } else {
-          showErrorMessage(
-            response.data.message || "Failed to load documents."
-          );
-        }
-      },
-      error: function () {
-        showErrorMessage("An error occurred while loading documents.");
-      },
-      complete: function () {
-        $paginationBtns.prop("disabled", false);
-        $grid.removeClass("loading");
-      },
-    });
-  }
-
-  // Show success message
-  function showSuccessMessage(message) {
-    const messageHtml = `
+    // Show success message
+    function showSuccessMessage(message) {
+      const messageHtml = `
             <div class="authdocs-notification authdocs-notification-success">
                 <div class="authdocs-notification-content">
                     <div class="authdocs-notification-icon">
@@ -806,100 +857,103 @@ jQuery(document).ready(function ($) {
             </div>
         `;
 
-    $("body").append(messageHtml);
+      $("body").append(messageHtml);
 
-    // Auto-hide after 6 seconds
-    setTimeout(function () {
-      $(".authdocs-notification-success").fadeOut(300, function () {
-        $(this).remove();
-      });
-    }, 6000);
-
-    // Handle close button
-    $(".authdocs-notification-close").on("click", function () {
-      $(this)
-        .closest(".authdocs-notification")
-        .fadeOut(300, function () {
+      // Auto-hide after 6 seconds
+      setTimeout(function () {
+        $(".authdocs-notification-success").fadeOut(300, function () {
           $(this).remove();
         });
-    });
-  }
+      }, 6000);
 
-  // Show error message
-  function showErrorMessage(message) {
-    const messageHtml = `
+      // Handle close button
+      $(".authdocs-notification-close").on("click", function () {
+        $(this)
+          .closest(".authdocs-notification")
+          .fadeOut(300, function () {
+            $(this).remove();
+          });
+      });
+    }
+
+    // Show error message
+    function showErrorMessage(message) {
+      const messageHtml = `
             <div class="authdocs-message authdocs-message-error">
                 <span>${message}</span>
                 <button type="button" class="authdocs-message-close">&times;</button>
             </div>
         `;
 
-    $("body").append(messageHtml);
+      $("body").append(messageHtml);
 
-    // Auto-hide after 8 seconds
-    setTimeout(function () {
-      $(".authdocs-message-error").fadeOut(300, function () {
-        $(this).remove();
-      });
-    }, 8000);
-
-    // Handle close button
-    $(".authdocs-message-close").on("click", function () {
-      $(this)
-        .closest(".authdocs-message")
-        .fadeOut(300, function () {
+      // Auto-hide after 8 seconds
+      setTimeout(function () {
+        $(".authdocs-message-error").fadeOut(300, function () {
           $(this).remove();
         });
-    });
-  }
+      }, 8000);
 
-  // Modern message styles are now handled in CSS file
-  // No need for dynamic styles injection
-
-  // Initialize bot protection
-  function initializeBotProtection() {
-    // Set page load time if not already set
-    if (!localStorage.getItem("authdocs_page_load_time")) {
-      localStorage.setItem(
-        "authdocs_page_load_time",
-        Math.floor(Date.now() / 1000).toString()
-      );
-    }
-
-    // Generate and store session token if not already set
-    if (!localStorage.getItem("authdocs_session_token")) {
-      const sessionToken = generateSessionToken();
-      localStorage.setItem("authdocs_session_token", sessionToken);
-
-      // Send session token to server for validation
-      $.ajax({
-        url: protecteddocs_frontend.ajax_url,
-        type: "POST",
-        data: {
-          action: "protecteddocs_validate_session",
-          session_token: sessionToken,
-          nonce: protecteddocs_frontend.nonce,
-        },
-        success: function (response) {
-          if (!response.success) {
-            console.warn("Session validation failed:", response.data.message);
-          }
-        },
-        error: function () {
-          console.warn("Failed to validate session token");
-        },
+      // Handle close button
+      $(".authdocs-message-close").on("click", function () {
+        $(this)
+          .closest(".authdocs-message")
+          .fadeOut(300, function () {
+            $(this).remove();
+          });
       });
     }
-  }
 
-  // Generate a simple session token
-  function generateSessionToken() {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "";
-    for (let i = 0; i < 32; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    // Modern message styles are now handled in CSS file
+    // No need for dynamic styles injection
+
+    // Initialize bot protection
+    function initializeBotProtection() {
+      // Set page load time if not already set
+      if (!localStorage.getItem("authdocs_page_load_time")) {
+        localStorage.setItem(
+          "authdocs_page_load_time",
+          Math.floor(Date.now() / 1000).toString()
+        );
+      }
+
+      // Generate and store session token if not already set
+      if (!localStorage.getItem("authdocs_session_token")) {
+        const sessionToken = generateSessionToken();
+        localStorage.setItem("authdocs_session_token", sessionToken);
+
+        // Send session token to server for validation (non-blocking)
+        $.ajax({
+          url: protecteddocs_frontend.ajax_url,
+          type: "POST",
+          data: {
+            action: "protecteddocs_validate_session",
+            session_token: sessionToken,
+            nonce: protecteddocs_frontend.nonce,
+          },
+          success: function (response) {
+            if (!response.success) {
+              console.warn("Session validation failed:", response.data.message);
+              // Don't clear the token, let the server handle validation during request
+            }
+          },
+          error: function () {
+            console.warn("Failed to validate session token");
+            // Don't clear the token, let the server handle validation during request
+          },
+        });
+      }
     }
-    return result;
-  }
-});
+
+    // Generate a simple session token
+    function generateSessionToken() {
+      const chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      let result = "";
+      for (let i = 0; i < 32; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+  }); // End document.ready
+})(jQuery); // End IIFE
