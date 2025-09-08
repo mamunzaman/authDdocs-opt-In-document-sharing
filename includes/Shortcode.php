@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class Shortcode
 {
     public function __construct()
     {
-        add_shortcode('authdocs', [$this, 'render_shortcode']);
+        add_shortcode('protecteddocs', [$this, 'render_shortcode']);
         add_shortcode('authdocs_grid', [$this, 'render_grid_shortcode']);
         add_action('init', [$this, 'handle_secure_download']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
@@ -18,31 +18,32 @@ class Shortcode
         $atts = shortcode_atts([
             'id' => 0,
             'restricted' => 'no'
-        ], $atts, 'authdocs');
+        ], $atts, 'protecteddocs');
 
         $document_id = intval($atts['id']);
         $restricted = $atts['restricted'] === 'yes';
         $instance_id = 'authdocs-' . uniqid();
 
         if (!$document_id || get_post_type($document_id) !== 'document') {
-            return '<p>' . __('Invalid document ID', 'authdocs') . '</p>';
+            return '<p>' . __('Invalid document ID', 'protecteddocs') . '</p>';
         }
 
         $document = get_post($document_id);
         if (!$document || $document->post_status !== 'publish') {
-            return '<p>' . __('Document not found', 'authdocs') . '</p>';
+            return '<p>' . __('Document not found', 'protecteddocs') . '</p>';
         }
 
         $file_data = Database::get_document_file($document_id);
         if (!$file_data) {
-            return '<p>' . __('No file attached to this document', 'authdocs') . '</p>';
+            return '<p>' . __('No file attached to this document', 'protecteddocs') . '</p>';
         }
 
         // Get color palette settings
         $settings = new Settings();
         $color_palette = $settings->get_color_palette_data();
-        $text_alignment = $settings->get_card_text_alignment();
-        $this->enqueue_dynamic_styles($instance_id, $color_palette, $text_alignment);
+        
+        
+        $this->enqueue_dynamic_styles($instance_id, $color_palette);
 
         ob_start();
         ?>
@@ -58,14 +59,14 @@ class Shortcode
             
             <div class="authdocs-document-actions">
                 <?php if ($restricted): ?>
-                    <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document_id); ?>" title="<?php _e('Request Access', 'authdocs'); ?>">
+                    <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document_id); ?>" title="<?php _e('Request Access', 'protecteddocs'); ?>">
                         <svg class="authdocs-lock-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                         </svg>
                     </button>
                 <?php else: ?>
                     <a href="<?php echo esc_url($file_data['url']); ?>" class="authdocs-download-btn" download>
-                        <?php _e('Download Document', 'authdocs'); ?>
+                        <?php _e('Download Document', 'protecteddocs'); ?>
                     </a>
                 <?php endif; ?>
             </div>
@@ -100,6 +101,9 @@ class Shortcode
             'limit' => 12,
             'restriction' => 'all', // all, restricted, unrestricted
             'columns' => 3,
+            'columns_desktop' => 5, // Desktop columns (1280px+)
+            'columns_tablet' => 3, // Tablet columns (768px-1279px)
+            'columns_mobile' => 1, // Mobile columns (below 768px)
             'show_description' => 'yes',
             'show_date' => 'yes',
             'orderby' => 'date', // date, title
@@ -108,12 +112,16 @@ class Shortcode
             'pagination_style' => 'classic', // classic, load_more
             'pagination_type' => 'ajax', // ajax, classic
             'load_more_limit' => 12, // Number of additional items to load each time Load More is clicked
-            'featured_image' => 'yes' // yes, no - whether to show featured image as card background
+            'featured_image' => 'yes', // yes, no - whether to show featured image as card background
+            'color_palette' => 'default' // default, black_white_blue, black_gray
         ], $atts, 'authdocs_grid');
         
         $limit = intval($atts['limit']);
         $restriction = sanitize_text_field($atts['restriction']);
         $columns = intval($atts['columns']);
+        $columns_desktop = intval($atts['columns_desktop']);
+        $columns_tablet = intval($atts['columns_tablet']);
+        $columns_mobile = intval($atts['columns_mobile']);
         $show_description = $atts['show_description'] === 'yes';
         $show_date = $atts['show_date'] === 'yes';
         $orderby = sanitize_text_field($atts['orderby']);
@@ -123,15 +131,20 @@ class Shortcode
         $pagination_type = sanitize_text_field($atts['pagination_type']);
         $load_more_limit = intval($atts['load_more_limit']);
         $show_featured_image = $atts['featured_image'] === 'yes';
+        $color_palette = sanitize_text_field($atts['color_palette']);
         $instance_id = 'authdocs-grid-' . uniqid();
         
         // Validate inputs
         if ($limit < 1) $limit = 12;
         if ($columns < 1 || $columns > 6) $columns = 3;
+        if ($columns_desktop < 1 || $columns_desktop > 6) $columns_desktop = 5;
+        if ($columns_tablet < 1 || $columns_tablet > 4) $columns_tablet = 3;
+        if ($columns_mobile < 1 || $columns_mobile > 2) $columns_mobile = 1;
         if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
         if (!in_array($orderby, ['date', 'title'])) $orderby = 'date';
         if (!in_array($order, ['ASC', 'DESC'])) $order = 'DESC';
         if ($load_more_limit < 1) $load_more_limit = 12;
+        if (!in_array($color_palette, ['default', 'black_white_blue', 'black_gray'])) $color_palette = 'default';
         
         // Get current page from URL parameter
         $current_page = isset($_GET['authdocs_page']) ? max(1, intval($_GET['authdocs_page'])) : 1;
@@ -141,14 +154,24 @@ class Shortcode
         $total_pages = ceil($total_documents / $limit);
         
         if (empty($documents)) {
-            return '<p class="authdocs-no-documents">' . __('No documents found.', 'authdocs') . '</p>';
+            return '<p class="authdocs-no-documents">' . __('No documents found.', 'protecteddocs') . '</p>';
         }
         
         // Get color palette settings
         $settings = new Settings();
-        $color_palette = $settings->get_color_palette_data();
-        $text_alignment = $settings->get_card_text_alignment();
-        $this->enqueue_dynamic_styles($instance_id, $color_palette, $text_alignment);
+        
+        // Store the original palette key for JavaScript
+        $color_palette_key = $color_palette;
+        
+        // Use custom color palette if specified, otherwise use frontend settings
+        if ($color_palette !== 'default') {
+            $color_palette_data = $settings->get_color_palette_data($color_palette);
+        } else {
+            $color_palette_data = $settings->get_color_palette_data();
+        }
+        
+        
+        $this->enqueue_dynamic_styles($instance_id, $color_palette_data);
         
         ob_start();
         ?>
@@ -156,6 +179,9 @@ class Shortcode
              data-limit="<?php echo esc_attr($limit); ?>"
              data-restriction="<?php echo esc_attr($restriction); ?>"
              data-columns="<?php echo esc_attr($columns); ?>"
+             data-columns-desktop="<?php echo esc_attr($columns_desktop); ?>"
+             data-columns-tablet="<?php echo esc_attr($columns_tablet); ?>"
+             data-columns-mobile="<?php echo esc_attr($columns_mobile); ?>"
              data-show-description="<?php echo esc_attr($show_description ? 'yes' : 'no'); ?>"
              data-show-date="<?php echo esc_attr($show_date ? 'yes' : 'no'); ?>"
              data-orderby="<?php echo esc_attr($orderby); ?>"
@@ -163,6 +189,7 @@ class Shortcode
              data-featured-image="<?php echo esc_attr($show_featured_image ? 'yes' : 'no'); ?>"
              data-pagination-style="<?php echo esc_attr($pagination_style); ?>"
              data-pagination-type="<?php echo esc_attr($pagination_type); ?>"
+             data-color-palette="<?php echo esc_attr($color_palette_key); ?>"
              data-current-page="<?php echo esc_attr($current_page); ?>"
              data-total-pages="<?php echo esc_attr($total_pages); ?>"
              data-total-documents="<?php echo esc_attr($total_documents); ?>"
@@ -184,7 +211,12 @@ class Shortcode
                     <article class="card" <?php echo $card_style; ?>>
                         <div class="card-body">
                             <?php if (!$featured_image): ?>
-                                <span class="card-icon" aria-hidden="true">📄</span>
+                                <div class="card-icon" aria-hidden="true">
+                                    <?php 
+                                    $file_type = $document['file_data']['type'] ?? 'file';
+                                    echo Database::get_file_type_icon_svg($file_type);
+                                    ?>
+                                </div>
                             <?php endif; ?>
                             <h3 class="card-title"><?php echo esc_html($document['title']); ?></h3>
                             <?php if ($show_description && !empty($document['description'])): ?>
@@ -199,13 +231,20 @@ class Shortcode
                         <div class="card-overlay" aria-hidden="true">
                             <div class="overlay-content">
                                 <?php if ($document['restricted']): ?>
-                                    <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'authdocs'); ?>">
+                                    <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'protecteddocs'); ?>">
                                         <svg class="authdocs-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                                         </svg>
                                     </button>
-                                <?php else: ?>
-                                    <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download title="<?php _e('Open Document', 'authdocs'); ?>">
+                                <?php else: 
+                                    $file_type = $document['file_data']['type'] ?? 'file';
+                                    $link_behavior = Database::get_file_link_behavior($file_type);
+                                    $link_attributes = 'target="' . esc_attr($link_behavior['target']) . '" title="' . esc_attr($link_behavior['title']) . '"';
+                                    if ($link_behavior['download']) {
+                                        $link_attributes .= ' download';
+                                    }
+                                ?>
+                                    <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" <?php echo $link_attributes; ?>>
                                         <svg class="authdocs-open-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
                                         </svg>
@@ -231,13 +270,13 @@ class Shortcode
                             <?php 
                             $start = (($current_page - 1) * $limit) + 1;
                             $end = min($current_page * $limit, $total_documents);
-                            printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                            printf(__('Showing %d-%d of %d documents', 'protecteddocs'), $start, $end, $total_documents);
                             ?>
                         </div>
                         
                         <?php if ($current_page < $total_pages): ?>
                             <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="<?php echo esc_attr($restriction); ?>" data-load-more-limit="<?php echo esc_attr($load_more_limit); ?>" data-featured-image="<?php echo esc_attr($show_featured_image ? 'yes' : 'no'); ?>">
-                                <?php _e('Load More Documents', 'authdocs'); ?>
+                                <?php _e('Load More Documents', 'protecteddocs'); ?>
                             </button>
                         <?php endif; ?>
                     </div>
@@ -248,7 +287,7 @@ class Shortcode
                             <?php 
                             $start = (($current_page - 1) * $limit) + 1;
                             $end = min($current_page * $limit, $total_documents);
-                            printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                            printf(__('Showing %d-%d of %d documents', 'protecteddocs'), $start, $end, $total_documents);
                             ?>
                         </div>
                         
@@ -257,7 +296,7 @@ class Shortcode
                                 <!-- AJAX Pagination with buttons -->
                                 <?php if ($current_page > 1): ?>
                                     <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($current_page - 1); ?>">
-                                        <?php _e('Previous', 'authdocs'); ?>
+                                        <?php _e('Previous', 'protecteddocs'); ?>
                                     </button>
                                 <?php endif; ?>
                                 
@@ -291,7 +330,7 @@ class Shortcode
                                 
                                 <?php if ($current_page < $total_pages): ?>
                                     <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($current_page + 1); ?>">
-                                        <?php _e('Next', 'authdocs'); ?>
+                                        <?php _e('Next', 'protecteddocs'); ?>
                                     </button>
                                 <?php endif; ?>
                             <?php else: ?>
@@ -305,7 +344,7 @@ class Shortcode
                                 ?>
                                 <?php if ($current_page > 1): ?>
                                     <a href="<?php echo esc_url(add_query_arg('authdocs_page', $current_page - 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-prev">
-                                        <?php _e('Previous', 'authdocs'); ?>
+                                        <?php _e('Previous', 'protecteddocs'); ?>
                                     </a>
                                 <?php endif; ?>
                                 
@@ -339,7 +378,7 @@ class Shortcode
                                 
                                 <?php if ($current_page < $total_pages): ?>
                                     <a href="<?php echo esc_url(add_query_arg('authdocs_page', $current_page + 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-next">
-                                        <?php _e('Next', 'authdocs'); ?>
+                                        <?php _e('Next', 'protecteddocs'); ?>
                                     </a>
                                 <?php endif; ?>
                             <?php endif; ?>
@@ -359,18 +398,18 @@ class Shortcode
     {
         // Check if any AuthDocs shortcodes are present
         $content = get_the_content();
-        $has_shortcodes = has_shortcode($content, 'authdocs') || has_shortcode($content, 'authdocs_grid');
+        $has_shortcodes = has_shortcode($content, 'protecteddocs') || has_shortcode($content, 'authdocs_grid');
         
         if ($has_shortcodes) {
             // Always enqueue CSS for shortcodes
-            wp_enqueue_style('authdocs-frontend', plugin_dir_url(__FILE__) . '../assets/css/frontend.css', [], '1.0.0');
+            wp_enqueue_style('protecteddocs-frontend-css', plugin_dir_url(__FILE__) . '../assets/css/protecteddocs-frontend.css', [], '1.0.0');
             
             // Enqueue JavaScript for grid functionality
             if (has_shortcode($content, 'authdocs_grid')) {
-                wp_enqueue_script('authdocs-frontend', plugin_dir_url(__FILE__) . '../assets/js/frontend.js', ['jquery'], '1.0.0', true);
-                wp_localize_script('authdocs-frontend', 'authdocs_frontend', [
+                wp_enqueue_script('protecteddocs-frontend-js', plugin_dir_url(__FILE__) . '../assets/js/protecteddocs-frontend.js', ['jquery'], '1.0.0', true);
+                wp_localize_script('protecteddocs-frontend-js', 'protecteddocs_frontend', [
                     'ajax_url' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('authdocs_frontend_nonce')
+                    'nonce' => wp_create_nonce('protecteddocs_frontend_nonce')
                 ]);
             }
         }
@@ -379,18 +418,27 @@ class Shortcode
     /**
      * Enqueue dynamic styles based on color palette
      */
-    private function enqueue_dynamic_styles(string $instance_id, array $color_palette, string $text_alignment = 'left'): void
+    private function enqueue_dynamic_styles(string $instance_id, array $color_palette): void
     {
-        $css = $this->generate_dynamic_css($instance_id, $color_palette, $text_alignment);
+        $css = $this->generate_dynamic_css($instance_id, $color_palette);
         
-        // Add inline styles using wp_add_inline_style to avoid output issues
-        wp_add_inline_style('authdocs-frontend', $css);
+        // Check if this is an AJAX request, REST API request, admin context, or block rendering - if so, don't output CSS
+        if (wp_doing_ajax() || is_admin() || defined('REST_REQUEST') || 
+            (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false) ||
+            (isset($_SERVER['HTTP_X_WP_NONCE']) && wp_verify_nonce($_SERVER['HTTP_X_WP_NONCE'], 'wp_rest'))) {
+            // For AJAX/REST/block rendering requests, we'll handle CSS differently
+            // The CSS will be applied via the frontend JavaScript
+            return;
+        }
+        
+        // Output CSS directly in HTML for maximum specificity (only for frontend non-AJAX requests)
+        echo '<style type="text/css" id="authdocs-dynamic-' . esc_attr($instance_id) . '">' . $css . '</style>';
     }
     
     /**
      * Generate dynamic CSS based on color palette
      */
-    private function generate_dynamic_css(string $instance_id, array $color_palette, string $text_alignment = 'left'): string
+    private function generate_dynamic_css(string $instance_id, array $color_palette): string
     {
         $css = "
         #{$instance_id} .authdocs-document {
@@ -437,14 +485,106 @@ class Shortcode
             color: {$color_palette['background']} !important;
         }
         
-        /* Blue lock icon hover effects */
+        /* Card styling with color palette */
+        #{$instance_id} .card {
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
+        }
+        
+        #{$instance_id} .card-title {
+            color: {$color_palette['text']} !important;
+        }
+        
+        #{$instance_id} .card-desc {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        #{$instance_id} .card-date {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        /* Pagination styling with color palette */
+        #{$instance_id} .authdocs-pagination-btn {
+            background: {$color_palette['background']} !important;
+            color: {$color_palette['text']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        #{$instance_id} .authdocs-pagination-btn:hover {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border-color: {$color_palette['primary']} !important;
+        }
+        
+        #{$instance_id} .authdocs-pagination-btn.active {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border-color: {$color_palette['primary']} !important;
+        }
+        
+        #{$instance_id} .authdocs-load-more-btn {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border: 1px solid {$color_palette['primary']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        #{$instance_id} .authdocs-load-more-btn:hover {
+            background: {$color_palette['text']} !important;
+            color: {$color_palette['background']} !important;
+            border-color: {$color_palette['text']} !important;
+        }
+        
+        /* Lock icon and button styling */
+        #{$instance_id} .authdocs-request-access-btn {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border: 1px solid {$color_palette['primary']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        #{$instance_id} .authdocs-request-access-btn:hover {
+            background: {$color_palette['text']} !important;
+            color: {$color_palette['background']} !important;
+            border-color: {$color_palette['text']} !important;
+        }
+        
+        #{$instance_id} .authdocs-lock-icon {
+            color: {$color_palette['secondary']} !important;
+        }
+        
         #{$instance_id} .card:hover .authdocs-request-access-btn .authdocs-lock-icon {
-            color: #2563eb !important;
+            color: {$color_palette['background']} !important;
         }
         
         #{$instance_id} .card:hover .card-overlay {
-            background: rgba(37, 99, 235, 0.1) !important;
+            background: {$color_palette['primary']}20 !important;
             backdrop-filter: blur(2px);
+        }
+        
+        /* Download button styling */
+        #{$instance_id} .authdocs-download-btn {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border: 1px solid {$color_palette['primary']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        #{$instance_id} .authdocs-download-btn:hover {
+            background: {$color_palette['text']} !important;
+            color: {$color_palette['background']} !important;
+            border-color: {$color_palette['text']} !important;
+        }
+        
+        #{$instance_id} .authdocs-open-icon {
+            color: {$color_palette['secondary']} !important;
+        }
+        
+        #{$instance_id} .authdocs-download-btn:hover .authdocs-open-icon {
+            color: {$color_palette['background']} !important;
         }
         
         #{$instance_id} .card:hover .card-title {
@@ -471,7 +611,6 @@ class Shortcode
             padding: 20px;
             position: relative;
             z-index: 2;
-            text-align: {$text_alignment} !important;
         }
         
         #{$instance_id} .card[style*='background-image'] .card-body {
@@ -615,9 +754,184 @@ class Shortcode
             color: {$color_palette['text_secondary']};
             border-radius: {$color_palette['border_radius']};
         }
+        
+        /* Responsive design for mobile devices */
+        @media (max-width: 768px) {
+            #{$instance_id} .authdocs-grid {
+                text-align: center;
+            }
+            
+            #{$instance_id} .authdocs-grid-item {
+                text-align: center;
+            }
+            
+            #{$instance_id} .authdocs-grid-item-content {
+                text-align: center;
+            }
+            
+            #{$instance_id} .authdocs-grid-item-title {
+                text-align: center;
+            }
+            
+            #{$instance_id} .authdocs-grid-item-description {
+                text-align: center;
+            }
+            
+            #{$instance_id} .authdocs-grid-item-actions {
+                text-align: center;
+            }
+            
+            #{$instance_id} .authdocs-request-access-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                min-width: auto;
+                padding: 12px 16px;
+            }
+            
+            #{$instance_id} .authdocs-pagination {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+            
+            #{$instance_id} .authdocs-pagination-links {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            #{$instance_id} .authdocs-load-more-btn {
+                width: 100%;
+                max-width: 200px;
+                margin: 0 auto;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #{$instance_id} .authdocs-request-access-btn {
+                padding: 10px 14px;
+                font-size: 0.875rem;
+            }
+            
+            #{$instance_id} .authdocs-pagination-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+            
+            #{$instance_id} .authdocs-load-more-btn {
+                padding: 12px 16px;
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* Popup styling with color palette */
+        .authdocs-modal-card {
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
+        }
+        
+        .authdocs-modal-header {
+            border-bottom: 1px solid {$color_palette['border']} !important;
+        }
+        
+        .authdocs-modal-icon {
+            background: {$color_palette['primary']} !important;
+        }
+        
+        .authdocs-modal-title {
+            color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-modal-close {
+            background: {$color_palette['background_secondary']} !important;
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-modal-close:hover {
+            background: {$color_palette['border']} !important;
+            color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-modal-description {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-form-label {
+            color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-form-label svg {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-form-input {
+            background: {$color_palette['background']} !important;
+            color: {$color_palette['text']} !important;
+            border: 2px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        .authdocs-form-input:focus {
+            border-color: {$color_palette['primary']} !important;
+            box-shadow: 0 0 0 3px rgba(" . $this->hex_to_rgb($color_palette['primary']) . ", 0.1) !important;
+        }
+        
+        .authdocs-form-input::placeholder {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-modal-footer {
+            border-top: 1px solid {$color_palette['border']} !important;
+        }
+        
+        .authdocs-btn-primary {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border: 1px solid {$color_palette['primary']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        .authdocs-btn-primary:hover {
+            background: {$color_palette['text']} !important;
+            color: {$color_palette['background']} !important;
+            border-color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-btn-outline {
+            background: transparent !important;
+            color: {$color_palette['text_secondary']} !important;
+            border: 2px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        .authdocs-btn-outline:hover {
+            background: {$color_palette['background_secondary']} !important;
+            border-color: {$color_palette['text_secondary']} !important;
+            color: {$color_palette['text']} !important;
+        }
         ";
         
         return $css;
+    }
+
+    /**
+     * Convert hex color to RGB values
+     */
+    private function hex_to_rgb(string $hex): string
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        return "$r, $g, $b";
     }
 
     public function handle_secure_download(): void
@@ -633,9 +947,18 @@ class Shortcode
         $request_id = isset($_GET['request_id']) ? intval($_GET['request_id']) : null;
         $filename = isset($_GET['filename']) ? sanitize_file_name($_GET['filename']) : '';
 
+        // Get document information for error pages
+        $document = get_post($document_id);
+
         // Block access if no hash is provided (direct file access attempt)
         if (empty($hash)) {
-            LinkHandler::render_error_page(__('Access denied. Valid authorization required.', 'authdocs'), __('Access Denied', 'authdocs'), 403);
+            // Try to get filename from document file data
+            $file_data = Database::get_document_file($document_id);
+            $document_info = [
+                'title' => $document ? $document->post_title : __('Unknown Document', 'protecteddocs'),
+                'filename' => $file_data ? $file_data['filename'] : ''
+            ];
+            LinkHandler::render_error_page(__('Access denied. Valid authorization required.', 'protecteddocs'), __('Access Denied', 'protecteddocs'), 403, $document_info);
             exit;
         }
 
@@ -643,7 +966,13 @@ class Shortcode
         error_log("AuthDocs: Download validation - Document ID: {$document_id}, Email: {$email}, Hash: {$hash}, Request ID: {$request_id}");
         if (!Database::validate_secure_access($hash, $email, $document_id, $request_id)) {
             error_log("AuthDocs: Download validation failed - Invalid or expired download link");
-            LinkHandler::render_error_page(__('Invalid or expired download link', 'authdocs'), __('Access Denied', 'authdocs'), 403);
+            // Try to get filename from document file data
+            $file_data = Database::get_document_file($document_id);
+            $document_info = [
+                'title' => $document ? $document->post_title : __('Unknown Document', 'protecteddocs'),
+                'filename' => $file_data ? $file_data['filename'] : ''
+            ];
+            LinkHandler::render_error_page(__('Invalid or expired download link', 'protecteddocs'), __('Access Denied', 'protecteddocs'), 403, $document_info);
             exit;
         }
         error_log("AuthDocs: Download validation successful");
@@ -652,7 +981,13 @@ class Shortcode
         if ($request_id && !Database::is_request_accessible($request_id)) {
             // Log the attempt to access a deactivated file
             error_log("AuthDocs: Attempted access to deactivated file - Request ID: {$request_id}, Document ID: {$document_id}, Email: {$email}");
-            LinkHandler::render_error_page(__('File access has been deactivated. Please contact the administrator.', 'authdocs'), __('File Not Available', 'authdocs'), 403);
+            // Try to get filename from document file data
+            $file_data = Database::get_document_file($document_id);
+            $document_info = [
+                'title' => $document ? $document->post_title : __('Unknown Document', 'protecteddocs'),
+                'filename' => $file_data ? $file_data['filename'] : ''
+            ];
+            LinkHandler::render_error_page(__('File access has been deactivated. Please contact the administrator.', 'protecteddocs'), __('File Not Available', 'protecteddocs'), 403, $document_info);
             exit;
         }
 
@@ -665,12 +1000,20 @@ class Shortcode
 
         $file_data = Database::get_document_file($document_id);
         if (!$file_data) {
-            LinkHandler::render_error_page(__('File not found', 'authdocs'), __('Error', 'authdocs'), 404);
+            $document_info = [
+                'title' => $document ? $document->post_title : __('Unknown Document', 'protecteddocs'),
+                'filename' => ''
+            ];
+            LinkHandler::render_error_page(__('File not found', 'protecteddocs'), __('Error', 'protecteddocs'), 404, $document_info);
             exit;
         }
 
         if (!file_exists($file_data['path'])) {
-            LinkHandler::render_error_page(__('File not found on server', 'authdocs'), __('Error', 'authdocs'), 404);
+            $document_info = [
+                'title' => $document ? $document->post_title : __('Unknown Document', 'protecteddocs'),
+                'filename' => $file_data['filename'] ?? ''
+            ];
+            LinkHandler::render_error_page(__('File not found on server', 'protecteddocs'), __('Error', 'protecteddocs'), 404, $document_info);
             exit;
         }
 

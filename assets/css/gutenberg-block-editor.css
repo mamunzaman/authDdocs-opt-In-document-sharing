@@ -5,6 +5,15 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   line-height: 1.4;
+  text-align: center;
+}
+
+/* Center the block title and icon */
+.authdocs-block-preview > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 /* Inspector controls styling */

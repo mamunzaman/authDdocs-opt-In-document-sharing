@@ -12,10 +12,10 @@ if (!defined('ABSPATH')) {
             <span class="authdocs-page-icon">
                 <span class="dashicons dashicons-portfolio"></span>
             </span>
-            <?php _e('Document Requests', 'authdocs'); ?>
+            <?php _e('Document Requests', 'protecteddocs'); ?>
         </h1>
         <p class="authdocs-page-description">
-            <?php _e('Manage and monitor document access requests from users', 'authdocs'); ?>
+            <?php _e('Manage and monitor document access requests from users', 'protecteddocs'); ?>
         </p>
     </div>
     
@@ -29,15 +29,15 @@ if (!defined('ABSPATH')) {
                                 <span class="dashicons dashicons-search"></span>
                             </div>
                             <input type="text" id="authdocs-requests-filter" class="authdocs-search-input" 
-                                   placeholder="<?php _e('Search requests by name, email, document, or status...', 'authdocs'); ?>" 
-                                   title="<?php _e('Type to filter requests instantly', 'authdocs'); ?>">
+                                   placeholder="<?php _e('Search requests by name, email, document, or status...', 'protecteddocs'); ?>" 
+                                   title="<?php _e('Type to filter requests instantly', 'protecteddocs'); ?>">
                             <div class="authdocs-search-clear" id="authdocs-search-clear" style="display: none;">
                                 <span class="dashicons dashicons-no-alt"></span>
                             </div>
                         </div>
                         <div class="authdocs-search-results-info" id="authdocs-search-results-info" style="display: none;">
                             <span class="authdocs-search-count"></span>
-                            <span class="authdocs-search-text"><?php _e('requests found', 'authdocs'); ?></span>
+                            <span class="authdocs-search-text"><?php _e('requests found', 'protecteddocs'); ?></span>
                         </div>
                     </div>
                 </div>
@@ -46,18 +46,18 @@ if (!defined('ABSPATH')) {
                     <div class="authdocs-filter-container">
                         <div class="authdocs-filter-group">
                             <select id="authdocs-status-filter" class="authdocs-filter-select">
-                                <option value=""><?php _e('All Statuses', 'authdocs'); ?></option>
-                                <option value="pending"><?php _e('Pending', 'authdocs'); ?></option>
-                                <option value="accepted"><?php _e('Accepted', 'authdocs'); ?></option>
-                                <option value="declined"><?php _e('Declined', 'authdocs'); ?></option>
-                                <option value="inactive"><?php _e('Inactive', 'authdocs'); ?></option>
+                                <option value=""><?php _e('All Statuses', 'protecteddocs'); ?></option>
+                                <option value="pending"><?php _e('Pending', 'protecteddocs'); ?></option>
+                                <option value="accepted"><?php _e('Accepted', 'protecteddocs'); ?></option>
+                                <option value="declined"><?php _e('Declined', 'protecteddocs'); ?></option>
+                                <option value="inactive"><?php _e('Inactive', 'protecteddocs'); ?></option>
                             </select>
                         </div>
                         
                         <div class="authdocs-filter-actions">
                             <button type="button" id="authdocs-clear-filters" class="authdocs-clear-filters-btn">
                                 <span class="dashicons dashicons-no-alt"></span>
-                                <?php _e('Clear Filters', 'authdocs'); ?>
+                                <?php _e('Clear Filters', 'protecteddocs'); ?>
                             </button>
                         </div>
                     </div>
@@ -73,7 +73,7 @@ if (!defined('ABSPATH')) {
                         <?php if ($current_page > 1): ?>
                             <a href="<?php echo esc_url(add_query_arg('paged', $current_page - 1)); ?>" class="page-numbers prev">
                                 <span class="dashicons dashicons-arrow-left-alt2"></span>
-                                <?php _e('Previous', 'authdocs'); ?>
+                                <?php _e('Previous', 'protecteddocs'); ?>
                             </a>
                         <?php endif; ?>
                         
@@ -105,7 +105,7 @@ if (!defined('ABSPATH')) {
                         
                         <?php if ($current_page < $total_pages): ?>
                             <a href="<?php echo esc_url(add_query_arg('paged', $current_page + 1)); ?>" class="page-numbers next">
-                                <?php _e('Next', 'authdocs'); ?>
+                                <?php _e('Next', 'protecteddocs'); ?>
                                 <span class="dashicons dashicons-arrow-right-alt2"></span>
                             </a>
                         <?php endif; ?>
@@ -119,7 +119,7 @@ if (!defined('ABSPATH')) {
                     $start = (($current_page - 1) * $per_page) + 1;
                     $end = min($current_page * $per_page, $total_requests);
                     printf(
-                        __('Showing %1$d-%2$d of %3$d requests', 'authdocs'),
+                        __('Showing %1$d-%2$d of %3$d requests', 'protecteddocs'),
                         $start,
                         $end,
                         $total_requests
@@ -132,7 +132,7 @@ if (!defined('ABSPATH')) {
     
     <?php if (empty($requests)): ?>
         <div class="notice notice-info">
-            <p><?php _e('No requests found.', 'authdocs'); ?></p>
+            <p><?php _e('No requests found.', 'protecteddocs'); ?></p>
         </div>
     <?php else: ?>
         <div class="authdocs-table-section">
@@ -141,21 +141,25 @@ if (!defined('ABSPATH')) {
                 <table class="wp-list-table widefat fixed striped authdocs-requests-table">
                     <thead>
                         <tr>
-                            <th class="authdocs-col-id"><?php _e('ID', 'authdocs'); ?></th>
-                            <th class="authdocs-col-name"><?php _e('Requester Name', 'authdocs'); ?></th>
-                            <th class="authdocs-col-email"><?php _e('Email', 'authdocs'); ?></th>
-                            <th class="authdocs-col-document"><?php _e('Document', 'authdocs'); ?></th>
-                            <th class="authdocs-col-file"><?php _e('File Link', 'authdocs'); ?></th>
-                            <th class="authdocs-col-status"><?php _e('Status', 'authdocs'); ?></th>
-                            <th class="authdocs-col-date"><?php _e('Date', 'authdocs'); ?></th>
-                            <th class="authdocs-col-actions"><?php _e('Actions', 'authdocs'); ?></th>
+                            <th class="authdocs-col-id"><?php _e('ID', 'protecteddocs'); ?></th>
+                            <th class="authdocs-col-name"><?php _e('Requester Name', 'protecteddocs'); ?></th>
+                            <th class="authdocs-col-email"><?php _e('Email', 'protecteddocs'); ?></th>
+                            <th class="authdocs-col-document"><?php _e('Document', 'protecteddocs'); ?></th>
+                            <th class="authdocs-col-file"><?php _e('File Link', 'protecteddocs'); ?></th>
+                            <th class="authdocs-col-status"><?php _e('Status', 'protecteddocs'); ?></th>
+                            <th class="authdocs-col-date"><?php _e('Date', 'protecteddocs'); ?></th>
+                            <th class="authdocs-col-actions"><?php _e('Actions', 'protecteddocs'); ?></th>
                         </tr>
                     </thead>
                 <tbody>
                     <?php foreach ($requests as $request): 
                         // Get document title for sorting/filtering
-                        $document_title = AuthDocs\Database::get_document_title(intval($request->document_id));
-                        $document_title = $document_title ?: sprintf(__('Document #%d', 'authdocs'), $request->document_id);
+                        $document_title = ProtectedDocs\Database::get_document_title(intval($request->document_id));
+                        $document_title = $document_title ?: sprintf(__('Document #%d', 'protecteddocs'), $request->document_id);
+                        
+                        // Check if document is deactivated
+                        $document = get_post(intval($request->document_id));
+                        $is_document_deactivated = !$document || $document->post_status !== 'publish';
                         
                         // Get file link status for filtering - should match request status
                         $file_link_status = '';
@@ -181,27 +185,36 @@ if (!defined('ABSPATH')) {
                             <td data-label="Document">
                                 <?php 
                                 // Get document title using the robust helper method
-                                $document_title = AuthDocs\Database::get_document_title(intval($request->document_id));
+                                $document_title = ProtectedDocs\Database::get_document_title(intval($request->document_id));
                                 
                                 // Debug logging
                                 error_log("AuthDocs Debug - Request ID: {$request->id}, Document ID: {$request->document_id}, Final Title: " . ($document_title ?: 'EMPTY'));
                                 ?>
-                                <?php if ($document_title): ?>
-                                    <a href="<?php echo esc_url(get_edit_post_link($request->document_id)); ?>" target="_blank">
-                                        <?php echo esc_html($document_title); ?>
-                                    </a>
-                                <?php else: ?>
-                                    <a href="<?php echo esc_url(get_edit_post_link($request->document_id)); ?>" target="_blank">
-                                        <?php printf(__('Document #%d', 'authdocs'), $request->document_id); ?>
-                                    </a>
-                                    <br><small class="authdocs-status-note"><?php _e('Title not available', 'authdocs'); ?></small>
-                                <?php endif; ?>
+                                <div class="authdocs-document-info">
+                                    <?php if ($document_title): ?>
+                                        <a href="<?php echo esc_url(get_edit_post_link($request->document_id)); ?>" target="_blank">
+                                            <?php echo esc_html($document_title); ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?php echo esc_url(get_edit_post_link($request->document_id)); ?>" target="_blank">
+                                            <?php printf(__('Document #%d', 'protecteddocs'), $request->document_id); ?>
+                                        </a>
+                                        <br><small class="authdocs-status-note"><?php _e('Title not available', 'protecteddocs'); ?></small>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($is_document_deactivated): ?>
+                                        <div class="authdocs-document-notice">
+                                            <span class="dashicons dashicons-warning" title="<?php _e('Document is currently deactivated', 'protecteddocs'); ?>"></span>
+                                            <span class="authdocs-notice-text"><?php _e('Document deactivated', 'protecteddocs'); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td data-label="File Link">
                                 <?php 
                                 $file_data = null;
                                 if (isset($request->document_id) && is_numeric($request->document_id)) {
-                                    $file_data = AuthDocs\Database::get_document_file(intval($request->document_id));
+                                    $file_data = ProtectedDocs\Database::get_document_file(intval($request->document_id));
                                 }
                                 
                                 if ($file_data && isset($file_data['url']) && isset($file_data['filename'])): 
@@ -212,7 +225,7 @@ if (!defined('ABSPATH')) {
                                             <span class="authdocs-file-status-icon">
                                                 <span class="dashicons dashicons-lock"></span>
                                             </span>
-                                            <span class="authdocs-file-status-text"><?php _e('Locked', 'authdocs'); ?></span>
+                                            <span class="authdocs-file-status-text"><?php _e('Locked', 'protecteddocs'); ?></span>
                                         </div>
                                         <?php
                                     // Show declined status for declined requests
@@ -222,7 +235,7 @@ if (!defined('ABSPATH')) {
                                             <span class="authdocs-file-status-icon">
                                                 <span class="dashicons dashicons-no-alt"></span>
                                             </span>
-                                            <span class="authdocs-file-status-text"><?php _e('Declined', 'authdocs'); ?></span>
+                                            <span class="authdocs-file-status-text"><?php _e('Declined', 'protecteddocs'); ?></span>
                                         </div>
                                         <?php
                                     // Generate the full download link if request is accepted and has hash
@@ -233,10 +246,10 @@ if (!defined('ABSPATH')) {
                                             <span class="authdocs-file-status-icon">
                                                 <span class="dashicons dashicons-visibility"></span>
                                             </span>
-                                            <a href="<?php echo esc_url($download_url); ?>" target="_blank" class="authdocs-file-status-text authdocs-view-document-link" title="<?php _e('Click to view document', 'authdocs'); ?>">
-                                                <?php _e('View Document', 'authdocs'); ?>
+                                            <a href="<?php echo esc_url($download_url); ?>" target="_blank" class="authdocs-file-status-text authdocs-view-document-link" title="<?php _e('Click to view document', 'protecteddocs'); ?>">
+                                                <?php _e('View Document', 'protecteddocs'); ?>
                                             </a>
-                                            <button type="button" class="authdocs-copy-link" title="<?php _e('Copy link', 'authdocs'); ?>" data-link="<?php echo esc_attr($download_url); ?>">
+                                            <button type="button" class="authdocs-copy-link" title="<?php _e('Copy link', 'protecteddocs'); ?>" data-link="<?php echo esc_attr($download_url); ?>">
                                                 <span class="dashicons dashicons-admin-page"></span>
                                             </button>
                                         </div>
@@ -245,7 +258,7 @@ if (!defined('ABSPATH')) {
                                             <span class="authdocs-file-status-icon">
                                                 <span class="dashicons dashicons-clock"></span>
                                             </span>
-                                            <span class="authdocs-file-status-text"><?php _e('Pending', 'authdocs'); ?></span>
+                                            <span class="authdocs-file-status-text"><?php _e('Pending', 'protecteddocs'); ?></span>
                                         </div>
                                      <?php endif; ?>
                                 <?php else: ?>
@@ -253,7 +266,7 @@ if (!defined('ABSPATH')) {
                                         <span class="authdocs-file-status-icon">
                                             <span class="dashicons dashicons-dismiss"></span>
                                         </span>
-                                        <span class="authdocs-file-status-text"><?php _e('No file', 'authdocs'); ?></span>
+                                        <span class="authdocs-file-status-text"><?php _e('No file', 'protecteddocs'); ?></span>
                                     </div>
                                 <?php endif; ?>
                             </td>
@@ -278,19 +291,19 @@ if (!defined('ABSPATH')) {
                                      title="<?php 
                                        switch($request->status) {
                                          case 'pending':
-                                           echo __('Request is waiting for approval', 'authdocs');
+                                           echo __('Request is waiting for approval', 'protecteddocs');
                                            break;
                                          case 'accepted':
-                                           echo __('Request has been approved and document access granted', 'authdocs');
+                                           echo __('Request has been approved and document access granted', 'protecteddocs');
                                            break;
                                          case 'declined':
-                                           echo __('Request has been declined and document access denied', 'authdocs');
+                                           echo __('Request has been declined and document access denied', 'protecteddocs');
                                            break;
                                          case 'inactive':
-                                           echo __('Document link is temporarily hidden', 'authdocs');
+                                           echo __('Document link is temporarily hidden', 'protecteddocs');
                                            break;
                                          default:
-                                           echo __('Unknown status', 'authdocs');
+                                           echo __('Unknown status', 'protecteddocs');
                                        }
                                      ?>">
                                     <span class="authdocs-status-icon" style="color: <?php echo esc_attr($color); ?>">
@@ -320,11 +333,11 @@ if (!defined('ABSPATH')) {
                                        data-action="accept" data-request-id="<?php echo esc_attr($request->id); ?>"
                                        title="<?php 
                                          if ($request->status === 'accepted') {
-                                           echo __('✓ Request already approved - Document access granted', 'authdocs');
+                                           echo __('✓ Request already approved - Document access granted', 'protecteddocs');
                                          } elseif ($request->status === 'inactive') {
-                                           echo __('⚠️ Cannot accept - Document link is currently hidden. Show the link first to enable this action.', 'authdocs');
+                                           echo __('⚠️ Cannot accept - Document link is currently hidden. Show the link first to enable this action.', 'protecteddocs');
                                          } else {
-                                           echo __('✅ Approve this request and grant document access to the requester', 'authdocs');
+                                           echo __('✅ Approve this request and grant document access to the requester', 'protecteddocs');
                                          }
                                        ?>"
                                        <?php echo $accept_disabled ? 'disabled' : ''; ?>>
@@ -336,11 +349,11 @@ if (!defined('ABSPATH')) {
                                        data-action="decline" data-request-id="<?php echo esc_attr($request->id); ?>"
                                        title="<?php 
                                          if ($request->status === 'declined') {
-                                           echo __('✗ Request already declined - Document access denied', 'authdocs');
+                                           echo __('✗ Request already declined - Document access denied', 'protecteddocs');
                                          } elseif ($request->status === 'inactive') {
-                                           echo __('⚠️ Cannot decline - Document link is currently hidden. Show the link first to enable this action.', 'authdocs');
+                                           echo __('⚠️ Cannot decline - Document link is currently hidden. Show the link first to enable this action.', 'protecteddocs');
                                          } else {
-                                           echo __('❌ Decline this request and deny document access to the requester', 'authdocs');
+                                           echo __('❌ Decline this request and deny document access to the requester', 'protecteddocs');
                                          }
                                        ?>"
                                        <?php echo $decline_disabled ? 'disabled' : ''; ?>>
@@ -350,7 +363,7 @@ if (!defined('ABSPATH')) {
                                     <!-- Toggle Link Visibility -->
                                     <button type="button" class="authdocs-action-link authdocs-action-inactive <?php echo $toggle_disabled ? 'disabled' : ''; ?>" 
                                        data-action="inactive" data-request-id="<?php echo esc_attr($request->id); ?>"
-                                       title="<?php echo $request->status === 'inactive' ? __('👁️ Document link is hidden - Click to make it visible and accessible', 'authdocs') : __('🙈 Document link is visible - Click to hide it temporarily', 'authdocs'); ?>"
+                                       title="<?php echo $request->status === 'inactive' ? __('👁️ Document link is hidden - Click to make it visible and accessible', 'protecteddocs') : __('🙈 Document link is visible - Click to hide it temporarily', 'protecteddocs'); ?>"
                                        <?php echo $toggle_disabled ? 'disabled' : ''; ?>>
                                         <span class="dashicons <?php echo $request->status === 'inactive' ? 'dashicons-visibility' : 'dashicons-hidden'; ?>"></span>
                                     </button>
@@ -358,7 +371,7 @@ if (!defined('ABSPATH')) {
                                     <!-- Delete Link -->
                                     <button type="button" class="authdocs-action-link authdocs-action-delete" 
                                        data-action="delete" data-request-id="<?php echo esc_attr($request->id); ?>"
-                                       title="<?php _e('🗑️ Permanently delete this request and all associated data', 'authdocs'); ?>">
+                                       title="<?php _e('🗑️ Permanently delete this request and all associated data', 'protecteddocs'); ?>">
                                         <span class="dashicons dashicons-trash"></span>
                                     </button>
                                 </div>
@@ -376,7 +389,7 @@ if (!defined('ABSPATH')) {
                             <?php if ($current_page > 1): ?>
                                 <a href="<?php echo esc_url(add_query_arg('paged', $current_page - 1)); ?>" class="page-numbers prev">
                                     <span class="dashicons dashicons-arrow-left-alt2"></span>
-                                    <?php _e('Previous', 'authdocs'); ?>
+                                    <?php _e('Previous', 'protecteddocs'); ?>
                                 </a>
                             <?php endif; ?>
                             
@@ -408,7 +421,7 @@ if (!defined('ABSPATH')) {
                             
                             <?php if ($current_page < $total_pages): ?>
                                 <a href="<?php echo esc_url(add_query_arg('paged', $current_page + 1)); ?>" class="page-numbers next">
-                                    <?php _e('Next', 'authdocs'); ?>
+                                    <?php _e('Next', 'protecteddocs'); ?>
                                     <span class="dashicons dashicons-arrow-right-alt2"></span>
                                 </a>
                             <?php endif; ?>
@@ -422,7 +435,7 @@ if (!defined('ABSPATH')) {
                         $start = (($current_page - 1) * $per_page) + 1;
                         $end = min($current_page * $per_page, $total_requests);
                         printf(
-                            __('Showing %1$d-%2$d of %3$d requests', 'authdocs'),
+                            __('Showing %1$d-%2$d of %3$d requests', 'protecteddocs'),
                             $start,
                             $end,
                             $total_requests
@@ -435,4 +448,4 @@ if (!defined('ABSPATH')) {
     <?php endif; ?>
 </div>
 
-<!-- JavaScript functionality moved to admin.js for better performance and consistency -->
+<!-- JavaScript functionality moved to protecteddocs-admin.js for better performance and consistency -->

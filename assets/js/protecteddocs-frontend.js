@@ -1,17 +1,232 @@
 jQuery(document).ready(function ($) {
   "use strict";
 
+  // Initialize bot protection
+  initializeBotProtection();
+
+  // Replace Gutenberg block placeholders with actual shortcode content
+  $(".authdocs-block-placeholder").each(function () {
+    const $placeholder = $(this);
+    const shortcode = $placeholder.data("shortcode");
+
+    if (shortcode) {
+      // Execute the shortcode via AJAX to get the content
+      $.ajax({
+        url: protecteddocs_frontend.ajax_url,
+        type: "POST",
+        data: {
+          action: "protecteddocs_render_shortcode",
+          shortcode: shortcode,
+          nonce: protecteddocs_frontend.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            $placeholder.replaceWith(response.data.html);
+          }
+        },
+        error: function () {
+          $placeholder.html("<p>Error loading content</p>");
+        },
+      });
+    }
+  });
+
+  // Get limit from container data attributes
+  function getLimit($container, type = "limit") {
+    let limit;
+
+    if (type === "limit") {
+      limit = $container.data("limit") || 12;
+    } else if (type === "load-more") {
+      limit = $container.data("load-more-limit") || 12;
+    }
+
+    return parseInt(limit) || 12;
+  }
+
+  // Apply dynamic CSS from AJAX responses
+  function applyDynamicCSS(css) {
+    // Remove any existing dynamic CSS
+    $("#authdocs-dynamic-ajax").remove();
+
+    // Add new CSS
+    $("<style>")
+      .attr("id", "authdocs-dynamic-ajax")
+      .attr("type", "text/css")
+      .html(css)
+      .appendTo("head");
+  }
+
+  // Apply popup color palette
+  function applyPopupColorPalette(colorPalette) {
+    // Color palette definitions
+    const palettes = {
+      default: {
+        primary: "#2271b1",
+        secondary: "#ffffff",
+        text: "#1d2327",
+        text_secondary: "#646970",
+        background: "#ffffff",
+        background_secondary: "#f6f7f7",
+        border: "#e5e5e5",
+        border_radius: "6px",
+        shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+      },
+      black_white_blue: {
+        primary: "#2563eb",
+        secondary: "#ffffff",
+        text: "#000000",
+        text_secondary: "#666666",
+        background: "#ffffff",
+        background_secondary: "#f9f9f9",
+        border: "#e5e5e5",
+        border_radius: "4px",
+        shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+      },
+      black_gray: {
+        primary: "#374151",
+        secondary: "#f9fafb",
+        text: "#111827",
+        text_secondary: "#6b7280",
+        background: "#ffffff",
+        background_secondary: "#f3f4f6",
+        border: "#d1d5db",
+        border_radius: "4px",
+        shadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+      },
+    };
+
+    const palette = palettes[colorPalette];
+    if (!palette) return;
+
+    // Convert hex to RGB
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result
+        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(
+            result[3],
+            16
+          )}`
+        : "0, 0, 0";
+    }
+
+    // Generate CSS for popup
+    const css = `
+      #authdocs-request-modal .authdocs-modal-card {
+        background: ${palette.background} !important;
+        border: 1px solid ${palette.border} !important;
+        border-radius: ${palette.border_radius} !important;
+        box-shadow: ${palette.shadow} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-modal-header {
+        border-bottom: 1px solid ${palette.border} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-modal-icon {
+        background: ${palette.primary} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-modal-title {
+        color: ${palette.text} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-modal-close {
+        background: ${palette.background_secondary} !important;
+        color: ${palette.text_secondary} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-modal-close:hover {
+        background: ${palette.border} !important;
+        color: ${palette.text} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-modal-description {
+        color: ${palette.text_secondary} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-form-label {
+        color: ${palette.text} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-form-label svg {
+        color: ${palette.text_secondary} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-form-input {
+        background: ${palette.background} !important;
+        color: ${palette.text} !important;
+        border: 2px solid ${palette.border} !important;
+        border-radius: ${palette.border_radius} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-form-input:focus {
+        border-color: ${palette.primary} !important;
+        box-shadow: 0 0 0 3px rgba(${hexToRgb(
+          palette.primary
+        )}, 0.1) !important;
+      }
+      
+      #authdocs-request-modal .authdocs-form-input::placeholder {
+        color: ${palette.text_secondary} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-modal-footer {
+        border-top: 1px solid ${palette.border} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-btn-primary {
+        background: ${palette.primary} !important;
+        color: ${palette.secondary} !important;
+        border: 1px solid ${palette.primary} !important;
+        border-radius: ${palette.border_radius} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-btn-primary:hover {
+        background: ${palette.text} !important;
+        color: ${palette.background} !important;
+        border-color: ${palette.text} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-btn-outline {
+        background: transparent !important;
+        color: ${palette.text_secondary} !important;
+        border: 2px solid ${palette.border} !important;
+        border-radius: ${palette.border_radius} !important;
+      }
+      
+      #authdocs-request-modal .authdocs-btn-outline:hover {
+        background: ${palette.background_secondary} !important;
+        border-color: ${palette.text_secondary} !important;
+        color: ${palette.text} !important;
+      }
+    `;
+
+    // Remove any existing popup CSS
+    $("#authdocs-popup-dynamic").remove();
+
+    // Add new CSS
+    $("<style>")
+      .attr("id", "authdocs-popup-dynamic")
+      .attr("type", "text/css")
+      .html(css)
+      .appendTo("head");
+  }
+
   // Handle request access button clicks
   $(document).on("click", ".authdocs-request-access-btn", function (e) {
     e.preventDefault();
     const documentId = $(this).data("document-id");
-    showRequestAccessModal(documentId);
+    const $container = $(this).closest(".authdocs-grid-container");
+    const colorPalette = $container.data("color-palette") || "default";
+    showRequestAccessModal(documentId, colorPalette);
   });
 
   // Handle load more button clicks
   $(document).on("click", ".authdocs-load-more-btn", function (e) {
     e.preventDefault();
     const $btn = $(this);
+    const $container = $btn.closest(".authdocs-grid-container");
     const currentLimit = parseInt($btn.data("current-limit"));
     const restriction = $btn.data("restriction");
     const featuredImage = $btn.data("featured-image");
@@ -19,7 +234,18 @@ jQuery(document).ready(function ($) {
       .closest(".authdocs-grid-load-more")
       .prev(".authdocs-grid");
 
-    loadMoreDocuments($grid, currentLimit, restriction, $btn, featuredImage);
+    // Get load more limit
+    const loadMoreLimit = getLimit($container, "load-more");
+
+    loadMoreDocuments(
+      $grid,
+      currentLimit,
+      restriction,
+      $btn,
+      featuredImage,
+      loadMoreLimit,
+      colorPalette
+    );
   });
 
   // Handle pagination button clicks
@@ -47,9 +273,9 @@ jQuery(document).ready(function ($) {
   });
 
   // Show request access modal
-  function showRequestAccessModal(documentId) {
+  function showRequestAccessModal(documentId, colorPalette = "default") {
     const modalHtml = `
-            <div class="authdocs-modal" id="authdocs-request-modal">
+            <div class="authdocs-modal" id="authdocs-request-modal" data-color-palette="${colorPalette}">
                 <div class="authdocs-modal-backdrop"></div>
                 <div class="authdocs-modal-container">
                     <div class="authdocs-modal-card">
@@ -60,7 +286,7 @@ jQuery(document).ready(function ($) {
                                 </svg>
                             </div>
                             <h2 class="authdocs-modal-title">${
-                              authdocs_frontend.request_access_title ||
+                              protecteddocs_frontend.request_access_title ||
                               "Request Document Access"
                             }</h2>
                             <button type="button" class="authdocs-modal-close" aria-label="Close">
@@ -82,7 +308,7 @@ jQuery(document).ready(function ($) {
                                             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                         </svg>
                                         ${
-                                          authdocs_frontend.name_label ||
+                                          protecteddocs_frontend.name_label ||
                                           "Full Name"
                                         }
                                     </label>
@@ -95,7 +321,7 @@ jQuery(document).ready(function ($) {
                                             <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
                                         </svg>
                                         ${
-                                          authdocs_frontend.email_label ||
+                                          protecteddocs_frontend.email_label ||
                                           "Email Address"
                                         }
                                     </label>
@@ -104,21 +330,24 @@ jQuery(document).ready(function ($) {
                                 
                                 <input type="hidden" name="document_id" value="${documentId}">
                                 <input type="hidden" name="nonce" value="${
-                                  authdocs_frontend.nonce
+                                  protecteddocs_frontend.nonce
                                 }">
                             </form>
                         </div>
                         
                         <div class="authdocs-modal-footer">
                             <button type="button" class="authdocs-btn authdocs-btn-outline authdocs-modal-close">
-                                ${authdocs_frontend.cancel_label || "Cancel"}
+                                ${
+                                  protecteddocs_frontend.cancel_label ||
+                                  "Cancel"
+                                }
                             </button>
                             <button type="button" class="authdocs-btn authdocs-btn-primary" id="authdocs-submit-request">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                                 </svg>
                                 ${
-                                  authdocs_frontend.submit_label ||
+                                  protecteddocs_frontend.submit_label ||
                                   "Submit Request"
                                 }
                             </button>
@@ -129,6 +358,10 @@ jQuery(document).ready(function ($) {
         `;
 
     $("body").append(modalHtml);
+
+    // Apply dynamic CSS for the popup based on color palette
+    applyPopupColorPalette(colorPalette);
+
     $("#authdocs-request-modal").fadeIn(300);
 
     // Focus on first input
@@ -276,16 +509,39 @@ jQuery(document).ready(function ($) {
     const $submitBtn = $("#authdocs-submit-request");
     const formData = new FormData($form[0]);
 
+    // Enhanced bot protection: Check if form was submitted too quickly
+    const now = Date.now();
+    const lastSubmission = localStorage.getItem("authdocs_last_submission");
+    const minInterval = 3000; // 3 seconds minimum between submissions
+
+    if (lastSubmission && now - parseInt(lastSubmission) < minInterval) {
+      showErrorMessage(
+        "Please wait a moment before submitting another request."
+      );
+      return;
+    }
+
+    // Store submission time
+    localStorage.setItem("authdocs_last_submission", now.toString());
+
+    // Add bot protection data
+    const pageLoadTime = localStorage.getItem("authdocs_page_load_time") || "0";
+    const sessionToken = localStorage.getItem("authdocs_session_token") || "";
+
+    formData.append("last_request_time", lastSubmission || "0");
+    formData.append("page_load_time", pageLoadTime);
+    formData.append("session_token", sessionToken);
+
     // Add action for AJAX
-    formData.append("action", "authdocs_request_access");
+    formData.append("action", "protecteddocs_request_access");
 
     // Disable submit button and show loading
     $submitBtn
       .prop("disabled", true)
-      .text(authdocs_frontend.submitting_label || "Submitting...");
+      .text(protecteddocs_frontend.submitting_label || "Submitting...");
 
     $.ajax({
-      url: authdocs_frontend.ajax_url,
+      url: protecteddocs_frontend.ajax_url,
       type: "POST",
       data: formData,
       processData: false,
@@ -309,7 +565,7 @@ jQuery(document).ready(function ($) {
       complete: function () {
         $submitBtn
           .prop("disabled", false)
-          .text(authdocs_frontend.submit_label || "Submit Request");
+          .text(protecteddocs_frontend.submit_label || "Submit Request");
       },
     });
   }
@@ -328,17 +584,19 @@ jQuery(document).ready(function ($) {
 
     // Get featured image setting from container
     const featuredImage = $container.data("featured-image") || "yes";
+    const colorPalette = $container.data("color-palette") || "default";
 
     $.ajax({
-      url: authdocs_frontend.ajax_url,
+      url: protecteddocs_frontend.ajax_url,
       type: "POST",
       data: {
-        action: "authdocs_load_more_documents",
+        action: "protecteddocs_load_more_documents",
         limit: currentLimit,
         restriction: restriction,
         load_more_limit: loadMoreLimit,
         featured_image: featuredImage,
-        nonce: authdocs_frontend.nonce,
+        color_palette: colorPalette,
+        nonce: protecteddocs_frontend.nonce,
       },
       success: function (response) {
         if (response.success) {
@@ -383,29 +641,40 @@ jQuery(document).ready(function ($) {
     currentLimit,
     restriction,
     $btn,
-    featuredImage = "yes"
+    featuredImage = "yes",
+    loadMoreLimit = null,
+    colorPalette = "default"
   ) {
     const $loadMoreContainer = $btn.closest(".authdocs-grid-load-more");
-    const loadMoreLimit = parseInt($btn.data("load-more-limit")) || 12;
+    // Use provided loadMoreLimit or fallback to data attribute
+    if (!loadMoreLimit) {
+      loadMoreLimit = parseInt($btn.data("load-more-limit")) || 12;
+    }
 
     // Show loading state
     $btn
       .prop("disabled", true)
-      .text(authdocs_frontend.loading_label || "Loading...");
+      .text(protecteddocs_frontend.loading_label || "Loading...");
 
     $.ajax({
-      url: authdocs_frontend.ajax_url,
+      url: protecteddocs_frontend.ajax_url,
       type: "POST",
       data: {
-        action: "authdocs_load_more_documents",
+        action: "protecteddocs_load_more_documents",
         limit: currentLimit,
         restriction: restriction,
         load_more_limit: loadMoreLimit,
         featured_image: featuredImage,
-        nonce: authdocs_frontend.nonce,
+        color_palette: colorPalette,
+        nonce: protecteddocs_frontend.nonce,
       },
       success: function (response) {
         if (response.success) {
+          // Apply CSS if provided
+          if (response.data.css) {
+            applyDynamicCSS(response.data.css);
+          }
+
           // Append new content to existing grid
           $grid.append(response.data.html);
 
@@ -428,7 +697,9 @@ jQuery(document).ready(function ($) {
       complete: function () {
         $btn
           .prop("disabled", false)
-          .text(authdocs_frontend.load_more_label || "Load More Documents");
+          .text(
+            protecteddocs_frontend.load_more_label || "Load More Documents"
+          );
       },
     });
   }
@@ -444,19 +715,20 @@ jQuery(document).ready(function ($) {
     $grid.addClass("loading");
 
     // Get container data attributes
-    const limit = parseInt($container.data("limit")) || 12;
+    const limit = getLimit($container, "limit");
     const restriction = $container.data("restriction") || "all";
     const orderby = $container.data("orderby") || "date";
     const order = $container.data("order") || "DESC";
     const featuredImage = $container.data("featured-image") || "yes";
     const paginationStyle = $container.data("pagination-style") || "classic";
     const paginationType = $container.data("pagination-type") || "ajax";
+    const colorPalette = $container.data("color-palette") || "default";
 
     $.ajax({
-      url: authdocs_frontend.ajax_url,
+      url: protecteddocs_frontend.ajax_url,
       type: "POST",
       data: {
-        action: "authdocs_paginate_documents",
+        action: "protecteddocs_paginate_documents",
         page: page,
         limit: limit,
         restriction: restriction,
@@ -465,10 +737,16 @@ jQuery(document).ready(function ($) {
         featured_image: featuredImage,
         pagination_style: paginationStyle,
         pagination_type: paginationType,
-        nonce: authdocs_frontend.nonce,
+        color_palette: colorPalette,
+        nonce: protecteddocs_frontend.nonce,
       },
       success: function (response) {
         if (response.success) {
+          // Apply CSS if provided
+          if (response.data.css) {
+            applyDynamicCSS(response.data.css);
+          }
+
           // Update grid content
           $grid.html(response.data.html);
 
@@ -577,4 +855,51 @@ jQuery(document).ready(function ($) {
 
   // Modern message styles are now handled in CSS file
   // No need for dynamic styles injection
+
+  // Initialize bot protection
+  function initializeBotProtection() {
+    // Set page load time if not already set
+    if (!localStorage.getItem("authdocs_page_load_time")) {
+      localStorage.setItem(
+        "authdocs_page_load_time",
+        Math.floor(Date.now() / 1000).toString()
+      );
+    }
+
+    // Generate and store session token if not already set
+    if (!localStorage.getItem("authdocs_session_token")) {
+      const sessionToken = generateSessionToken();
+      localStorage.setItem("authdocs_session_token", sessionToken);
+
+      // Send session token to server for validation
+      $.ajax({
+        url: protecteddocs_frontend.ajax_url,
+        type: "POST",
+        data: {
+          action: "protecteddocs_validate_session",
+          session_token: sessionToken,
+          nonce: protecteddocs_frontend.nonce,
+        },
+        success: function (response) {
+          if (!response.success) {
+            console.warn("Session validation failed:", response.data.message);
+          }
+        },
+        error: function () {
+          console.warn("Failed to validate session token");
+        },
+      });
+    }
+  }
+
+  // Generate a simple session token
+  function generateSessionToken() {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    for (let i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
 });

@@ -6,7 +6,7 @@
  */
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class Database
 {
@@ -50,9 +50,9 @@ class Database
         
         $table_name = $wpdb->prefix . self::$table_name;
         
-        // Check if request already exists
-        $existing = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM $table_name WHERE document_id = %d AND requester_email = %s",
+        // Check if request already exists (only non-deleted requests)
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status FROM $table_name WHERE document_id = %d AND requester_email = %s AND status != 'deleted'",
             $document_id,
             $email
         ));
@@ -77,6 +77,40 @@ class Database
         }
         
         return false;
+    }
+
+    /**
+     * Check if a request already exists and return detailed information
+     */
+    public static function check_existing_request(int $document_id, string $email): array
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . self::$table_name;
+        
+        // Check for any existing request (including deleted ones)
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status, created_at FROM $table_name WHERE document_id = %d AND requester_email = %s ORDER BY created_at DESC LIMIT 1",
+            $document_id,
+            $email
+        ));
+        
+        if (!$existing) {
+            return ['exists' => false];
+        }
+        
+        // Check if document is currently active
+        $document = get_post($document_id);
+        $is_document_active = $document && $document->post_status === 'publish';
+        
+        return [
+            'exists' => true,
+            'request_id' => $existing->id,
+            'status' => $existing->status,
+            'created_at' => $existing->created_at,
+            'is_document_active' => $is_document_active,
+            'is_deleted' => $existing->status === 'deleted'
+        ];
     }
 
     public static function get_all_requests(): array
@@ -470,13 +504,158 @@ class Database
             return null;
         }
         
+        $filename = basename($file_path);
+        $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
         return [
             'id' => $file_id,
             'url' => $file_url,
             'path' => $file_path,
-            'filename' => basename($file_path),
-            'title' => get_the_title($document_id) ?: basename($file_path)
+            'filename' => $filename,
+            'title' => get_the_title($document_id) ?: $filename,
+            'extension' => $file_extension,
+            'type' => self::get_file_type($file_extension)
         ];
+    }
+
+    /**
+     * Get file type category based on extension
+     */
+    public static function get_file_type(string $extension): string
+    {
+        $extension = strtolower($extension);
+        
+        $file_types = [
+            // Document types
+            'pdf' => 'pdf',
+            'doc' => 'word',
+            'docx' => 'word',
+            'rtf' => 'word',
+            'txt' => 'text',
+            'odt' => 'word',
+            
+            // Spreadsheet types
+            'xls' => 'excel',
+            'xlsx' => 'excel',
+            'csv' => 'excel',
+            'ods' => 'excel',
+            
+            // Presentation types
+            'ppt' => 'powerpoint',
+            'pptx' => 'powerpoint',
+            'odp' => 'powerpoint',
+            
+            // Image types
+            'jpg' => 'image',
+            'jpeg' => 'image',
+            'png' => 'image',
+            'gif' => 'image',
+            'bmp' => 'image',
+            'svg' => 'image',
+            'webp' => 'image',
+            
+            // Archive types
+            'zip' => 'archive',
+            'rar' => 'archive',
+            '7z' => 'archive',
+            'tar' => 'archive',
+            'gz' => 'archive',
+            
+            // Video types
+            'mp4' => 'video',
+            'avi' => 'video',
+            'mov' => 'video',
+            'wmv' => 'video',
+            'flv' => 'video',
+            'webm' => 'video',
+            
+            // Audio types
+            'mp3' => 'audio',
+            'wav' => 'audio',
+            'flac' => 'audio',
+            'aac' => 'audio',
+            'ogg' => 'audio',
+        ];
+        
+        return $file_types[$extension] ?? 'file';
+    }
+
+    /**
+     * Get file type icon based on file type
+     */
+    public static function get_file_type_icon(string $file_type): string
+    {
+        $icons = [
+            'pdf' => '📄',
+            'word' => '📝',
+            'excel' => '📊',
+            'powerpoint' => '📽️',
+            'text' => '📄',
+            'image' => '🖼️',
+            'video' => '🎥',
+            'audio' => '🎵',
+            'archive' => '📦',
+            'file' => '📄'
+        ];
+        
+        return $icons[$file_type] ?? '📄';
+    }
+
+    /**
+     * Get file type icon SVG based on file type
+     */
+    public static function get_file_type_icon_svg(string $file_type): string
+    {
+        $icons = [
+            'pdf' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'word' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'excel' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'powerpoint' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'text' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'image' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z" /></svg>',
+            'video' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z" /></svg>',
+            'audio' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" /></svg>',
+            'archive' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,17H7V15H14M17,13H7V11H17M17,9H7V7H17M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z" /></svg>',
+            'file' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" /></svg>'
+        ];
+        
+        return $icons[$file_type] ?? $icons['file'];
+    }
+
+    /**
+     * Check if a file type can be viewed directly in the browser
+     */
+    public static function can_view_in_browser(string $file_type): bool
+    {
+        $browser_viewable_types = [
+            'pdf',      // PDF files can be viewed in most browsers
+            'image',    // Images can be viewed in browsers
+            'text',     // Text files can be viewed in browsers
+            'video',    // Videos can be played in browsers
+            'audio',    // Audio can be played in browsers
+        ];
+        
+        return in_array($file_type, $browser_viewable_types, true);
+    }
+
+    /**
+     * Get the appropriate link behavior for a file type
+     */
+    public static function get_file_link_behavior(string $file_type): array
+    {
+        if (self::can_view_in_browser($file_type)) {
+            return [
+                'target' => '_blank',
+                'download' => false,
+                'title' => __('View Document', 'protecteddocs')
+            ];
+        } else {
+            return [
+                'target' => '_blank',
+                'download' => true,
+                'title' => __('Download Document', 'protecteddocs')
+            ];
+        }
     }
     
     /**

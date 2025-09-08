@@ -9,10 +9,10 @@ jQuery(document).ready(function ($) {
   console.log("AuthDocs: AJAX URL available:", typeof ajaxurl !== "undefined");
   console.log(
     "AuthDocs: Admin object available:",
-    typeof authdocs_admin !== "undefined"
+    typeof protecteddocs_admin !== "undefined"
   );
-  if (typeof authdocs_admin !== "undefined") {
-    console.log("AuthDocs: Admin object:", authdocs_admin);
+  if (typeof protecteddocs_admin !== "undefined") {
+    console.log("AuthDocs: Admin object:", protecteddocs_admin);
   }
 
   // Handle copy link button clicks
@@ -590,9 +590,9 @@ jQuery(document).ready(function ($) {
       url: ajaxurl,
       type: "POST",
       data: {
-        action: "authdocs_get_request_data",
+        action: "protecteddocs_get_request_data",
         request_id: requestId,
-        nonce: authdocs_admin.nonce,
+        nonce: protecteddocs_admin.nonce,
       },
       success: function (response) {
         console.log("AJAX response received:", response);
@@ -643,7 +643,7 @@ jQuery(document).ready(function ($) {
           if ($fileLinkCell.length && request.document_file) {
             if (request.status === "accepted" && request.secure_hash) {
               var downloadUrl =
-                authdocs_admin.site_url +
+                protecteddocs_admin.site_url +
                 "?authdocs_download=" +
                 request.document_id +
                 "&hash=" +
@@ -885,19 +885,21 @@ jQuery(document).ready(function ($) {
     $btn.addClass("loading").prop("disabled", true);
 
     console.log("AuthDocs: Making AJAX request with data:", {
-      action: "authdocs_manage_request",
+      action: "protecteddocs_manage_request",
       request_id: requestId,
       action_type: action,
-      nonce: authdocs_admin.nonce,
+      nonce: protecteddocs_admin.nonce,
     });
     var ajaxUrl =
       typeof ajaxurl !== "undefined"
         ? ajaxurl
-        : typeof authdocs_admin !== "undefined"
-        ? authdocs_admin.ajax_url
+        : typeof protecteddocs_admin !== "undefined"
+        ? protecteddocs_admin.ajax_url
         : "/wp-admin/admin-ajax.php";
     var nonce =
-      typeof authdocs_admin !== "undefined" ? authdocs_admin.nonce : "";
+      typeof protecteddocs_admin !== "undefined"
+        ? protecteddocs_admin.nonce
+        : "";
     console.log("AuthDocs: AJAX URL:", ajaxUrl);
     console.log("AuthDocs: Nonce value:", nonce);
 
@@ -914,7 +916,7 @@ jQuery(document).ready(function ($) {
       url: ajaxUrl,
       type: "POST",
       data: {
-        action: "authdocs_manage_request",
+        action: "protecteddocs_manage_request",
         request_id: requestId,
         action_type: action,
         nonce: nonce,

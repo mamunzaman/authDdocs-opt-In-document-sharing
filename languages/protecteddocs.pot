@@ -736,50 +736,50 @@ msgstr ""
 msgid "Copied!"
 msgstr ""
 
-#: assets/js/frontend.js:25
+#: assets/js/protecteddocs-frontend.js:25
 msgid "Request Document Access"
 msgstr ""
 
-#: assets/js/frontend.js:30
+#: assets/js/protecteddocs-frontend.js:30
 msgid "Full Name"
 msgstr ""
 
-#: assets/js/frontend.js:33
+#: assets/js/protecteddocs-frontend.js:33
 msgid "Email Address"
 msgstr ""
 
-#: assets/js/frontend.js:40
+#: assets/js/protecteddocs-frontend.js:40
 msgid "Cancel"
 msgstr ""
 
-#: assets/js/frontend.js:42
+#: assets/js/protecteddocs-frontend.js:42
 msgid "Submit Request"
 msgstr ""
 
-#: assets/js/frontend.js:50
+#: assets/js/protecteddocs-frontend.js:50
 msgid "Please fill in all required fields."
 msgstr ""
 
-#: assets/js/frontend.js:55
+#: assets/js/protecteddocs-frontend.js:55
 msgid "Please enter a valid email address."
 msgstr ""
 
-#: assets/js/frontend.js:62
+#: assets/js/protecteddocs-frontend.js:62
 msgid "Submitting..."
 msgstr ""
 
-#: assets/js/frontend.js:75
+#: assets/js/protecteddocs-frontend.js:75
 msgid "Request sent successfully!"
 msgstr ""
 
-#: assets/js/frontend.js:77
+#: assets/js/protecteddocs-frontend.js:77
 msgid "An error occurred. Please try again."
 msgstr ""
 
-#: assets/js/frontend.js:81
+#: assets/js/protecteddocs-frontend.js:81
 msgid "Network error. Please try again."
 msgstr ""
 
-#: assets/js/frontend.js:87
+#: assets/js/protecteddocs-frontend.js:87
 msgid "Submit Request"
 msgstr ""

@@ -1,8 +1,8 @@
 <?php
 /**
- * Settings page template for AuthDocs plugin
+ * Settings page template for ProtectedDocs plugin
  * 
- * @package AuthDocs
+ * @package ProtectedDocs
  */
 
 // Prevent direct access
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 // Check user capabilities
 if (!current_user_can('manage_options')) {
-    wp_die(__('You do not have sufficient permissions to access this page.', 'authdocs'));
+    wp_die(__('You do not have sufficient permissions to access this page.', 'protecteddocs'));
 }
 
 // Build URLs for navigation
@@ -38,10 +38,10 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
             <span class="authdocs-page-icon">
                 <span class="dashicons dashicons-admin-settings"></span>
             </span>
-            <?php _e('Settings', 'authdocs'); ?>
+            <?php _e('Settings', 'protecteddocs'); ?>
         </h1>
         <p class="authdocs-page-description">
-            <?php _e('Configure email templates, frontend settings, and general plugin options', 'authdocs'); ?>
+            <?php _e('Configure email templates, frontend settings, and general plugin options', 'protecteddocs'); ?>
         </p>
     </div>
     
@@ -52,8 +52,8 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                     <span class="dashicons dashicons-yes-alt"></span>
                 </div>
                 <div class="authdocs-notice-text">
-                    <strong><?php _e('Settings Saved Successfully!', 'authdocs'); ?></strong>
-                    <p><?php _e('Your settings have been saved and are now active.', 'authdocs'); ?></p>
+                    <strong><?php _e('Settings Saved Successfully!', 'protecteddocs'); ?></strong>
+                    <p><?php _e('Your settings have been saved and are now active.', 'protecteddocs'); ?></p>
                 </div>
             </div>
         </div>
@@ -67,8 +67,8 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                             <span class="dashicons dashicons-email-alt"></span>
                     </div>
                 <div class="authdocs-nav-card-content">
-                    <h3><?php _e('Email Settings', 'authdocs'); ?></h3>
-                    <p><?php _e('Configure email notifications for access requests, auto-responses, and decisions', 'authdocs'); ?></p>
+                    <h3><?php _e('Email Settings', 'protecteddocs'); ?></h3>
+                    <p><?php _e('Configure email notifications for access requests, auto-responses, and decisions', 'protecteddocs'); ?></p>
                 </div>
                 <div class="authdocs-nav-card-arrow">
                     <span class="dashicons dashicons-arrow-right-alt2"></span>
@@ -80,8 +80,8 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                             <span class="dashicons dashicons-admin-appearance"></span>
                 </div>
                 <div class="authdocs-nav-card-content">
-                    <h3><?php _e('Frontend Settings', 'authdocs'); ?></h3>
-                    <p><?php _e('Customize color schemes, pagination styles, and document display options', 'authdocs'); ?></p>
+                    <h3><?php _e('Frontend Settings', 'protecteddocs'); ?></h3>
+                    <p><?php _e('Customize color schemes, pagination styles, and document display options', 'protecteddocs'); ?></p>
                 </div>
                 <div class="authdocs-nav-card-arrow">
                     <span class="dashicons dashicons-arrow-right-alt2"></span>
@@ -93,8 +93,8 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                     <span class="dashicons dashicons-info"></span>
                 </div>
                 <div class="authdocs-nav-card-content">
-                    <h3><?php _e('About Plugin', 'authdocs'); ?></h3>
-                    <p><?php _e('Learn about AuthDocs features, get help, and view system information', 'authdocs'); ?></p>
+                    <h3><?php _e('About Plugin', 'protecteddocs'); ?></h3>
+                    <p><?php _e('Learn about ProtectedDocs features, get help, and view system information', 'protecteddocs'); ?></p>
                 </div>
                 <div class="authdocs-nav-card-arrow">
                     <span class="dashicons dashicons-arrow-right-alt2"></span>

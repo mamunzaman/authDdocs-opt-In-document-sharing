@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class GutenbergBlock
 {
@@ -9,6 +9,7 @@ class GutenbergBlock
     {
         add_action('init', [$this, 'register_block']);
         add_action('enqueue_block_editor_assets', [$this, 'enqueue_block_editor_assets']);
+        add_action('init', [$this, 'migrate_old_blocks'], 20); // Run after block registration
     }
 
     public function register_block(): void
@@ -17,8 +18,12 @@ class GutenbergBlock
             return;
         }
 
-        register_block_type('authdocs/document-grid', [
+        register_block_type('protecteddocs/document-grid', [
             'attributes' => [
+                'columns' => [
+                    'type' => 'number',
+                    'default' => 3,
+                ],
                 'limit' => [
                     'type' => 'number',
                     'default' => 12,
@@ -59,50 +64,127 @@ class GutenbergBlock
                     'type' => 'string',
                     'default' => 'DESC',
                 ],
+                'colorPalette' => [
+                    'type' => 'string',
+                    'default' => 'default',
+                ],
+                'columnsDesktop' => [
+                    'type' => 'number',
+                    'default' => 5,
+                ],
+                'columnsTablet' => [
+                    'type' => 'number',
+                    'default' => 3,
+                ],
+                'columnsMobile' => [
+                    'type' => 'number',
+                    'default' => 1,
+                ],
             ],
             'render_callback' => [$this, 'render_block'],
-            'editor_script' => 'authdocs-gutenberg-block',
-            'editor_style' => 'authdocs-gutenberg-block-editor',
+            'editor_script' => 'protecteddocs-gutenberg-block',
+            'editor_style' => 'protecteddocs-gutenberg-block-editor',
+        ]);
+        
+        // Register the old block name as an alias for backward compatibility
+        register_block_type('authdocs/document-grid', [
+            'attributes' => [
+                'columns' => [
+                    'type' => 'number',
+                    'default' => 3,
+                ],
+                'limit' => [
+                    'type' => 'number',
+                    'default' => 12,
+                ],
+                'loadMoreLimit' => [
+                    'type' => 'number',
+                    'default' => 12,
+                ],
+                'paginationType' => [
+                    'type' => 'string',
+                    'default' => 'classic',
+                ],
+                'featuredImage' => [
+                    'type' => 'boolean',
+                    'default' => true,
+                ],
+                'paginationStyle' => [
+                    'type' => 'string',
+                    'default' => 'classic',
+                ],
+                'restriction' => [
+                    'type' => 'string',
+                    'default' => 'all',
+                ],
+                'orderby' => [
+                    'type' => 'string',
+                    'default' => 'date',
+                ],
+                'order' => [
+                    'type' => 'string',
+                    'default' => 'DESC',
+                ],
+                'columnsDesktop' => [
+                    'type' => 'number',
+                    'default' => 5,
+                ],
+                'columnsTablet' => [
+                    'type' => 'number',
+                    'default' => 3,
+                ],
+                'columnsMobile' => [
+                    'type' => 'number',
+                    'default' => 1,
+                ],
+            ],
+            'render_callback' => [$this, 'render_block'],
+            'editor_script' => 'protecteddocs-gutenberg-block',
+            'editor_style' => 'protecteddocs-gutenberg-block-editor',
         ]);
     }
 
     public function enqueue_block_editor_assets(): void
     {
         wp_enqueue_script(
-            'authdocs-gutenberg-block',
-            AUTHDOCS_PLUGIN_URL . 'assets/js/gutenberg-block.js',
+            'protecteddocs-gutenberg-block',
+            PROTECTEDDOCS_PLUGIN_URL . 'assets/js/gutenberg-block.js',
             ['wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-i18n'],
-            AUTHDOCS_VERSION,
+            PROTECTEDDOCS_VERSION,
             true
         );
 
         wp_enqueue_style(
-            'authdocs-gutenberg-block-editor',
-            AUTHDOCS_PLUGIN_URL . 'assets/css/gutenberg-block-editor.css',
+            'protecteddocs-gutenberg-block-editor',
+            PROTECTEDDOCS_PLUGIN_URL . 'assets/css/gutenberg-block-editor.css',
             ['wp-edit-blocks'],
-            AUTHDOCS_VERSION
+            PROTECTEDDOCS_VERSION
         );
 
         // Localize script with translations
-        wp_localize_script('authdocs-gutenberg-block', 'authdocs_block', [
-            'title' => __('AuthDocs Document Grid', 'authdocs'),
-            'description' => __('Display a grid of documents with customizable settings', 'authdocs'),
-            'category' => __('AuthDocs', 'authdocs'),
+        wp_localize_script('protecteddocs-gutenberg-block', 'protecteddocs_block', [
+            'title' => __('ProtectedDocs Document Grid', 'protecteddocs'),
+            'description' => __('Display a grid of documents with customizable settings', 'protecteddocs'),
+            'category' => __('ProtectedDocs', 'protecteddocs'),
             'icon' => 'grid-view',
         ]);
     }
 
     public function render_block(array $attributes): string
     {
-        // Auto-calculate columns based on limit
+        // Get simple values from attributes
+        $columns = $attributes['columns'] ?? 3;
         $limit = $attributes['limit'] ?? 12;
-        $columns = $this->calculate_columns($limit);
+        $load_more_limit = $attributes['loadMoreLimit'] ?? 12;
 
         // Convert block attributes to shortcode format
         $shortcode_atts = [
             'columns' => $columns,
+            'columns_desktop' => $attributes['columnsDesktop'] ?? 5,
+            'columns_tablet' => $attributes['columnsTablet'] ?? 3,
+            'columns_mobile' => $attributes['columnsMobile'] ?? 1,
             'limit' => $limit,
-            'load_more_limit' => $attributes['loadMoreLimit'] ?? 12,
+            'load_more_limit' => $load_more_limit,
             'pagination_style' => $attributes['paginationStyle'] ?? 'classic',
             'pagination_type' => $attributes['paginationType'] ?? 'classic',
             'featured_image' => ($attributes['featuredImage'] ?? true) ? 'yes' : 'no',
@@ -112,6 +194,7 @@ class GutenbergBlock
             'show_date' => ($attributes['showDate'] ?? true) ? 'yes' : 'no',
             'orderby' => $attributes['orderby'] ?? 'date',
             'order' => $attributes['order'] ?? 'DESC',
+            'color_palette' => $attributes['colorPalette'] ?? 'default',
         ];
 
         // Handle pagination style mapping
@@ -139,25 +222,63 @@ class GutenbergBlock
         }
         $shortcode_string .= ']';
 
-        // Execute shortcode
+        // For block rendering, return a placeholder to avoid CSS output issues
+        // The shortcode will be executed on the frontend
+        if (is_admin() || wp_doing_ajax() || defined('REST_REQUEST') || 
+            (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false)) {
+            return '<div class="authdocs-block-placeholder" data-shortcode="' . esc_attr($shortcode_string) . '">' . 
+                   __('ProtectedDocs Document Grid - Content will be loaded on the frontend', 'protecteddocs') . 
+                   '</div>';
+        }
+        
+        // Execute shortcode only on frontend
         return do_shortcode($shortcode_string);
     }
-
+    
     /**
-     * Calculate optimal number of columns based on documents per page
+     * Migrate old blocks from authdocs/document-grid to protecteddocs/document-grid
      */
-    private function calculate_columns(int $documents_per_page): int
+    public function migrate_old_blocks(): void
     {
-        if ($documents_per_page <= 4) {
-            return 2;
-        } elseif ($documents_per_page <= 9) {
-            return 3;
-        } elseif ($documents_per_page <= 16) {
-            return 4;
-        } elseif ($documents_per_page <= 25) {
-            return 5;
-        } else {
-            return 6;
+        // Only run migration once
+        if (get_option('protecteddocs_blocks_migrated', false)) {
+            return;
         }
+        
+        global $wpdb;
+        
+        // Find all posts that contain the old block
+        $posts_with_old_blocks = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT ID, post_content FROM {$wpdb->posts} 
+                 WHERE post_content LIKE %s 
+                 AND post_type IN ('post', 'page')",
+                '%authdocs/document-grid%'
+            )
+        );
+        
+        if (!empty($posts_with_old_blocks)) {
+            foreach ($posts_with_old_blocks as $post) {
+                // Replace old block name with new block name
+                $new_content = str_replace(
+                    'authdocs/document-grid',
+                    'protecteddocs/document-grid',
+                    $post->post_content
+                );
+                
+                // Update the post content
+                $wpdb->update(
+                    $wpdb->posts,
+                    ['post_content' => $new_content],
+                    ['ID' => $post->ID],
+                    ['%s'],
+                    ['%d']
+                );
+            }
+        }
+        
+        // Mark migration as completed
+        update_option('protecteddocs_blocks_migrated', true);
     }
+
 }

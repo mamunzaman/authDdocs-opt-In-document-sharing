@@ -6,7 +6,7 @@
  */
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class Logs
 {
@@ -32,7 +32,7 @@ class Logs
     public function render_logs_page(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
         
         $logs = $this->get_all_logs();
@@ -41,15 +41,15 @@ class Logs
         
         ?>
         <div class="wrap">
-            <h1><?php _e('Email Logs', 'authdocs'); ?></h1>
-            <p class="description"><?php _e('View all email send attempts and autorespond activities.', 'authdocs'); ?></p>
+            <h1><?php _e('Email Logs', 'protecteddocs'); ?></h1>
+            <p class="description"><?php _e('View all email send attempts and autorespond activities.', 'protecteddocs'); ?></p>
             
             <?php $this->render_filters(); ?>
             
             <div class="authdocs-logs-container">
                 <?php if (empty($filtered_logs)): ?>
                     <div class="notice notice-info">
-                        <p><?php _e('No logs found.', 'authdocs'); ?></p>
+                        <p><?php _e('No logs found.', 'protecteddocs'); ?></p>
                     </div>
                 <?php else: ?>
                     <?php $this->render_logs_table($filtered_logs, $pagination); ?>
@@ -202,21 +202,21 @@ class Logs
                 <input type="hidden" name="page" value="authdocs-logs">
                 
                 <select name="type" class="authdocs-filter-select">
-                    <option value=""><?php _e('All Types', 'authdocs'); ?></option>
-                    <option value="email" <?php selected($current_type, 'email'); ?>><?php _e('Email Logs', 'authdocs'); ?></option>
-                    <option value="link_action" <?php selected($current_type, 'link_action'); ?>><?php _e('Link Action Logs', 'authdocs'); ?></option>
+                    <option value=""><?php _e('All Types', 'protecteddocs'); ?></option>
+                    <option value="email" <?php selected($current_type, 'email'); ?>><?php _e('Email Logs', 'protecteddocs'); ?></option>
+                    <option value="link_action" <?php selected($current_type, 'link_action'); ?>><?php _e('Link Action Logs', 'protecteddocs'); ?></option>
                 </select>
                 
                 <select name="status" class="authdocs-filter-select">
-                    <option value=""><?php _e('All Statuses', 'authdocs'); ?></option>
-                    <option value="success" <?php selected($current_status, 'success'); ?>><?php _e('Success', 'authdocs'); ?></option>
-                    <option value="error" <?php selected($current_status, 'error'); ?>><?php _e('Error', 'authdocs'); ?></option>
+                    <option value=""><?php _e('All Statuses', 'protecteddocs'); ?></option>
+                    <option value="success" <?php selected($current_status, 'success'); ?>><?php _e('Success', 'protecteddocs'); ?></option>
+                    <option value="error" <?php selected($current_status, 'error'); ?>><?php _e('Error', 'protecteddocs'); ?></option>
                 </select>
                 
                 <input type="date" name="date" value="<?php echo esc_attr($current_date); ?>" class="authdocs-filter-date">
                 
-                <button type="submit" class="button"><?php _e('Filter', 'authdocs'); ?></button>
-                <a href="<?php echo admin_url('edit.php?post_type=document&page=authdocs-logs'); ?>" class="button"><?php _e('Clear', 'authdocs'); ?></a>
+                <button type="submit" class="button"><?php _e('Filter', 'protecteddocs'); ?></button>
+                <a href="<?php echo admin_url('edit.php?post_type=document&page=authdocs-logs'); ?>" class="button"><?php _e('Clear', 'protecteddocs'); ?></a>
             </form>
         </div>
         <?php
@@ -234,13 +234,13 @@ class Logs
         <table class="wp-list-table widefat fixed striped authdocs-logs-table">
             <thead>
                 <tr>
-                    <th><?php _e('Date/Time', 'authdocs'); ?></th>
-                    <th><?php _e('Type', 'authdocs'); ?></th>
-                    <th><?php _e('Request ID', 'authdocs'); ?></th>
-                    <th><?php _e('Template', 'authdocs'); ?></th>
-                    <th><?php _e('Recipient', 'authdocs'); ?></th>
-                    <th><?php _e('Status', 'authdocs'); ?></th>
-                    <th><?php _e('Details', 'authdocs'); ?></th>
+                    <th><?php _e('Date/Time', 'protecteddocs'); ?></th>
+                    <th><?php _e('Type', 'protecteddocs'); ?></th>
+                    <th><?php _e('Request ID', 'protecteddocs'); ?></th>
+                    <th><?php _e('Template', 'protecteddocs'); ?></th>
+                    <th><?php _e('Recipient', 'protecteddocs'); ?></th>
+                    <th><?php _e('Status', 'protecteddocs'); ?></th>
+                    <th><?php _e('Details', 'protecteddocs'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -254,7 +254,7 @@ class Logs
                         </td>
                         <td>
                             <?php 
-                            $type_label = $log['type'] === 'email' ? __('Email', 'authdocs') : __('Link Action', 'authdocs');
+                            $type_label = $log['type'] === 'email' ? __('Email', 'protecteddocs') : __('Link Action', 'protecteddocs');
                             echo '<span class="authdocs-log-type authdocs-log-type-' . esc_attr($log['type']) . '">' . esc_html($type_label) . '</span>';
                             ?>
                         </td>
@@ -279,7 +279,7 @@ class Logs
                             <?php 
                             $success = $log['data']['success'] ?? false;
                             $status_class = $success ? 'success' : 'error';
-                            $status_text = $success ? __('Success', 'authdocs') : __('Error', 'authdocs');
+                            $status_text = $success ? __('Success', 'protecteddocs') : __('Error', 'protecteddocs');
                             echo '<span class="authdocs-log-status authdocs-log-status-' . $status_class . '">' . esc_html($status_text) . '</span>';
                             ?>
                         </td>
@@ -322,7 +322,7 @@ class Logs
             <span class="authdocs-pagination-info">
                 <?php 
                 printf(
-                    __('Showing %1$d-%2$d of %3$d items', 'authdocs'),
+                    __('Showing %1$d-%2$d of %3$d items', 'protecteddocs'),
                     ($pagination['current_page'] - 1) * $pagination['per_page'] + 1,
                     min($pagination['current_page'] * $pagination['per_page'], $pagination['total_items']),
                     $pagination['total_items']
@@ -332,7 +332,7 @@ class Logs
             
             <div class="authdocs-pagination-links">
                 <?php if ($pagination['current_page'] > 1): ?>
-                    <a href="<?php echo add_query_arg('paged', $pagination['current_page'] - 1, $current_url); ?>" class="button">&laquo; <?php _e('Previous', 'authdocs'); ?></a>
+                    <a href="<?php echo add_query_arg('paged', $pagination['current_page'] - 1, $current_url); ?>" class="button">&laquo; <?php _e('Previous', 'protecteddocs'); ?></a>
                 <?php endif; ?>
                 
                 <?php for ($i = 1; $i <= $pagination['total_pages']; $i++): ?>
@@ -344,7 +344,7 @@ class Logs
                 <?php endfor; ?>
                 
                 <?php if ($pagination['current_page'] < $pagination['total_pages']): ?>
-                    <a href="<?php echo add_query_arg('paged', $pagination['current_page'] + 1, $current_url); ?>" class="button"><?php _e('Next', 'authdocs'); ?> &raquo;</a>
+                    <a href="<?php echo add_query_arg('paged', $pagination['current_page'] + 1, $current_url); ?>" class="button"><?php _e('Next', 'protecteddocs'); ?> &raquo;</a>
                 <?php endif; ?>
             </div>
         </div>

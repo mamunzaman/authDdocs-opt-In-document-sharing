@@ -12,11 +12,11 @@ if (!defined('ABSPATH')) {
 
 // Check user capabilities
 if (!current_user_can('manage_options')) {
-    wp_die(__('You do not have sufficient permissions to access this page.', 'authdocs'));
+    wp_die(__('You do not have sufficient permissions to access this page.', 'protecteddocs'));
 }
 
 // Create Settings instance for helper methods
-$settings = new \AuthDocs\Settings();
+$settings = new \ProtectedDocs\Settings();
 
 // Check if settings were just saved
 $settings_updated = false;
@@ -31,10 +31,10 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
             <span class="authdocs-page-icon">
                 <span class="dashicons dashicons-email-alt"></span>
             </span>
-            <?php _e('Email Settings', 'authdocs'); ?>
+            <?php _e('Email Settings', 'protecteddocs'); ?>
         </h1>
         <p class="authdocs-page-description">
-            <?php _e('Configure email templates for different stages of the document access workflow', 'authdocs'); ?>
+            <?php _e('Configure email templates for different stages of the document access workflow', 'protecteddocs'); ?>
         </p>
     </div>
     
@@ -45,8 +45,8 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                     <span class="dashicons dashicons-yes-alt"></span>
                 </div>
                 <div class="authdocs-notice-text">
-                    <strong><?php _e('Settings Saved Successfully!', 'authdocs'); ?></strong>
-                    <p><?php _e('Your email template settings have been saved and are now active.', 'authdocs'); ?></p>
+                    <strong><?php _e('Settings Saved Successfully!', 'protecteddocs'); ?></strong>
+                    <p><?php _e('Your email template settings have been saved and are now active.', 'protecteddocs'); ?></p>
                 </div>
             </div>
         </div>
@@ -58,10 +58,10 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                 <div class="authdocs-email-templates-header">
                     <h2 class="authdocs-main-title">
                         <span class="dashicons dashicons-email-alt"></span>
-                        <?php _e('Email Templates Configuration', 'authdocs'); ?>
+                        <?php _e('Email Templates Configuration', 'protecteddocs'); ?>
                     </h2>
                     <p class="authdocs-main-description">
-                        <?php _e('Customize your email templates for different stages of the document access workflow. Each template supports dynamic variables and HTML formatting.', 'authdocs'); ?>
+                        <?php _e('Customize your email templates for different stages of the document access workflow. Each template supports dynamic variables and HTML formatting.', 'protecteddocs'); ?>
                     </p>
                 </div>
                 
@@ -70,16 +70,16 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                     settings_fields('authdocs_options');
                     
                     // Include hidden fields for frontend settings to preserve their values
-                    echo '<input type="hidden" name="' . \AuthDocs\Settings::FRONTEND_COLOR_PALETTE_NAME . '" value="' . esc_attr(get_option(\AuthDocs\Settings::FRONTEND_COLOR_PALETTE_NAME, '')) . '" />';
-                    echo '<input type="hidden" name="' . \AuthDocs\Settings::PAGINATION_STYLE_NAME . '" value="' . esc_attr(get_option(\AuthDocs\Settings::PAGINATION_STYLE_NAME, '')) . '" />';
-                    echo '<input type="hidden" name="' . \AuthDocs\Settings::PAGINATION_TYPE_NAME . '" value="' . esc_attr(get_option(\AuthDocs\Settings::PAGINATION_TYPE_NAME, '')) . '" />';
+                    echo '<input type="hidden" name="' . \ProtectedDocs\Settings::FRONTEND_COLOR_PALETTE_NAME . '" value="' . esc_attr(get_option(\ProtectedDocs\Settings::FRONTEND_COLOR_PALETTE_NAME, '')) . '" />';
+                    echo '<input type="hidden" name="' . \ProtectedDocs\Settings::PAGINATION_STYLE_NAME . '" value="' . esc_attr(get_option(\ProtectedDocs\Settings::PAGINATION_STYLE_NAME, '')) . '" />';
+                    echo '<input type="hidden" name="' . \ProtectedDocs\Settings::PAGINATION_TYPE_NAME . '" value="' . esc_attr(get_option(\ProtectedDocs\Settings::PAGINATION_TYPE_NAME, '')) . '" />';
                     ?>
                     
                     <!-- Top Save Button -->
                     <div class="authdocs-form-actions authdocs-form-actions-top">
                         <button type="submit" class="button button-primary authdocs-save-button">
                             <span class="dashicons dashicons-saved"></span>
-                            <?php _e('Save Email Templates', 'authdocs'); ?>
+                            <?php _e('Save Email Templates', 'protecteddocs'); ?>
                         </button>
                     </div>
                     
@@ -87,16 +87,18 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                         <!-- Access Request Email Section -->
                         <div class="authdocs-email-section authdocs-section-access-request">
                             <div class="authdocs-section-header">
-                                <div class="authdocs-section-icon">
-                                    <span class="dashicons dashicons-admin-users"></span>
+                                <div class="authdocs-section-header-left">
+                                    <div class="authdocs-section-icon">
+                                        <span class="dashicons dashicons-admin-users"></span>
+                                    </div>
+                                    <div class="authdocs-section-title">
+                                        <h3><?php _e('Access Request Notification', 'protecteddocs'); ?></h3>
+                                        <p><?php _e('Sent to website owners when someone requests document access', 'protecteddocs'); ?></p>
+                                    </div>
                                 </div>
-                                <div class="authdocs-section-title">
-                                    <h3><?php _e('Access Request Notification', 'authdocs'); ?></h3>
-                                    <p><?php _e('Sent to website owners when someone requests document access', 'authdocs'); ?></p>
-                                </div>
-                                <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('access_request', '<?php _e('Access Request Email Preview', 'authdocs'); ?>')">
+                                <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('access_request', '<?php _e('Access Request Email Preview', 'protecteddocs'); ?>')">
                                     <span class="dashicons dashicons-visibility"></span>
-                                    <?php _e('Preview', 'authdocs'); ?>
+                                    <?php _e('Preview', 'protecteddocs'); ?>
                                 </button>
                             </div>
                             <div class="authdocs-section-content">
@@ -108,23 +110,25 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                         <div class="authdocs-form-actions authdocs-form-actions-middle">
                             <button type="submit" class="button button-primary authdocs-save-button">
                                 <span class="dashicons dashicons-saved"></span>
-                                <?php _e('Save Email Templates', 'authdocs'); ?>
+                                <?php _e('Save Email Templates', 'protecteddocs'); ?>
                             </button>
                         </div>
                         
                         <!-- Auto-Response Email Section -->
                         <div class="authdocs-email-section authdocs-section-auto-response">
                             <div class="authdocs-section-header">
-                                <div class="authdocs-section-icon">
-                                    <span class="dashicons dashicons-yes-alt"></span>
+                                <div class="authdocs-section-header-left">
+                                    <div class="authdocs-section-icon">
+                                        <span class="dashicons dashicons-yes-alt"></span>
+                                    </div>
+                                    <div class="authdocs-section-title">
+                                        <h3><?php _e('Auto-Response Confirmation', 'protecteddocs'); ?></h3>
+                                        <p><?php _e('Automatically sent to users when they submit an access request', 'protecteddocs'); ?></p>
+                                    </div>
                                 </div>
-                                <div class="authdocs-section-title">
-                                    <h3><?php _e('Auto-Response Confirmation', 'authdocs'); ?></h3>
-                                    <p><?php _e('Automatically sent to users when they submit an access request', 'authdocs'); ?></p>
-                                </div>
-                                <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('auto_response', '<?php _e('Auto-Response Email Preview', 'authdocs'); ?>')">
+                                <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('auto_response', '<?php _e('Auto-Response Email Preview', 'protecteddocs'); ?>')">
                                     <span class="dashicons dashicons-visibility"></span>
-                                    <?php _e('Preview', 'authdocs'); ?>
+                                    <?php _e('Preview', 'protecteddocs'); ?>
                                 </button>
                             </div>
                             <div class="authdocs-section-content">
@@ -135,16 +139,18 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                         <!-- Grant/Decline Email Section -->
                         <div class="authdocs-email-section authdocs-section-grant-decline">
                             <div class="authdocs-section-header">
-                                <div class="authdocs-section-icon">
-                                    <span class="dashicons dashicons-awards"></span>
+                                <div class="authdocs-section-header-left">
+                                    <div class="authdocs-section-icon">
+                                        <span class="dashicons dashicons-awards"></span>
+                                    </div>
+                                    <div class="authdocs-section-title">
+                                        <h3><?php _e('Access Decision Notification', 'protecteddocs'); ?></h3>
+                                        <p><?php _e('Sent to users when their access request is approved or declined', 'protecteddocs'); ?></p>
+                                    </div>
                                 </div>
-                                <div class="authdocs-section-title">
-                                    <h3><?php _e('Access Decision Notification', 'authdocs'); ?></h3>
-                                    <p><?php _e('Sent to users when their access request is approved or declined', 'authdocs'); ?></p>
-                                </div>
-                                <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('grant_decline', '<?php _e('Access Decision Email Preview', 'authdocs'); ?>')">
+                                <button type="button" class="authdocs-section-preview-btn" onclick="previewEmail('grant_decline', '<?php _e('Access Decision Email Preview', 'protecteddocs'); ?>')">
                                     <span class="dashicons dashicons-visibility"></span>
-                                    <?php _e('Preview', 'authdocs'); ?>
+                                    <?php _e('Preview', 'protecteddocs'); ?>
                                 </button>
                             </div>
                             <div class="authdocs-section-content">
@@ -156,7 +162,7 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                     <div class="authdocs-form-actions authdocs-form-actions-bottom">
                         <button type="submit" class="button button-primary authdocs-save-button">
                             <span class="dashicons dashicons-saved"></span>
-                            <?php _e('Save Email Templates', 'authdocs'); ?>
+                            <?php _e('Save Email Templates', 'protecteddocs'); ?>
                         </button>
                         <div class="authdocs-save-status">
                             <span class="authdocs-save-indicator"></span>
@@ -169,10 +175,10 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                 <div class="authdocs-sidebar-header">
                     <h3 class="authdocs-sidebar-title">
                         <span class="dashicons dashicons-admin-tools"></span>
-                        <?php _e('Tools & Resources', 'authdocs'); ?>
+                        <?php _e('Tools & Resources', 'protecteddocs'); ?>
                     </h3>
                     <p class="authdocs-sidebar-description">
-                        <?php _e('Preview, test, and optimize your email templates', 'authdocs'); ?>
+                        <?php _e('Preview, test, and optimize your email templates', 'protecteddocs'); ?>
                     </p>
                 </div>
                 
@@ -184,26 +190,26 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                 <span class="dashicons dashicons-visibility"></span>
                             </div>
                             <div class="authdocs-card-title">
-                                <h4><?php _e('Email Preview', 'authdocs'); ?></h4>
-                                <p><?php _e('See how your emails will look', 'authdocs'); ?></p>
+                                <h4><?php _e('Email Preview', 'protecteddocs'); ?></h4>
+                                <p><?php _e('See how your emails will look', 'protecteddocs'); ?></p>
                             </div>
                         </div>
                         <div class="authdocs-card-content">
                             <p class="authdocs-card-description">
-                                <?php _e('Preview your email templates with sample data to ensure they look perfect:', 'authdocs'); ?>
+                                <?php _e('Preview your email templates with sample data to ensure they look perfect:', 'protecteddocs'); ?>
                             </p>
                             <div class="authdocs-button-group">
                                 <button type="button" id="preview-access-request" class="authdocs-sidebar-button authdocs-button-preview">
                                     <span class="dashicons dashicons-admin-users"></span>
-                                    <?php _e('Access Request', 'authdocs'); ?>
+                                    <?php _e('Access Request', 'protecteddocs'); ?>
                                 </button>
                                 <button type="button" id="preview-auto-response" class="authdocs-sidebar-button authdocs-button-preview">
                                     <span class="dashicons dashicons-yes-alt"></span>
-                                    <?php _e('Auto-Response', 'authdocs'); ?>
+                                    <?php _e('Auto-Response', 'protecteddocs'); ?>
                                 </button>
                                 <button type="button" id="preview-grant-decline" class="authdocs-sidebar-button authdocs-button-preview">
                                     <span class="dashicons dashicons-awards"></span>
-                                    <?php _e('Grant/Decline', 'authdocs'); ?>
+                                    <?php _e('Grant/Decline', 'protecteddocs'); ?>
                                 </button>
                             </div>
                         </div>
@@ -216,27 +222,27 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                 <span class="dashicons dashicons-lightbulb"></span>
                             </div>
                             <div class="authdocs-card-title">
-                                <h4><?php _e('Template Tips', 'authdocs'); ?></h4>
-                                <p><?php _e('Best practices for email design', 'authdocs'); ?></p>
+                                <h4><?php _e('Template Tips', 'protecteddocs'); ?></h4>
+                                <p><?php _e('Best practices for email design', 'protecteddocs'); ?></p>
                             </div>
                         </div>
                         <div class="authdocs-card-content">
                             <div class="authdocs-tips-list">
                                 <div class="authdocs-tip-item">
                                     <span class="dashicons dashicons-editor-code"></span>
-                                    <span><?php _e('Use HTML for rich formatting', 'authdocs'); ?></span>
+                                    <span><?php _e('Use HTML for rich formatting', 'protecteddocs'); ?></span>
                                 </div>
                                 <div class="authdocs-tip-item">
                                     <span class="dashicons dashicons-admin-links"></span>
-                                    <span><?php _e('Variables are automatically replaced', 'authdocs'); ?></span>
+                                    <span><?php _e('Variables are automatically replaced', 'protecteddocs'); ?></span>
                                 </div>
                                 <div class="authdocs-tip-item">
                                     <span class="dashicons dashicons-email-alt"></span>
-                                    <span><?php _e('Test with different email clients', 'authdocs'); ?></span>
+                                    <span><?php _e('Test with different email clients', 'protecteddocs'); ?></span>
                                 </div>
                                 <div class="authdocs-tip-item">
                                     <span class="dashicons dashicons-text"></span>
-                                    <span><?php _e('Keep subject lines under 60 characters', 'authdocs'); ?></span>
+                                    <span><?php _e('Keep subject lines under 60 characters', 'protecteddocs'); ?></span>
                                 </div>
                             </div>
                         </div>
@@ -249,26 +255,26 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
                                 <span class="dashicons dashicons-email"></span>
                             </div>
                             <div class="authdocs-card-title">
-                                <h4><?php _e('Test Emails', 'authdocs'); ?></h4>
-                                <p><?php _e('Send test emails to verify functionality', 'authdocs'); ?></p>
+                                <h4><?php _e('Test Emails', 'protecteddocs'); ?></h4>
+                                <p><?php _e('Send test emails to verify functionality', 'protecteddocs'); ?></p>
                             </div>
                         </div>
                         <div class="authdocs-card-content">
                             <p class="authdocs-card-description">
-                                <?php _e('Send test emails to verify your templates work correctly:', 'authdocs'); ?>
+                                <?php _e('Send test emails to verify your templates work correctly:', 'protecteddocs'); ?>
                             </p>
                             <div class="authdocs-button-group">
                                 <button type="button" id="test-access-request" class="authdocs-sidebar-button authdocs-button-test">
                                     <span class="dashicons dashicons-admin-users"></span>
-                                    <?php _e('Test Access Request', 'authdocs'); ?>
+                                    <?php _e('Test Access Request', 'protecteddocs'); ?>
                                 </button>
                                 <button type="button" id="test-auto-response" class="authdocs-sidebar-button authdocs-button-test">
                                     <span class="dashicons dashicons-yes-alt"></span>
-                                    <?php _e('Test Auto-Response', 'authdocs'); ?>
+                                    <?php _e('Test Auto-Response', 'protecteddocs'); ?>
                                 </button>
                                 <button type="button" id="test-grant-decline" class="authdocs-sidebar-button authdocs-button-test">
                                     <span class="dashicons dashicons-awards"></span>
-                                    <?php _e('Test Grant/Decline', 'authdocs'); ?>
+                                    <?php _e('Test Grant/Decline', 'protecteddocs'); ?>
                                 </button>
                             </div>
                             <div id="test-email-results" class="authdocs-test-results"></div>
@@ -284,13 +290,13 @@ if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
 <div id="authdocs-email-preview-modal" class="authdocs-modal" style="display: none;">
     <div class="authdocs-modal-content">
         <div class="authdocs-modal-header">
-            <h3 id="preview-modal-title"><?php _e('Email Preview', 'authdocs'); ?></h3>
+            <h3 id="preview-modal-title"><?php _e('Email Preview', 'protecteddocs'); ?></h3>
             <button type="button" class="authdocs-modal-close">&times;</button>
         </div>
         <div class="authdocs-modal-body">
             <div class="authdocs-preview-content">
                 <div class="authdocs-preview-subject">
-                    <strong><?php _e('Subject:', 'authdocs'); ?></strong>
+                    <strong><?php _e('Subject:', 'protecteddocs'); ?></strong>
                     <span id="preview-subject-display"></span>
                 </div>
                 <div id="preview-body-display"></div>
@@ -359,15 +365,15 @@ jQuery(document).ready(function($) {
     
     // Preview button handlers
     $('#preview-access-request').on('click', function() {
-        previewEmail('access_request', '<?php _e('Access Request Email Preview', 'authdocs'); ?>');
+        previewEmail('access_request', '<?php _e('Access Request Email Preview', 'protecteddocs'); ?>');
     });
     
     $('#preview-auto-response').on('click', function() {
-        previewEmail('auto_response', '<?php _e('Auto-Response Email Preview', 'authdocs'); ?>');
+        previewEmail('auto_response', '<?php _e('Auto-Response Email Preview', 'protecteddocs'); ?>');
     });
     
     $('#preview-grant-decline').on('click', function() {
-        previewEmail('grant_decline', '<?php _e('Grant/Decline Email Preview', 'authdocs'); ?>');
+        previewEmail('grant_decline', '<?php _e('Grant/Decline Email Preview', 'protecteddocs'); ?>');
     });
     
     // Close modal
@@ -394,8 +400,8 @@ jQuery(document).ready(function($) {
             url: ajaxurl,
             type: 'POST',
             data: {
-                action: 'authdocs_' + action,
-                nonce: authdocs_admin.nonce
+                action: 'protecteddocs_' + action,
+                nonce: protecteddocs_admin.nonce
             },
             success: function(response) {
                 if (response.success) {

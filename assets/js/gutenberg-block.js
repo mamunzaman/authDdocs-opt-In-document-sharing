@@ -15,10 +15,10 @@
   const { InspectorControls } = editor;
 
   // Block registration
-  registerBlockType("authdocs/document-grid", {
-    title: authdocs_block.title,
-    description: authdocs_block.description,
-    icon: authdocs_block.icon,
+  registerBlockType("protecteddocs/document-grid", {
+    title: protecteddocs_block.title,
+    description: protecteddocs_block.description,
+    icon: protecteddocs_block.icon,
     category: "widgets",
     keywords: [
       __("documents", "authdocs"),
@@ -26,6 +26,10 @@
       __("authdocs", "authdocs"),
     ],
     attributes: {
+      columns: {
+        type: "number",
+        default: 3,
+      },
       limit: {
         type: "number",
         default: 12,
@@ -66,43 +70,61 @@
         type: "string",
         default: "DESC",
       },
+      colorPalette: {
+        type: "string",
+        default: "default",
+      },
+      columnsDesktop: {
+        type: "number",
+        default: 5,
+      },
+      columnsTablet: {
+        type: "number",
+        default: 3,
+      },
+      columnsMobile: {
+        type: "number",
+        default: 1,
+      },
     },
 
     edit: function (props) {
       const { attributes, setAttributes } = props;
+
+      // Ensure attributes exist with fallbacks
       const {
-        limit,
-        loadMoreLimit,
-        paginationType,
-        featuredImage,
-        paginationStyle,
-        restriction,
-        showDescription,
-        showDate,
-        orderby,
-        order,
+        columns = 3,
+        limit = 12,
+        loadMoreLimit = 12,
+        paginationType = "classic",
+        featuredImage = true,
+        paginationStyle = "classic",
+        restriction = "all",
+        showDescription = true,
+        showDate = true,
+        orderby = "date",
+        order = "DESC",
+        colorPalette = "default",
+        columnsDesktop = 5,
+        columnsTablet = 3,
+        columnsMobile = 1,
       } = attributes;
 
-      // Auto-calculate columns based on limit
-      const calculateColumns = (documentsPerPage) => {
-        if (documentsPerPage <= 4) return 2;
-        if (documentsPerPage <= 9) return 3;
-        if (documentsPerPage <= 16) return 4;
-        if (documentsPerPage <= 25) return 5;
-        return 6;
-      };
-
-      const columns = calculateColumns(limit);
+      // Use the columns setting directly
 
       // Handle pagination style changes
       const handlePaginationStyleChange = (value) => {
-        setAttributes({ paginationStyle: value });
+        try {
+          setAttributes({ paginationStyle: value });
 
-        // Auto-adjust pagination type based on style
-        if (value === "load_more") {
-          setAttributes({ paginationType: "ajax" });
-        } else if (value === "classic") {
-          setAttributes({ paginationType: "classic" });
+          // Auto-adjust pagination type based on style
+          if (value === "load_more") {
+            setAttributes({ paginationType: "ajax" });
+          } else if (value === "classic") {
+            setAttributes({ paginationType: "classic" });
+          }
+        } catch (error) {
+          console.error("AuthDocs Block Error:", error);
         }
       };
 
@@ -115,25 +137,125 @@
           el(
             PanelBody,
             { title: __("Grid Settings", "authdocs"), initialOpen: true },
+            // Responsive Columns settings
+            el(NumberControl, {
+              label: __("Desktop Columns", "authdocs"),
+              value: columnsDesktop,
+              onChange: (value) => {
+                try {
+                  setAttributes({
+                    columnsDesktop: parseInt(value) || 5,
+                  });
+                } catch (error) {
+                  console.error("AuthDocs Block Error:", error);
+                }
+              },
+              min: 1,
+              max: 6,
+              help: __(
+                "Number of columns on desktop screens (1280px+)",
+                "authdocs"
+              ),
+            }),
+            el(NumberControl, {
+              label: __("Tablet Columns", "authdocs"),
+              value: columnsTablet,
+              onChange: (value) => {
+                try {
+                  setAttributes({
+                    columnsTablet: parseInt(value) || 3,
+                  });
+                } catch (error) {
+                  console.error("AuthDocs Block Error:", error);
+                }
+              },
+              min: 1,
+              max: 4,
+              help: __(
+                "Number of columns on tablet screens (768px-1279px)",
+                "authdocs"
+              ),
+            }),
+            el(NumberControl, {
+              label: __("Mobile Columns", "authdocs"),
+              value: columnsMobile,
+              onChange: (value) => {
+                try {
+                  setAttributes({
+                    columnsMobile: parseInt(value) || 1,
+                  });
+                } catch (error) {
+                  console.error("AuthDocs Block Error:", error);
+                }
+              },
+              min: 1,
+              max: 2,
+              help: __(
+                "Number of columns on mobile screens (below 768px)",
+                "authdocs"
+              ),
+            }),
+            // Documents per page
             el(NumberControl, {
               label: __("Documents per page", "authdocs"),
               value: limit,
-              onChange: (value) =>
-                setAttributes({ limit: parseInt(value) || 12 }),
+              onChange: (value) => {
+                try {
+                  setAttributes({
+                    limit: parseInt(value) || 12,
+                  });
+                } catch (error) {
+                  console.error("AuthDocs Block Error:", error);
+                }
+              },
               min: 1,
               max: 100,
               help: __("Number of documents to display per page", "authdocs"),
             }),
+            // Load more limit
             el(NumberControl, {
               label: __("Load more limit", "authdocs"),
               value: loadMoreLimit,
-              onChange: (value) =>
-                setAttributes({ loadMoreLimit: parseInt(value) || 12 }),
+              onChange: (value) => {
+                try {
+                  setAttributes({
+                    loadMoreLimit: parseInt(value) || 12,
+                  });
+                } catch (error) {
+                  console.error("AuthDocs Block Error:", error);
+                }
+              },
               min: 1,
               max: 50,
-              help: __(
-                'Number of additional documents to load when "Load More" is clicked',
-                "authdocs"
+              help: el(
+                "div",
+                {
+                  style: {
+                    marginTop: "8px",
+                    padding: "12px",
+                    backgroundColor: "#f8f9fa",
+                    border: "1px solid #e9ecef",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    lineHeight: "1.4",
+                    color: "#495057",
+                  },
+                },
+                el(
+                  "strong",
+                  {
+                    style: {
+                      color: "#212529",
+                      display: "block",
+                      marginBottom: "4px",
+                    },
+                  },
+                  __("Load More Behavior:", "authdocs")
+                ),
+                __(
+                  'Number of additional documents to load when "Load More" is clicked',
+                  "authdocs"
+                )
               ),
             })
           ),
@@ -180,6 +302,26 @@
           el(
             PanelBody,
             { title: __("Display Settings", "authdocs"), initialOpen: false },
+            el(SelectControl, {
+              label: __("Color Palette", "authdocs"),
+              value: colorPalette,
+              options: [
+                {
+                  label: __("Use Frontend Settings", "authdocs"),
+                  value: "default",
+                },
+                {
+                  label: __("Black & White + Blue", "authdocs"),
+                  value: "black_white_blue",
+                },
+                {
+                  label: __("Black & Gray", "authdocs"),
+                  value: "black_gray",
+                },
+              ],
+              onChange: (value) => setAttributes({ colorPalette: value }),
+              help: __("Choose a color palette for this block", "authdocs"),
+            }),
             el(ToggleControl, {
               label: __("Show Featured Images", "authdocs"),
               checked: featuredImage,
@@ -272,12 +414,44 @@
             "div",
             {
               style: {
+                display: "flex",
+                alignItems: "center",
                 fontSize: "18px",
                 fontWeight: "bold",
                 marginBottom: "10px",
                 color: "#0073aa",
               },
             },
+            el(
+              "span",
+              {
+                style: {
+                  display: "inline-block",
+                  width: "24px",
+                  height: "24px",
+                  marginRight: "8px",
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  borderRadius: "4px",
+                  position: "relative",
+                },
+              },
+              el(
+                "span",
+                {
+                  style: {
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                  },
+                },
+                "📄"
+              )
+            ),
             __("AuthDocs Document Grid", "authdocs")
           ),
           el(
@@ -291,15 +465,25 @@
             },
             __("Columns:", "authdocs") +
               " " +
-              columns +
-              " (auto) | " +
+              columnsDesktop +
+              "/" +
+              columnsTablet +
+              "/" +
+              columnsMobile +
+              " | " +
               __("Limit:", "authdocs") +
               " " +
               limit +
               " | " +
               __("Pagination:", "authdocs") +
               " " +
-              paginationStyle
+              paginationStyle +
+              " | " +
+              __("Colors:", "authdocs") +
+              " " +
+              (colorPalette === "default"
+                ? __("Frontend Settings", "authdocs")
+                : colorPalette.replace(/_/g, " "))
           ),
           el(
             "div",
