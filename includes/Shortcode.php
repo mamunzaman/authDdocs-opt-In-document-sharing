@@ -10,6 +10,7 @@ class Shortcode
         add_shortcode('protecteddocs', [$this, 'render_shortcode']);
         add_shortcode('authdocs_grid', [$this, 'render_grid_shortcode']);
         add_action('init', [$this, 'handle_secure_download']);
+        add_action('init', [$this, 'handle_secure_file']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
     }
 
@@ -222,12 +223,12 @@ class Shortcode
                                 <!-- Action Overlay -->
                                 <div class="authdocs-card-action-overlay">
                                     <?php if ($document['restricted']): ?>
-                                        <a href="<?php echo esc_url($this->get_access_request_url($document['id'])); ?>" class="authdocs-request-access-btn" title="<?php _e('Request Access', 'protecteddocs'); ?>">
+                                        <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'protecteddocs'); ?>">
                                             <svg class="authdocs-lock-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                                             </svg>
                                             <span><?php _e('Request Access', 'protecteddocs'); ?></span>
-                                        </a>
+                                        </button>
                                     <?php else: ?>
                                         <a href="<?php echo esc_url($this->get_secure_download_url($document['id'])); ?>" class="authdocs-download-btn" title="<?php _e('Download Document', 'protecteddocs'); ?>">
                                             <svg class="authdocs-download-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -501,12 +502,460 @@ class Shortcode
         // Log download
         Logs::log_download($document_id, get_current_user_id());
 
-        // Serve file
-        $this->serve_file($file_path, $file_data['filename']);
+        // Display file in browser instead of downloading
+        $this->display_file_in_browser($document_id, $file_path, $file_data['filename']);
+    }
+    
+    /**
+     * Handle secure file serving for embedding
+     */
+    public function handle_secure_file(): void
+    {
+        if (!isset($_GET['authdocs_file']) || !isset($_GET['token'])) {
+            return;
+        }
+
+        $document_id = intval($_GET['authdocs_file']);
+        $token = sanitize_text_field($_GET['token']);
+
+        if (!Tokens::verify_download_token($document_id, $token)) {
+            wp_die(__('Invalid file link', 'protecteddocs'), __('Access Error', 'protecteddocs'), ['response' => 403]);
+        }
+
+        $file_data = Database::get_document_file($document_id);
+        if (!$file_data) {
+            wp_die(__('File not found', 'protecteddocs'), __('Access Error', 'protecteddocs'), ['response' => 404]);
+        }
+
+        $file_path = $file_data['path'] ?? null;
+        if (!$file_path || !file_exists($file_path)) {
+            wp_die(__('File not found on server', 'protecteddocs'), __('Access Error', 'protecteddocs'), ['response' => 404]);
+        }
+
+        // Serve file for embedding (inline display)
+        $this->serve_file_inline($file_path, $file_data['filename']);
     }
 
     /**
-     * Serve file for download
+     * Display file in browser instead of downloading
+     */
+    private function display_file_in_browser(int $document_id, string $file_path, string $file_name): void
+    {
+        $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+        $mime_type = wp_check_filetype($file_path)['type'] ?: 'application/octet-stream';
+        
+        // Get document information
+        $document = get_post($document_id);
+        $document_title = $document ? $document->post_title : $file_name;
+        
+        // Clear any previous output
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Set headers for HTML page
+        header('Content-Type: text/html; charset=UTF-8');
+        header('Cache-Control: no-cache, must-revalidate');
+        header('Expires: 0');
+        
+        // Generate secure file URL for embedding
+        $file_url = $this->get_secure_file_url($document_id, $file_path);
+        
+        ?>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title><?php echo esc_html($document_title); ?> - <?php bloginfo('name'); ?></title>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: #f5f5f5;
+                }
+                .document-header {
+                    background: #fff;
+                    padding: 15px 20px;
+                    border-bottom: 1px solid #ddd;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .document-title {
+                    margin: 0;
+                    font-size: 18px;
+                    color: #333;
+                }
+                .document-meta {
+                    margin: 5px 0 0 0;
+                    font-size: 14px;
+                    color: #666;
+                }
+                .document-container {
+                    height: calc(100vh - 80px);
+                    background: #fff;
+                    margin: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                }
+                .document-viewer {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                }
+                .download-btn {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #0073aa;
+                    color: white;
+                    padding: 10px 15px;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    z-index: 1000;
+                }
+                .download-btn:hover {
+                    background: #005a87;
+                    color: white;
+                }
+                .error-message {
+                    padding: 40px;
+                    text-align: center;
+                    color: #666;
+                }
+                .pdf-viewer-container {
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
+                }
+                .pdf-viewer {
+                    border: none;
+                    background: #f8f9fa;
+                }
+                .pdf-viewer-fallback {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 2;
+                }
+                .office-viewer-container {
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
+                }
+                .office-viewer {
+                    border: none;
+                    background: #f8f9fa;
+                }
+                .office-viewer-loading {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1;
+                }
+                .office-viewer-fallback {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 2;
+                }
+                .loading-message {
+                    text-align: center;
+                    color: #666;
+                    font-size: 16px;
+                }
+                .loading-spinner {
+                    display: inline-block;
+                    width: 20px;
+                    height: 20px;
+                    border: 3px solid #f3f3f3;
+                    border-top: 3px solid #0073aa;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin-right: 10px;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="document-header">
+                <h1 class="document-title"><?php echo esc_html($document_title); ?></h1>
+                <p class="document-meta"><?php echo esc_html($file_name); ?> • <?php echo size_format(filesize($file_path)); ?></p>
+            </div>
+            
+            <a href="<?php echo esc_url($file_url); ?>" class="download-btn" download>
+                📥 Download
+            </a>
+            
+            <!-- Debug info (remove in production) -->
+            <div style="position: fixed; top: 60px; right: 20px; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; z-index: 1001; max-width: 300px;">
+                <strong>Debug Info:</strong><br>
+                File URL: <?php echo esc_html($file_url); ?><br>
+                File Extension: <?php echo esc_html($file_extension); ?><br>
+                MIME Type: <?php echo esc_html($mime_type); ?>
+            </div>
+            
+            <div class="document-container">
+                <?php if (in_array($file_extension, ['pdf'])): ?>
+                    <!-- PDF Viewer -->
+                    <div class="pdf-viewer-container">
+                        <iframe src="<?php echo esc_url($file_url); ?>" class="document-viewer pdf-viewer" type="application/pdf" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+                        <div class="pdf-viewer-fallback" style="display: none;">
+                            <div class="error-message">
+                                <h3>PDF Preview</h3>
+                                <p>This PDF cannot be previewed in the browser.</p>
+                                <a href="<?php echo esc_url($file_url); ?>" class="download-btn" download>Download PDF</a>
+                            </div>
+                        </div>
+                    </div>
+                <?php elseif (in_array($file_extension, ['doc', 'docx'])): ?>
+                    <!-- Word Document Viewer -->
+                    <div class="office-viewer-container">
+                        <iframe 
+                            src="https://view.officeapps.live.com/op/embed.aspx?src=<?php echo urlencode($file_url); ?>&wdAr=1.7777777777777777" 
+                            class="document-viewer office-viewer" 
+                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+                            allowfullscreen>
+                        </iframe>
+                        <div class="office-viewer-loading">
+                            <div class="loading-message">
+                                <div class="loading-spinner"></div>
+                                Loading document preview...
+                            </div>
+                        </div>
+                        <div class="office-viewer-fallback" style="display: none;">
+                            <div class="error-message">
+                                <h3>Document Preview</h3>
+                                <p>This document cannot be previewed in the browser.</p>
+                                <a href="<?php echo esc_url($file_url); ?>" class="download-btn" download>Download Document</a>
+                            </div>
+                        </div>
+                    </div>
+                <?php elseif (in_array($file_extension, ['ppt', 'pptx'])): ?>
+                    <!-- PowerPoint Viewer -->
+                    <div class="office-viewer-container">
+                        <iframe 
+                            src="https://view.officeapps.live.com/op/embed.aspx?src=<?php echo urlencode($file_url); ?>&wdAr=1.7777777777777777" 
+                            class="document-viewer office-viewer" 
+                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+                            allowfullscreen>
+                        </iframe>
+                        <div class="office-viewer-loading">
+                            <div class="loading-message">
+                                <div class="loading-spinner"></div>
+                                Loading presentation preview...
+                            </div>
+                        </div>
+                        <div class="office-viewer-fallback" style="display: none;">
+                            <div class="error-message">
+                                <h3>Presentation Preview</h3>
+                                <p>This presentation cannot be previewed in the browser.</p>
+                                <a href="<?php echo esc_url($file_url); ?>" class="download-btn" download>Download Presentation</a>
+                            </div>
+                        </div>
+                    </div>
+                <?php elseif (in_array($file_extension, ['xls', 'xlsx'])): ?>
+                    <!-- Excel Viewer -->
+                    <div class="office-viewer-container">
+                        <iframe 
+                            src="https://view.officeapps.live.com/op/embed.aspx?src=<?php echo urlencode($file_url); ?>&wdAr=1.7777777777777777" 
+                            class="document-viewer office-viewer" 
+                            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+                            allowfullscreen>
+                        </iframe>
+                        <div class="office-viewer-loading">
+                            <div class="loading-message">
+                                <div class="loading-spinner"></div>
+                                Loading spreadsheet preview...
+                            </div>
+                        </div>
+                        <div class="office-viewer-fallback" style="display: none;">
+                            <div class="error-message">
+                                <h3>Spreadsheet Preview</h3>
+                                <p>This spreadsheet cannot be previewed in the browser.</p>
+                                <a href="<?php echo esc_url($file_url); ?>" class="download-btn" download>Download Spreadsheet</a>
+                            </div>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <!-- Fallback for other file types -->
+                    <div class="error-message">
+                        <h3>Preview not available</h3>
+                        <p>This file type cannot be previewed in the browser.</p>
+                        <a href="<?php echo esc_url($file_url); ?>" class="download-btn" download>Download File</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <script>
+                // Handle iframe loading errors and provide fallback
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Handle PDF viewers
+                    const pdfViewers = document.querySelectorAll('.pdf-viewer');
+                    pdfViewers.forEach(function(iframe) {
+                        const container = iframe.closest('.pdf-viewer-container');
+                        const fallback = container.querySelector('.pdf-viewer-fallback');
+                        
+                        // Set a timeout to show fallback if iframe doesn't load
+                        const timeout = setTimeout(function() {
+                            if (fallback) {
+                                fallback.style.display = 'flex';
+                                iframe.style.display = 'none';
+                            }
+                        }, 10000); // 10 seconds timeout
+                        
+                        // Handle iframe load success
+                        iframe.addEventListener('load', function() {
+                            clearTimeout(timeout);
+                        });
+                        
+                        // Handle iframe load error
+                        iframe.addEventListener('error', function() {
+                            clearTimeout(timeout);
+                            if (fallback) {
+                                fallback.style.display = 'flex';
+                                iframe.style.display = 'none';
+                            }
+                        });
+                    });
+                    
+                    // Handle Office viewers
+                    const officeViewers = document.querySelectorAll('.office-viewer');
+                    
+                    officeViewers.forEach(function(iframe) {
+                        const container = iframe.closest('.office-viewer-container');
+                        const loading = container.querySelector('.office-viewer-loading');
+                        const fallback = container.querySelector('.office-viewer-fallback');
+                        
+                        // Set a timeout to show fallback if iframe doesn't load
+                        const timeout = setTimeout(function() {
+                            if (loading) loading.style.display = 'none';
+                            if (fallback) {
+                                fallback.style.display = 'flex';
+                                iframe.style.display = 'none';
+                            }
+                        }, 15000); // 15 seconds timeout
+                        
+                        // Handle iframe load success
+                        iframe.addEventListener('load', function() {
+                            clearTimeout(timeout);
+                            // Hide loading indicator
+                            if (loading) loading.style.display = 'none';
+                            
+                            // Check if iframe actually loaded content
+                            try {
+                                if (iframe.contentDocument && iframe.contentDocument.body) {
+                                    // Iframe loaded successfully
+                                    if (fallback) {
+                                        fallback.style.display = 'none';
+                                    }
+                                }
+                            } catch (e) {
+                                // Cross-origin error, but iframe might still be working
+                                console.log('Iframe loaded (cross-origin)');
+                            }
+                        });
+                        
+                        // Handle iframe load error
+                        iframe.addEventListener('error', function() {
+                            clearTimeout(timeout);
+                            if (loading) loading.style.display = 'none';
+                            if (fallback) {
+                                fallback.style.display = 'flex';
+                                iframe.style.display = 'none';
+                            }
+                        });
+                    });
+                    
+                    // Suppress console errors from Office Online viewer
+                    window.addEventListener('error', function(e) {
+                        if (e.message && e.message.includes('web-client-content-script')) {
+                            e.preventDefault();
+                            return false;
+                        }
+                    });
+                });
+            </script>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
+    
+    /**
+     * Get secure file URL for embedding
+     */
+    private function get_secure_file_url(int $document_id, string $file_path): string
+    {
+        $token = Tokens::generate_download_token($document_id);
+        return add_query_arg([
+            'authdocs_file' => $document_id,
+            'token' => $token
+        ], home_url('/'));
+    }
+    
+    /**
+     * Serve file inline for embedding
+     */
+    private function serve_file_inline(string $file_path, string $file_name): void
+    {
+        $file_size = filesize($file_path);
+        $mime_type = wp_check_filetype($file_path)['type'] ?: 'application/octet-stream';
+        $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+        // Clear any previous output
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // Set headers for inline display
+        header('Content-Type: ' . $mime_type);
+        header('Content-Disposition: inline; filename="' . $file_name . '"');
+        header('Content-Length: ' . $file_size);
+        header('Cache-Control: public, max-age=3600');
+        header('X-Content-Type-Options: nosniff');
+        
+        // Add CORS headers for iframe embedding
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET');
+        header('Access-Control-Allow-Headers: Content-Type');
+        
+        // For PDFs, ensure proper MIME type
+        if ($file_extension === 'pdf') {
+            header('Content-Type: application/pdf');
+        }
+
+        // Output file
+        readfile($file_path);
+        exit;
+    }
+    
+    /**
+     * Serve file for download (kept for download button)
      */
     private function serve_file(string $file_path, string $file_name): void
     {

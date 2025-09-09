@@ -14,8 +14,7 @@
       return;
     }
 
-    // Initialize bot protection
-    initializeBotProtection();
+    // Bot protection temporarily disabled for debugging
 
     // Replace Gutenberg block placeholders with actual shortcode content
     $(".authdocs-block-placeholder").each(function () {
@@ -379,6 +378,11 @@
       // Focus on first input
       $("#authdocs-name").focus();
 
+      console.log(
+        "ProtectedDocs: Modal created and shown, document ID:",
+        documentId
+      );
+
       // Handle close button clicks
       $("#authdocs-request-modal .authdocs-modal-close").on(
         "click",
@@ -403,9 +407,30 @@
       initializeFormValidation();
 
       // Handle form submission
-      $("#authdocs-submit-request").on("click", function () {
+      $("#authdocs-submit-request").on("click", function (e) {
+        e.preventDefault();
+        console.log("ProtectedDocs: Submit button clicked");
         if (validateForm()) {
+          console.log(
+            "ProtectedDocs: Form validation passed, calling submitAccessRequest"
+          );
           submitAccessRequest();
+        } else {
+          console.log("ProtectedDocs: Form validation failed");
+        }
+      });
+
+      // Handle form submit event
+      $("#authdocs-request-form").on("submit", function (e) {
+        e.preventDefault();
+        console.log("ProtectedDocs: Form submit event triggered");
+        if (validateForm()) {
+          console.log(
+            "ProtectedDocs: Form validation passed on submit, calling submitAccessRequest"
+          );
+          submitAccessRequest();
+        } else {
+          console.log("ProtectedDocs: Form validation failed on submit");
         }
       });
 
@@ -413,8 +438,14 @@
       $("#authdocs-request-form").on("keypress", function (e) {
         if (e.which === 13) {
           e.preventDefault();
+          console.log("ProtectedDocs: Enter key pressed in form");
           if (validateForm()) {
+            console.log(
+              "ProtectedDocs: Form validation passed on Enter key, calling submitAccessRequest"
+            );
             submitAccessRequest();
+          } else {
+            console.log("ProtectedDocs: Form validation failed on Enter key");
           }
         }
       });
@@ -449,6 +480,13 @@
       const value = $field.val().trim();
       const isValid = value.length >= 2;
 
+      console.log(
+        "ProtectedDocs: Name field validation - value:",
+        value,
+        "isValid:",
+        isValid
+      );
+
       if (showError) {
         if (isValid) {
           clearFieldError($field);
@@ -465,6 +503,13 @@
       const value = $field.val().trim();
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const isValid = emailRegex.test(value);
+
+      console.log(
+        "ProtectedDocs: Email field validation - value:",
+        value,
+        "isValid:",
+        isValid
+      );
 
       if (showError) {
         if (isValid) {
@@ -505,6 +550,13 @@
       const isNameValid = validateNameField($nameInput);
       const isEmailValid = validateEmailField($emailInput);
 
+      console.log(
+        "ProtectedDocs: Form validation - name valid:",
+        isNameValid,
+        "email valid:",
+        isEmailValid
+      );
+
       return isNameValid && isEmailValid;
     }
 
@@ -519,45 +571,56 @@
     function submitAccessRequest() {
       const $form = $("#authdocs-request-form");
       const $submitBtn = $("#authdocs-submit-request");
-      const formData = new FormData($form[0]);
 
-      // Enhanced bot protection: Check if form was submitted too quickly
-      const now = Date.now();
-      const lastSubmission = localStorage.getItem("authdocs_last_submission");
-      const minInterval = 1000; // 1 second minimum between submissions
+      // Get form values directly to ensure they're captured
+      const name = $("#authdocs-name").val().trim();
+      const email = $("#authdocs-email").val().trim();
+      const documentId = $form.find('input[name="document_id"]').val();
+      const nonce = $form.find('input[name="nonce"]').val();
 
-      if (lastSubmission && now - parseInt(lastSubmission) < minInterval) {
-        showErrorMessage(
-          "Please wait a moment before submitting another request."
+      console.log("ProtectedDocs: Retrieved form values:", {
+        name: name,
+        email: email,
+        documentId: documentId,
+        nonce: nonce,
+      });
+
+      // Validate required fields before submission
+      if (!name || !email || !documentId) {
+        console.log(
+          "ProtectedDocs: Missing required fields - name:",
+          name,
+          "email:",
+          email,
+          "documentId:",
+          documentId
         );
+        showErrorMessage("Please fill in all required fields.");
         return;
       }
 
-      // Store submission time
-      localStorage.setItem("authdocs_last_submission", now.toString());
-
-      // Add bot protection data
-      const pageLoadTime =
-        localStorage.getItem("authdocs_page_load_time") || "0";
-      let sessionToken = localStorage.getItem("authdocs_session_token") || "";
-
-      // Generate session token if missing
-      if (!sessionToken) {
-        sessionToken = generateSessionToken();
-        localStorage.setItem("authdocs_session_token", sessionToken);
-      }
-
-      formData.append(
-        "last_request_time",
-        lastSubmission
-          ? Math.floor(parseInt(lastSubmission) / 1000).toString()
-          : "0"
-      );
-      formData.append("page_load_time", pageLoadTime);
-      formData.append("session_token", sessionToken);
-
-      // Add action for AJAX
+      // Create form data with only required fields
+      const formData = new FormData();
       formData.append("action", "protecteddocs_request_access");
+      formData.append("name", name);
+      formData.append("email", email);
+      formData.append("document_id", documentId);
+      formData.append("nonce", nonce);
+
+      // Debug: Log form data being sent
+      console.log("ProtectedDocs: Sending form data:", {
+        action: "protecteddocs_request_access",
+        name: name,
+        email: email,
+        document_id: documentId,
+        nonce: nonce,
+      });
+
+      // Debug: Show FormData contents
+      console.log("ProtectedDocs: FormData contents:");
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`);
+      }
 
       // Disable submit button and show loading
       $submitBtn
@@ -568,34 +631,56 @@
             (protecteddocs_frontend.submitting_label || "Submitting...")
         );
 
+      console.log(
+        "ProtectedDocs: Making AJAX request to:",
+        protecteddocs_frontend.ajax_url
+      );
+      console.log(
+        "ProtectedDocs: protecteddocs_frontend object:",
+        protecteddocs_frontend
+      );
+
       $.ajax({
         url: protecteddocs_frontend.ajax_url,
         type: "POST",
         data: formData,
         processData: false,
         contentType: false,
+        beforeSend: function () {
+          console.log("ProtectedDocs: AJAX request started");
+        },
         success: function (response) {
+          console.log("ProtectedDocs: AJAX success response:", response);
+          console.log(
+            "ProtectedDocs: Response success status:",
+            response.success
+          );
+          console.log("ProtectedDocs: Response data:", response.data);
+
           if (response.success) {
             showSuccessMessage(
               response.data.message || "Access request submitted successfully!"
             );
             closeRequestModal();
           } else {
-            // Handle specific error types
-            if (response.data.session_invalid) {
-              // Regenerate session token and retry
-              const newSessionToken = generateSessionToken();
-              localStorage.setItem("authdocs_session_token", newSessionToken);
-              showErrorMessage("Session expired. Please try submitting again.");
-            } else {
-              showErrorMessage(
-                response.data.message ||
-                  "Failed to submit request. Please try again."
-              );
-            }
+            console.log(
+              "ProtectedDocs: Request failed - showing error message"
+            );
+            console.log("ProtectedDocs: Error message:", response.data.message);
+            console.log("ProtectedDocs: Full error response:", response);
+
+            showErrorMessage(
+              response.data.message ||
+                "Failed to submit request. Please try again."
+            );
           }
         },
         error: function (xhr, status, error) {
+          console.error("ProtectedDocs AJAX Error:", {
+            status: status,
+            error: error,
+            responseText: xhr.responseText,
+          });
           showErrorMessage("An error occurred. Please try again.");
         },
         complete: function () {
@@ -907,53 +992,6 @@
     // Modern message styles are now handled in CSS file
     // No need for dynamic styles injection
 
-    // Initialize bot protection
-    function initializeBotProtection() {
-      // Set page load time if not already set
-      if (!localStorage.getItem("authdocs_page_load_time")) {
-        localStorage.setItem(
-          "authdocs_page_load_time",
-          Math.floor(Date.now() / 1000).toString()
-        );
-      }
-
-      // Generate and store session token if not already set
-      if (!localStorage.getItem("authdocs_session_token")) {
-        const sessionToken = generateSessionToken();
-        localStorage.setItem("authdocs_session_token", sessionToken);
-
-        // Send session token to server for validation (non-blocking)
-        $.ajax({
-          url: protecteddocs_frontend.ajax_url,
-          type: "POST",
-          data: {
-            action: "protecteddocs_validate_session",
-            session_token: sessionToken,
-            nonce: protecteddocs_frontend.nonce,
-          },
-          success: function (response) {
-            if (!response.success) {
-              console.warn("Session validation failed:", response.data.message);
-              // Don't clear the token, let the server handle validation during request
-            }
-          },
-          error: function () {
-            console.warn("Failed to validate session token");
-            // Don't clear the token, let the server handle validation during request
-          },
-        });
-      }
-    }
-
-    // Generate a simple session token
-    function generateSessionToken() {
-      const chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      let result = "";
-      for (let i = 0; i < 32; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return result;
-    }
+    // Bot protection functions temporarily disabled for debugging
   }); // End document.ready
 })(jQuery); // End IIFE

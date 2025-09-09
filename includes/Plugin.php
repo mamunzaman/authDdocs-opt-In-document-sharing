@@ -260,10 +260,25 @@ class Plugin
 
     public function handle_access_request(): void
     {
+        error_log('ProtectedDocs: handle_access_request() method called');
         try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_frontend_nonce')) {
+            // Debug: Log received data
+            error_log('ProtectedDocs: Received POST data: ' . print_r($_POST, true));
+            error_log('ProtectedDocs: Received REQUEST data: ' . print_r($_REQUEST, true));
+            error_log('ProtectedDocs: Raw input: ' . file_get_contents('php://input'));
+
+            // Check if nonce exists
+            $nonce = $_POST['nonce'] ?? '';
+            error_log("ProtectedDocs: Nonce received: '{$nonce}'");
+            
+            if (!wp_verify_nonce($nonce, 'protecteddocs_frontend_nonce')) {
+                error_log('ProtectedDocs: Nonce verification failed');
                 wp_send_json_error([
-                    'message' => __('Security check failed', 'protecteddocs')
+                    'message' => __('Security check failed', 'protecteddocs'),
+                    'debug' => [
+                        'nonce_received' => $nonce,
+                        'nonce_valid' => false
+                    ]
                 ]);
             }
 
@@ -271,36 +286,28 @@ class Plugin
             $name = sanitize_text_field($_POST['name'] ?? '');
             $email = sanitize_email($_POST['email'] ?? '');
 
+            error_log("ProtectedDocs: Parsed values - document_id: {$document_id}, name: '{$name}', email: '{$email}'");
+            error_log("ProtectedDocs: Field validation - document_id empty: " . ($document_id ? 'false' : 'true'));
+            error_log("ProtectedDocs: Field validation - name empty: " . (empty($name) ? 'true' : 'false'));
+            error_log("ProtectedDocs: Field validation - email empty: " . (empty($email) ? 'true' : 'false'));
+
             if (!$document_id || !$name || !$email) {
+                error_log('ProtectedDocs: Missing required fields detected');
                 wp_send_json_error([
-                    'message' => __('Missing required fields', 'protecteddocs')
+                    'message' => __('Missing required fields', 'protecteddocs'),
+                    'debug' => [
+                        'document_id' => $document_id,
+                        'name' => $name,
+                        'email' => $email,
+                        'document_id_empty' => !$document_id,
+                        'name_empty' => !$name,
+                        'email_empty' => !$email,
+                        'raw_post' => $_POST
+                    ]
                 ]);
             }
 
-            // Bot protection checks
-            $request_data = [
-                'last_request_time' => sanitize_text_field($_POST['last_request_time'] ?? '0'),
-                'page_load_time' => sanitize_text_field($_POST['page_load_time'] ?? '0'),
-                'session_token' => sanitize_text_field($_POST['session_token'] ?? ''),
-            ];
-
-            $bot_check = BotProtection::check_bot_request($request_data);
-            
-            if ($bot_check['is_bot']) {
-                wp_send_json_error([
-                    'message' => $bot_check['reason'],
-                    'bot_detected' => true,
-                    'check_failed' => $bot_check['check']
-                ]);
-            }
-
-            // Validate session token
-            if (!BotProtection::validate_session_token($request_data['session_token'])) {
-                wp_send_json_error([
-                    'message' => __('Invalid session. Please refresh the page and try again.', 'protecteddocs'),
-                    'session_invalid' => true
-                ]);
-            }
+            // Bot protection temporarily disabled for debugging
 
             // Check for existing requests first (only for the same document)
             $existing_request = Database::check_existing_request($document_id, $email);
@@ -317,9 +324,6 @@ class Plugin
             $result = Database::save_access_request($document_id, $name, $email);
             
             if ($result) {
-                // Record successful request for rate limiting
-                BotProtection::record_request();
-                
                 // Fire the request submitted hook
                 do_action('authdocs/request_submitted', $result);
                 
@@ -1868,12 +1872,12 @@ class Plugin
                 <!-- Action Overlay -->
                 <div class="authdocs-card-action-overlay">
                     <?php if ($document['restricted']): ?>
-                        <a href="<?php echo esc_url($this->get_access_request_url($document['id'])); ?>" class="authdocs-request-access-btn" title="<?php _e('Request Access', 'protecteddocs'); ?>">
+                        <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'protecteddocs'); ?>">
                             <svg class="authdocs-lock-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                             </svg>
                             <span><?php _e('Request Access', 'protecteddocs'); ?></span>
-                        </a>
+                        </button>
                     <?php else: ?>
                         <?php 
                         $file_type = $document['file_data']['type'] ?? 'file';

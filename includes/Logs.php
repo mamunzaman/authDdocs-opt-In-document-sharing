@@ -350,4 +350,21 @@ class Logs
         </div>
         <?php
     }
+    
+    /**
+     * Log download activity
+     */
+    public static function log_download(int $document_id, int $user_id = 0): void
+    {
+        $log_data = [
+            'action' => 'download',
+            'user_id' => $user_id,
+            'timestamp' => current_time('mysql'),
+            'success' => true,
+            'message' => 'File downloaded successfully'
+        ];
+        
+        $log_key = self::LINK_LOG_META_PREFIX . '_' . time() . '_' . wp_generate_password(8, false);
+        update_post_meta($document_id, $log_key, $log_data);
+    }
 }
