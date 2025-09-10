@@ -1,0 +1,49 @@
+/* AuthDocs Menu Badge Styles - Minimal CSS for menu badge only */
+
+/* Pending Requests Count Badge */
+.authdocs-pending-requests-count {
+  display: inline-block;
+  background: #dc3545;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Legacy access requests count badge (for backward compatibility) */
+.authdocs-access-requests-count {
+  display: inline-block;
+  background: #dc3545;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Legacy pending count badge (for backward compatibility) */
+.authdocs-pending-count {
+  display: inline-block;
+  background: #dc3545;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}

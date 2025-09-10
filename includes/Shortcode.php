@@ -59,8 +59,8 @@ class Shortcode
                             <?php _e('Request Access', 'protecteddocs'); ?>
                     </button>
                 <?php else: ?>
-                        <a href="<?php echo esc_url($this->get_secure_download_url($document_id)); ?>" class="authdocs-download-btn">
-                            <?php _e('Download', 'protecteddocs'); ?>
+                        <a href="<?php echo esc_url($this->get_file_viewer_url($document_id)); ?>" class="authdocs-download-btn" target="_blank">
+                            <?php _e('View Document', 'protecteddocs'); ?>
                     </a>
                 <?php endif; ?>
                 </div>
@@ -230,11 +230,11 @@ class Shortcode
                                             <span><?php _e('Request Access', 'protecteddocs'); ?></span>
                                         </button>
                                     <?php else: ?>
-                                        <a href="<?php echo esc_url($this->get_secure_download_url($document['id'])); ?>" class="authdocs-download-btn" title="<?php _e('Download Document', 'protecteddocs'); ?>">
+                                        <a href="<?php echo esc_url($this->get_file_viewer_url($document['id'])); ?>" class="authdocs-download-btn" title="<?php _e('View Document', 'protecteddocs'); ?>" target="_blank">
                                             <svg class="authdocs-download-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                                             </svg>
-                                            <span><?php _e('Download', 'protecteddocs'); ?></span>
+                                            <span><?php _e('View Document', 'protecteddocs'); ?></span>
                                         </a>
                                     <?php endif; ?>
                                 </div>
@@ -242,7 +242,13 @@ class Shortcode
                 <?php endforeach; ?>
             </div>
             
-            <?php if ($total_pages > 1): ?>
+            <?php if (empty($documents) && $total_documents === 0): ?>
+                <div class="authdocs-no-documents">
+                    <p><?php _e('No documents with attached files found.', 'protecteddocs'); ?></p>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($total_pages > 1 && $total_documents > 0): ?>
                 <?php if ($pagination_style === 'load_more'): ?>
                     <!-- Load More Pagination -->
                     <div class="authdocs-load-more">
@@ -261,8 +267,8 @@ class Shortcode
                         <?php endif; ?>
                     </div>
                 <?php else: ?>
-                    <!-- Classic Pagination -->
-                    <div class="authdocs-pagination authdocs-classic-pagination" data-pagination-type="<?php echo esc_attr($pagination_type); ?>">
+                    <!-- Compact Pagination -->
+                    <div class="authdocs-pagination authdocs-compact-pagination" data-pagination-type="<?php echo esc_attr($pagination_type); ?>">
                         <div class="authdocs-pagination-info">
                             <?php 
                             $start = (($current_page - 1) * $limit) + 1;
@@ -271,92 +277,105 @@ class Shortcode
                             ?>
                         </div>
                         
-                        <div class="authdocs-pagination-links">
+                        <div class="authdocs-pagination-numbers">
                             <?php if ($pagination_type === 'ajax'): ?>
                                 <!-- AJAX Pagination with buttons -->
-                                <?php if ($current_page > 1): ?>
-                                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($current_page - 1); ?>">
-                                        <?php _e('Previous', 'protecteddocs'); ?>
-                                    </button>
-                                <?php endif; ?>
+                                <?php
+                                // Compact pagination logic: show first 3, current page, last 3
+                                $show_pages = [];
                                 
-                                <div class="authdocs-pagination-numbers">
-                                    <?php
-                                    $start_page = max(1, $current_page - 2);
-                                    $end_page = min($total_pages, $current_page + 2);
-                                    
-                                    if ($start_page > 1): ?>
-                                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
-                                        <?php if ($start_page > 2): ?>
-                                            <span class="authdocs-pagination-ellipsis">...</span>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                    
-                                    <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                        <?php if ($i === $current_page): ?>
-                                            <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $i; ?></span>
-                                        <?php else: ?>
-                                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($i); ?>"><?php echo $i; ?></button>
-                                        <?php endif; ?>
-                                    <?php endfor; ?>
-                                    
-                                    <?php if ($end_page < $total_pages): ?>
-                                        <?php if ($end_page < $total_pages - 1): ?>
-                                            <span class="authdocs-pagination-ellipsis">...</span>
-                                        <?php endif; ?>
-                                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
-                                    <?php endif; ?>
-                                </div>
+                                // Always show first page
+                                if ($current_page > 4) {
+                                    $show_pages[] = 1;
+                                    $show_pages[] = '...';
+                                } else {
+                                    for ($i = 1; $i <= min(3, $total_pages); $i++) {
+                                        $show_pages[] = $i;
+                                    }
+                                }
                                 
-                                <?php if ($current_page < $total_pages): ?>
-                                    <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($current_page + 1); ?>">
-                                        <?php _e('Next', 'protecteddocs'); ?>
-                                    </button>
-                                <?php endif; ?>
+                                // Show current page and surrounding pages
+                                if ($current_page > 4 && $current_page < $total_pages - 3) {
+                                    $show_pages[] = $current_page - 1;
+                                    $show_pages[] = $current_page;
+                                    $show_pages[] = $current_page + 1;
+                                }
+                                
+                                // Always show last page
+                                if ($current_page < $total_pages - 3) {
+                                    if (!in_array('...', $show_pages) || end($show_pages) !== '...') {
+                                        $show_pages[] = '...';
+                                    }
+                                    $show_pages[] = $total_pages;
+                                } else {
+                                    for ($i = max(1, $total_pages - 2); $i <= $total_pages; $i++) {
+                                        if (!in_array($i, $show_pages)) {
+                                            $show_pages[] = $i;
+                                        }
+                                    }
+                                }
+                                
+                                foreach ($show_pages as $page_num): ?>
+                                    <?php if ($page_num === '...'): ?>
+                                        <span class="authdocs-pagination-ellipsis">...</span>
+                                    <?php elseif ($page_num === $current_page): ?>
+                                        <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $page_num; ?></span>
+                                    <?php else: ?>
+                                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($page_num); ?>"><?php echo $page_num; ?></button>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
                             <?php else: ?>
                                 <!-- Classic Pagination with links -->
                                 <?php 
-                                $current_url = remove_query_arg('authdocs_page');
-                                ?>
-                                <?php if ($current_page > 1): ?>
-                                    <a href="<?php echo esc_url(add_query_arg('authdocs_page', $current_page - 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-prev">
-                                        <?php _e('Previous', 'protecteddocs'); ?>
-                                    </a>
-                                <?php endif; ?>
+                                // Build the base URL for pagination links
+                                $current_url = add_query_arg([
+                                    'authdocs_page' => false,
+                                    'paged' => false
+                                ]);
                                 
-                                <div class="authdocs-pagination-numbers">
-                                    <?php
-                                    $start_page = max(1, $current_page - 2);
-                                    $end_page = min($total_pages, $current_page + 2);
-                                    
-                                    if ($start_page > 1): ?>
-                                        <a href="<?php echo esc_url(add_query_arg('authdocs_page', 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number">1</a>
-                                        <?php if ($start_page > 2): ?>
-                                            <span class="authdocs-pagination-ellipsis">...</span>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                    
-                                    <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                        <?php if ($i === $current_page): ?>
-                                            <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $i; ?></span>
-                                        <?php else: ?>
-                                            <a href="<?php echo esc_url(add_query_arg('authdocs_page', $i, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number"><?php echo $i; ?></a>
-                                        <?php endif; ?>
-                                    <?php endfor; ?>
-                                    
-                                    <?php if ($end_page < $total_pages): ?>
-                                        <?php if ($end_page < $total_pages - 1): ?>
-                                            <span class="authdocs-pagination-ellipsis">...</span>
-                                        <?php endif; ?>
-                                        <a href="<?php echo esc_url(add_query_arg('authdocs_page', $total_pages, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number"><?php echo $total_pages; ?></a>
-                                    <?php endif; ?>
-                                </div>
+                                // Compact pagination logic: show first 3, current page, last 3
+                                $show_pages = [];
                                 
-                                <?php if ($current_page < $total_pages): ?>
-                                    <a href="<?php echo esc_url(add_query_arg('authdocs_page', $current_page + 1, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-next">
-                                        <?php _e('Next', 'protecteddocs'); ?>
-                                    </a>
-                                <?php endif; ?>
+                                // Always show first page
+                                if ($current_page > 4) {
+                                    $show_pages[] = 1;
+                                    $show_pages[] = '...';
+                                } else {
+                                    for ($i = 1; $i <= min(3, $total_pages); $i++) {
+                                        $show_pages[] = $i;
+                                    }
+                                }
+                                
+                                // Show current page and surrounding pages
+                                if ($current_page > 4 && $current_page < $total_pages - 3) {
+                                    $show_pages[] = $current_page - 1;
+                                    $show_pages[] = $current_page;
+                                    $show_pages[] = $current_page + 1;
+                                }
+                                
+                                // Always show last page
+                                if ($current_page < $total_pages - 3) {
+                                    if (!in_array('...', $show_pages) || end($show_pages) !== '...') {
+                                        $show_pages[] = '...';
+                                    }
+                                    $show_pages[] = $total_pages;
+                                } else {
+                                    for ($i = max(1, $total_pages - 2); $i <= $total_pages; $i++) {
+                                        if (!in_array($i, $show_pages)) {
+                                            $show_pages[] = $i;
+                                        }
+                                    }
+                                }
+                                
+                                foreach ($show_pages as $page_num): ?>
+                                    <?php if ($page_num === '...'): ?>
+                                        <span class="authdocs-pagination-ellipsis">...</span>
+                                    <?php elseif ($page_num === $current_page): ?>
+                                        <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $page_num; ?></span>
+                                    <?php else: ?>
+                                        <a href="<?php echo esc_url(add_query_arg('authdocs_page', $page_num, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number"><?php echo $page_num; ?></a>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -369,6 +388,7 @@ class Shortcode
     
     /**
      * Get documents for display
+     * Only returns documents that have attached files
      */
     private function get_documents(int $limit, int $page, string $restriction, string $orderby, string $order): array
     {
@@ -405,12 +425,16 @@ class Shortcode
                 $query->the_post();
                 $post_id = get_the_ID();
                 
-                $documents[] = [
-                    'id' => $post_id,
-                    'title' => get_the_title(),
-                    'date' => get_the_date(),
-                    'restricted' => get_post_meta($post_id, '_authdocs_restricted', true) === 'yes'
-                ];
+                // Only include documents that have attached files
+                $file_data = Database::get_document_file($post_id);
+                if ($file_data) {
+                    $documents[] = [
+                        'id' => $post_id,
+                        'title' => get_the_title(),
+                        'date' => get_the_date(),
+                        'restricted' => get_post_meta($post_id, '_authdocs_restricted', true) === 'yes'
+                    ];
+                }
             }
             wp_reset_postdata();
         }
@@ -420,6 +444,7 @@ class Shortcode
 
     /**
      * Get total documents count
+     * Only counts documents that have attached files
      */
     private function get_total_documents(string $restriction): int
     {
@@ -447,11 +472,27 @@ class Shortcode
         }
 
         $query = new \WP_Query($args);
-        return $query->found_posts;
+        $count = 0;
+        
+        // Only count documents that have attached files
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                $file_data = Database::get_document_file($post_id);
+                
+                if ($file_data) {
+                    $count++;
+                }
+            }
+            wp_reset_postdata();
+        }
+        
+        return $count;
     }
 
     /**
-     * Get secure download URL
+     * Get secure download URL (for actual downloads)
      */
     private function get_secure_download_url(int $document_id): string
     {
@@ -460,6 +501,19 @@ class Shortcode
             'authdocs_download' => $document_id,
             'token' => $token
         ], home_url());
+    }
+
+    /**
+     * Get file viewer URL (for preview/display)
+     */
+    private function get_file_viewer_url(int $document_id): string
+    {
+        $token = Tokens::generate_download_token($document_id);
+        return add_query_arg([
+            'authdocs_viewer' => '1',
+            'document_id' => $document_id,
+            'token' => $token
+        ], home_url('/'));
     }
 
     /**
@@ -489,6 +543,19 @@ class Shortcode
             wp_die(__('Invalid download link', 'protecteddocs'), __('Download Error', 'protecteddocs'), ['response' => 403]);
         }
 
+        // Additional validation: Check if request is still valid (not declined)
+        $hash = sanitize_text_field($_GET['hash'] ?? '');
+        $email = sanitize_email($_GET['email'] ?? '');
+        $request_id = intval($_GET['request_id'] ?? 0);
+        
+        if (!empty($hash) && !empty($email)) {
+            $has_valid_access = Database::validate_secure_access($hash, $email, $document_id, $request_id > 0 ? $request_id : null);
+            
+            if (!$has_valid_access) {
+                wp_die(__('Access has been revoked', 'protecteddocs'), __('Download Error', 'protecteddocs'), ['response' => 403]);
+            }
+        }
+
         $file_data = Database::get_document_file($document_id);
         if (!$file_data) {
             wp_die(__('File not found', 'protecteddocs'), __('Download Error', 'protecteddocs'), ['response' => 404]);
@@ -502,8 +569,8 @@ class Shortcode
         // Log download
         Logs::log_download($document_id, get_current_user_id());
 
-        // Display file in browser instead of downloading
-        $this->display_file_in_browser($document_id, $file_path, $file_data['filename']);
+        // Serve file for download (not redirect to viewer)
+        $this->serve_file($file_path, $file_data['filename']);
     }
     
     /**
@@ -517,6 +584,7 @@ class Shortcode
 
         $document_id = intval($_GET['authdocs_file']);
         $token = sanitize_text_field($_GET['token']);
+        $virtual_filename = sanitize_file_name($_GET['filename'] ?? '');
 
         if (!Tokens::verify_download_token($document_id, $token)) {
             wp_die(__('Invalid file link', 'protecteddocs'), __('Access Error', 'protecteddocs'), ['response' => 403]);
@@ -532,8 +600,11 @@ class Shortcode
             wp_die(__('File not found on server', 'protecteddocs'), __('Access Error', 'protecteddocs'), ['response' => 404]);
         }
 
+        // Use virtual filename if provided, otherwise use database filename
+        $filename = !empty($virtual_filename) ? $virtual_filename : $file_data['filename'];
+
         // Serve file for embedding (inline display)
-        $this->serve_file_inline($file_path, $file_data['filename']);
+        $this->serve_file_inline($file_path, $filename);
     }
 
     /**
@@ -559,7 +630,7 @@ class Shortcode
         header('Expires: 0');
         
         // Generate secure file URL for embedding
-        $file_url = $this->get_secure_file_url($document_id, $file_path);
+        $file_url = $this->get_secure_file_url($document_id, $file_path, $file_name);
         
         ?>
         <!DOCTYPE html>
@@ -909,13 +980,20 @@ class Shortcode
     /**
      * Get secure file URL for embedding
      */
-    private function get_secure_file_url(int $document_id, string $file_path): string
+    private function get_secure_file_url(int $document_id, string $file_path, string $file_name = ''): string
     {
         $token = Tokens::generate_download_token($document_id);
-        return add_query_arg([
+        $args = [
             'authdocs_file' => $document_id,
             'token' => $token
-        ], home_url('/'));
+        ];
+        
+        // Add filename parameter if provided
+        if (!empty($file_name)) {
+            $args['filename'] = $file_name;
+        }
+        
+        return add_query_arg($args, home_url('/'));
     }
     
     /**

@@ -61,7 +61,10 @@
       // Remove any existing dynamic CSS
       $("#authdocs-dynamic-ajax").remove();
 
-      // Add new CSS
+      // Remove any existing instance-specific CSS that might conflict
+      $("style[id^='authdocs-dynamic-']").remove();
+
+      // Add new CSS with higher specificity
       $("<style>")
         .attr("id", "authdocs-dynamic-ajax")
         .attr("type", "text/css")
@@ -843,7 +846,7 @@
       const $paginationBtns = $container.find(".authdocs-pagination-btn");
 
       // Show loading state
-      $paginationBtns.prop("disabled", true).addClass("loading");
+      $paginationBtns.prop("disabled", true);
       $grid.addClass("loading");
 
       // Add loading class to container for CSS targeting
@@ -912,7 +915,7 @@
           showErrorMessage("An error occurred while loading documents.");
         },
         complete: function () {
-          $paginationBtns.prop("disabled", false).removeClass("loading");
+          $paginationBtns.prop("disabled", false);
           $grid.removeClass("loading");
           $container.removeClass("loading");
         },

@@ -54,13 +54,56 @@ if (!defined('ABSPATH')) {
                         </select>
                     </div>
 
-                    <div class="authdocs-filter-actions">
-                        <button type="button" id="authdocs-clear-filters" class="authdocs-clear-filters-btn">
-                            <span class="dashicons dashicons-no-alt"></span>
-                            <?php _e('Clear Filters', 'protecteddocs'); ?>
-                        </button>
-                    </div>
-                </div>
+            <div class="authdocs-filter-actions">
+                <button type="button" id="authdocs-clear-filters" class="authdocs-clear-filters-btn">
+                    <span class="dashicons dashicons-no-alt"></span>
+                    <?php _e('Clear Filters', 'protecteddocs'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Persistent Bulk Delete Section -->
+    <div class="authdocs-persistent-bulk-section">
+        <div class="authdocs-persistent-bulk-container">
+            <div class="authdocs-persistent-bulk-left">
+                <span class="authdocs-persistent-bulk-label">
+                    <span class="dashicons dashicons-trash"></span>
+                    <?php _e('Bulk Delete', 'protecteddocs'); ?>
+                </span>
+                <span class="authdocs-persistent-bulk-description">
+                    <?php _e('Select items above and use this action to delete multiple requests at once', 'protecteddocs'); ?>
+                </span>
+            </div>
+            <div class="authdocs-persistent-bulk-right">
+                <button type="button" id="authdocs-persistent-bulk-delete" class="authdocs-persistent-bulk-delete-btn" disabled>
+                    <span class="dashicons dashicons-trash"></span>
+                    <?php _e('Delete Selected', 'protecteddocs'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <!-- Bulk Actions Section -->
+    <div class="authdocs-bulk-actions-section" id="authdocs-bulk-actions-section" style="display: none;">
+        <div class="authdocs-bulk-actions-container">
+            <div class="authdocs-bulk-actions-left">
+                <span class="authdocs-selected-count" id="authdocs-selected-count">0</span>
+                <span class="authdocs-selected-text"><?php _e('items selected', 'protecteddocs'); ?></span>
+            </div>
+            <div class="authdocs-bulk-actions-right">
+                <select id="authdocs-bulk-action-select" class="authdocs-bulk-action-select">
+                    <option value=""><?php _e('Bulk Actions', 'protecteddocs'); ?></option>
+                    <option value="delete"><?php _e('Delete Selected', 'protecteddocs'); ?></option>
+                </select>
+                <button type="button" id="authdocs-bulk-action-apply" class="authdocs-bulk-action-apply-btn" disabled>
+                    <?php _e('Apply', 'protecteddocs'); ?>
+                </button>
+                <button type="button" id="authdocs-bulk-action-cancel" class="authdocs-bulk-action-cancel-btn">
+                    <?php _e('Cancel', 'protecteddocs'); ?>
+                </button>
             </div>
         </div>
     </div>
@@ -136,12 +179,20 @@ if (!defined('ABSPATH')) {
         <p><?php _e('No requests found.', 'protecteddocs'); ?></p>
     </div>
     <?php else: ?>
-    <div class="authdocs-table-section">
-        <div class="authdocs-requests-table-wrapper">
-            <div class="authdocs-table-responsive">
-                <table class="wp-list-table widefat striped authdocs-requests-table">
+    <form method="post" id="authdocs-bulk-form" action="">
+        <?php wp_nonce_field('bulk-delete-requests'); ?>
+        <input type="hidden" name="bulk_action" id="authdocs-bulk-action-input" value="">
+        <input type="hidden" name="request_ids" id="authdocs-request-ids-input" value="">
+        
+        <div class="authdocs-table-section">
+            <div class="authdocs-requests-table-wrapper">
+                <div class="authdocs-table-responsive">
+                    <table class="wp-list-table widefat striped authdocs-requests-table">
                     <thead>
                         <tr>
+                            <th class="authdocs-col-checkbox">
+                                <input type="checkbox" id="authdocs-select-all" class="authdocs-select-all-checkbox" title="<?php _e('Select all items', 'protecteddocs'); ?>">
+                            </th>
                             <th class="authdocs-col-id"><?php _e('ID', 'protecteddocs'); ?></th>
                             <th class="authdocs-col-name"><?php _e('Requester Name', 'protecteddocs'); ?></th>
                             <th class="authdocs-col-email"><?php _e('Email', 'protecteddocs'); ?></th>
@@ -180,6 +231,9 @@ if (!defined('ABSPATH')) {
                             data-status="<?php echo esc_attr($request->status); ?>"
                             data-date="<?php echo esc_attr($request->created_at); ?>"
                             data-search="<?php echo esc_attr(strtolower($request->requester_name . ' ' . $request->requester_email . ' ' . $document_title . ' ' . $request->status)); ?>">
+                            <td data-label="Select" class="authdocs-col-checkbox">
+                                <input type="checkbox" class="authdocs-row-checkbox" value="<?php echo esc_attr($request->id); ?>" data-request-id="<?php echo esc_attr($request->id); ?>">
+                            </td>
                             <td data-label="Request ID"><?php echo esc_html($request->id); ?></td>
                             <td data-label="Requester Name"><?php echo esc_html($request->requester_name); ?></td>
                             <td data-label="Email"><?php echo esc_html($request->requester_email); ?></td>
@@ -246,22 +300,31 @@ if (!defined('ABSPATH')) {
                                         class="authdocs-file-status-text"><?php _e('Declined', 'protecteddocs'); ?></span>
                                 </div>
                                 <?php
-                                    // Generate the full download link if request is accepted and has hash
+                                    // Generate the full file viewer link if request is accepted and has hash
                                     elseif ($request->status === 'accepted' && $request->secure_hash): 
-                                        $download_url = home_url('?authdocs_download=' . $request->document_id . '&hash=' . $request->secure_hash . '&email=' . urlencode($request->requester_email) . '&request_id=' . $request->id);
+                                        // Generate fresh token for the viewer
+                                        $token = \ProtectedDocs\Tokens::generate_download_token(intval($request->document_id));
+                                        $viewer_url = add_query_arg([
+                                            'authdocs_viewer' => '1',
+                                            'document_id' => intval($request->document_id),
+                                            'token' => $token,
+                                            'hash' => $request->secure_hash,
+                                            'email' => $request->requester_email,
+                                            'request_id' => intval($request->id)
+                                        ], home_url('/'));
                                         ?>
                                 <div class="authdocs-file-status-modern authdocs-file-status-available">
                                     <span class="authdocs-file-status-icon">
                                         <span class="dashicons dashicons-visibility"></span>
                                     </span>
-                                    <a href="<?php echo esc_url($download_url); ?>" target="_blank"
+                                    <a href="<?php echo esc_url($viewer_url); ?>" target="_blank"
                                         class="authdocs-file-status-text authdocs-view-document-link"
                                         title="<?php _e('Click to view document', 'protecteddocs'); ?>">
                                         <?php _e('View Document', 'protecteddocs'); ?>
                                     </a>
                                     <button type="button" class="authdocs-copy-link"
                                         title="<?php _e('Copy link', 'protecteddocs'); ?>"
-                                        data-link="<?php echo esc_attr($download_url); ?>">
+                                        data-link="<?php echo esc_attr($viewer_url); ?>">
                                         <span class="dashicons dashicons-admin-page"></span>
                                     </button>
                                 </div>
@@ -470,6 +533,7 @@ if (!defined('ABSPATH')) {
                 </div>
             </div>
         </div>
+        </form>
         <?php endif; ?>
     </div>
 

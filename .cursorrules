@@ -79,3 +79,7 @@ Key Conventions
 8. Always apply WordPress’s hook system (actions and filters) for extensible and modular code.
 9. Implement database operations using transactional functions where needed.
 10. Schedule tasks using WordPress’s WP_Cron API for automated workflows.
+
+Important
+
+- Do NOT create or include any test/demo pages in the implementation. Only update the plugin logic as described.

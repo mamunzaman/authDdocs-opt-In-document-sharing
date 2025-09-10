@@ -391,7 +391,7 @@ class Settings {
             <p><strong>Request Date:</strong> ' . date_i18n(get_option('date_format') . ' ' . get_option('time_format')) . '</p>
         </div>
         
-        <p><a href="' . admin_url('edit.php?post_type=document&page=authdocs-requests') . '" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Review Request</a></p>
+        <p><a href="{{document_edit_url}}" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Review Request</a></p>
         
         <p>You can review and manage this request from your WordPress admin panel.</p>
     </div>
@@ -1010,7 +1010,8 @@ class Settings {
             '{{site_name}}' => $variables['site_name'] ?? get_bloginfo('name'),
             '{{status}}' => $variables['status'] ?? '',
             '{{status_color}}' => $variables['status_color'] ?? '',
-            '{{link}}' => $variables['link'] ?? ''
+            '{{link}}' => $variables['link'] ?? '',
+            '{{document_edit_url}}' => $variables['document_edit_url'] ?? ''
         ];
         
         return str_replace(array_keys($replacements), array_values($replacements), $text);

@@ -23,12 +23,12 @@ jQuery(document).ready(function ($) {
     var $btn = $(this);
     var linkToCopy = $btn.data("link");
 
-    // If data-link is not available, try to find the download link in the same row
+    // If data-link is not available, try to find the viewer link in the same row
     if (!linkToCopy) {
-      var $downloadLink = $btn.closest("tr").find(".authdocs-download-link");
-      if ($downloadLink.length > 0) {
-        linkToCopy = $downloadLink.attr("href");
-        console.log("AuthDocs: Found download link from href:", linkToCopy);
+      var $viewerLink = $btn.closest("tr").find(".authdocs-view-document-link");
+      if ($viewerLink.length > 0) {
+        linkToCopy = $viewerLink.attr("href");
+        console.log("AuthDocs: Found viewer link from href:", linkToCopy);
       }
     }
 
@@ -345,6 +345,50 @@ jQuery(document).ready(function ($) {
           action,
           requestId
         );
+
+        // Handle delete action with form submission instead of AJAX
+        if (action === "delete") {
+          // Create a form for individual delete
+          var deleteForm = document.createElement("form");
+          deleteForm.method = "POST";
+          deleteForm.action = window.location.href;
+
+          // Add nonce (use the same nonce as the bulk delete form)
+          var nonceField = document.createElement("input");
+          nonceField.type = "hidden";
+          nonceField.name = "_wpnonce";
+          // Get the nonce from the existing bulk form
+          var existingNonce = jQuery(
+            "#authdocs-bulk-form input[name='_wpnonce']"
+          ).val();
+          if (!existingNonce) {
+            // Fallback: try to get nonce from any form on the page
+            existingNonce = jQuery("input[name='_wpnonce']").first().val();
+          }
+          nonceField.value = existingNonce || "";
+          deleteForm.appendChild(nonceField);
+
+          // Add action type
+          var actionField = document.createElement("input");
+          actionField.type = "hidden";
+          actionField.name = "individual_action";
+          actionField.value = "delete";
+          deleteForm.appendChild(actionField);
+
+          // Add request ID
+          var requestIdField = document.createElement("input");
+          requestIdField.type = "hidden";
+          requestIdField.name = "request_id";
+          requestIdField.value = requestId;
+          deleteForm.appendChild(requestIdField);
+
+          // Submit the form
+          document.body.appendChild(deleteForm);
+          deleteForm.submit();
+          return;
+        }
+
+        // For other actions, use AJAX
         proceedWithAction($btn, action, requestId);
       },
       action
@@ -642,28 +686,27 @@ jQuery(document).ready(function ($) {
           var $fileLinkCell = $row.find("td[data-label='File Link']");
           if ($fileLinkCell.length && request.document_file) {
             if (request.status === "accepted" && request.secure_hash) {
-              var downloadUrl =
-                protecteddocs_admin.site_url +
-                "?authdocs_download=" +
-                request.document_id +
-                "&hash=" +
-                request.secure_hash +
-                "&email=" +
-                encodeURIComponent(request.requester_email) +
-                "&request_id=" +
-                request.id;
+              // Use viewer URL from AJAX response (has fresh token)
+              var viewerUrl = request.viewer_url;
+
+              if (!viewerUrl) {
+                console.error(
+                  "AuthDocs: No viewer URL provided in AJAX response"
+                );
+                return;
+              }
               $fileLinkCell.html(
                 '<div class="authdocs-file-status-modern authdocs-file-status-available">' +
                   '<span class="authdocs-file-status-icon">' +
                   '<span class="dashicons dashicons-visibility"></span>' +
                   "</span>" +
                   '<a href="' +
-                  downloadUrl +
+                  viewerUrl +
                   '" target="_blank" class="authdocs-file-status-text authdocs-view-document-link" title="Click to view document">' +
                   "View Document" +
                   "</a>" +
                   '<button type="button" class="authdocs-copy-link" title="Copy link" data-link="' +
-                  downloadUrl +
+                  viewerUrl +
                   '">' +
                   '<span class="dashicons dashicons-admin-page"></span>' +
                   "</button>" +
@@ -960,14 +1003,6 @@ jQuery(document).ready(function ($) {
 
           showNotice(actionMessage, messageType);
 
-          // Handle delete action - remove row completely
-          if (action === "delete" && response.data && response.data.deleted) {
-            $row.fadeOut(300, function () {
-              $(this).remove();
-            });
-            return;
-          }
-
           if (shouldRemoveRow) {
             // Add highlighting class for visual feedback
             $row.addClass("authdocs-row-updated");
@@ -1000,6 +1035,8 @@ jQuery(document).ready(function ($) {
               requestId
             );
             refreshRowData($row, requestId);
+            // Update menu count after status change
+            updateDocumentsMenuCount();
           } else {
             // For inactive status, add highlighting and refresh the row data
             $row.addClass("authdocs-row-updated");
@@ -1027,6 +1064,8 @@ jQuery(document).ready(function ($) {
             }, 5000);
 
             refreshRowData($row, requestId);
+            // Update menu count after status change
+            updateDocumentsMenuCount();
           }
         } else {
           showNotice("Error occurred. Please try again.", "error");
@@ -1183,4 +1222,228 @@ function authdocsConfirmClassicPagination(radioButton) {
     return false;
   }
   return true;
+}
+
+// Function to update the Documents menu count
+function updateDocumentsMenuCount() {
+  // Get pending requests count via AJAX
+  jQuery.ajax({
+    url: ajaxurl,
+    type: "POST",
+    data: {
+      action: "protecteddocs_get_pending_count",
+      nonce: protecteddocs_admin.nonce,
+    },
+    success: function (response) {
+      if (response.success) {
+        var pendingCount = response.data.count;
+        var menuName = "Documents";
+
+        // Find the Documents menu item
+        var $menuItem = jQuery(
+          'a[href*="edit.php?post_type=document"]'
+        ).first();
+        if ($menuItem.length) {
+          var $menuText = $menuItem.find(".wp-menu-name");
+          if ($menuText.length) {
+            if (pendingCount > 0) {
+              // Remove existing badge if any
+              $menuText.find(".authdocs-pending-requests-count").remove();
+              // Add new badge
+              $menuText.html(
+                menuName +
+                  ' <span class="authdocs-pending-requests-count">' +
+                  pendingCount +
+                  "</span>"
+              );
+            } else {
+              // Remove badge if no pending requests
+              $menuText.html(menuName);
+              $menuText.find(".authdocs-pending-requests-count").remove();
+            }
+          }
+        }
+      }
+    },
+    error: function () {
+      console.log("AuthDocs: Failed to update menu count");
+    },
+  });
+}
+
+// Update menu count when page loads
+jQuery(document).ready(function ($) {
+  updateDocumentsMenuCount();
+
+  // Initialize bulk selection functionality
+  initializeBulkSelection();
+});
+
+// Bulk Selection Functionality
+function initializeBulkSelection() {
+  var $selectAllCheckbox = jQuery("#authdocs-select-all");
+  var $rowCheckboxes = jQuery(".authdocs-row-checkbox");
+  var $bulkActionsSection = jQuery("#authdocs-bulk-actions-section");
+  var $selectedCount = jQuery("#authdocs-selected-count");
+  var $bulkActionSelect = jQuery("#authdocs-bulk-action-select");
+  var $bulkActionApply = jQuery("#authdocs-bulk-action-apply");
+  var $bulkActionCancel = jQuery("#authdocs-bulk-action-cancel");
+  var $bulkActionInput = jQuery("#authdocs-bulk-action-input");
+  var $requestIdsInput = jQuery("#authdocs-request-ids-input");
+  var $bulkForm = jQuery("#authdocs-bulk-form");
+
+  // Select All checkbox functionality
+  $selectAllCheckbox.on("change", function () {
+    var isChecked = jQuery(this).is(":checked");
+    $rowCheckboxes.prop("checked", isChecked);
+    updateBulkActions();
+  });
+
+  // Individual row checkbox functionality
+  $rowCheckboxes.on("change", function () {
+    updateBulkActions();
+    updateSelectAllState();
+  });
+
+  // Update bulk actions visibility and state
+  function updateBulkActions() {
+    var selectedCount = $rowCheckboxes.filter(":checked").length;
+
+    if (selectedCount > 0) {
+      $bulkActionsSection.show();
+      $selectedCount.text(selectedCount);
+      $bulkActionApply.prop("disabled", false);
+    } else {
+      $bulkActionsSection.hide();
+      $bulkActionApply.prop("disabled", true);
+    }
+  }
+
+  // Update Select All checkbox state
+  function updateSelectAllState() {
+    var totalCheckboxes = $rowCheckboxes.length;
+    var checkedCheckboxes = $rowCheckboxes.filter(":checked").length;
+
+    if (checkedCheckboxes === 0) {
+      $selectAllCheckbox.prop("indeterminate", false).prop("checked", false);
+    } else if (checkedCheckboxes === totalCheckboxes) {
+      $selectAllCheckbox.prop("indeterminate", false).prop("checked", true);
+    } else {
+      $selectAllCheckbox.prop("indeterminate", true);
+    }
+  }
+
+  // Bulk action apply button
+  $bulkActionApply.on("click", function () {
+    var selectedAction = $bulkActionSelect.val();
+    var selectedIds = $rowCheckboxes
+      .filter(":checked")
+      .map(function () {
+        return jQuery(this).val();
+      })
+      .get();
+
+    if (!selectedAction) {
+      alert("Please select a bulk action.");
+      return;
+    }
+
+    if (selectedIds.length === 0) {
+      alert("Please select at least one item.");
+      return;
+    }
+
+    // Confirm deletion
+    if (selectedAction === "delete") {
+      var confirmMessage =
+        selectedIds.length === 1
+          ? "Are you sure you want to delete this request?"
+          : "Are you sure you want to delete " +
+            selectedIds.length +
+            " requests?";
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+    }
+
+    // Use standard form submission for all bulk actions (including delete)
+    $bulkActionInput.val(selectedAction);
+    $requestIdsInput.val(selectedIds.join(","));
+    $bulkForm.submit();
+  });
+
+  // Bulk action cancel button
+  $bulkActionCancel.on("click", function () {
+    $rowCheckboxes.prop("checked", false);
+    $selectAllCheckbox.prop("checked", false).prop("indeterminate", false);
+    $bulkActionsSection.hide();
+    $bulkActionSelect.val("");
+  });
+
+  // Initialize state
+  updateBulkActions();
+  updateSelectAllState();
+
+  // Initialize persistent bulk delete functionality
+  initializePersistentBulkDelete();
+}
+
+// Function to initialize persistent bulk delete functionality
+function initializePersistentBulkDelete() {
+  var $persistentBulkDeleteBtn = jQuery("#authdocs-persistent-bulk-delete");
+  var $rowCheckboxes = jQuery(".authdocs-row-checkbox");
+  var $selectAllCheckbox = jQuery("#authdocs-select-all");
+  var $bulkForm = jQuery("#authdocs-bulk-form");
+  var $bulkActionInput = jQuery("#authdocs-bulk-action-input");
+  var $requestIdsInput = jQuery("#authdocs-request-ids-input");
+
+  // Update persistent bulk delete button state
+  function updatePersistentBulkDeleteState() {
+    var selectedCount = $rowCheckboxes.filter(":checked").length;
+
+    if (selectedCount > 0) {
+      $persistentBulkDeleteBtn.prop("disabled", false);
+    } else {
+      $persistentBulkDeleteBtn.prop("disabled", true);
+    }
+  }
+
+  // Listen for checkbox changes
+  $rowCheckboxes.on("change", updatePersistentBulkDeleteState);
+  $selectAllCheckbox.on("change", updatePersistentBulkDeleteState);
+
+  // Handle persistent bulk delete button click
+  $persistentBulkDeleteBtn.on("click", function () {
+    var selectedIds = $rowCheckboxes
+      .filter(":checked")
+      .map(function () {
+        return jQuery(this).val();
+      })
+      .get();
+
+    if (selectedIds.length === 0) {
+      alert("Please select at least one item.");
+      return;
+    }
+
+    var confirmMessage =
+      selectedIds.length === 1
+        ? "Are you sure you want to delete this request?"
+        : "Are you sure you want to delete " +
+          selectedIds.length +
+          " requests?";
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Set form values and submit
+    $bulkActionInput.val("delete");
+    $requestIdsInput.val(selectedIds.join(","));
+    $bulkForm.submit();
+  });
+
+  // Initialize state
+  updatePersistentBulkDeleteState();
 }

@@ -106,10 +106,21 @@ class CustomPostType
                                             </div>
                                         </div>
                                         <div class="acf-file-uploader-preview-actions">
-                                            <a href="<?php echo esc_url(wp_get_attachment_url($file_id)); ?>" target="_blank" class="acf-button acf-button-small">
-                                                <span class="dashicons dashicons-external"></span>
-                                                <?php _e('View', 'protecteddocs'); ?>
-                                            </a>
+                                            <?php 
+                                            // Add View PDF link for admin access
+                                            $file_data = Database::get_document_file($post->ID);
+                                            if ($file_data && $file_data['extension'] === 'pdf') {
+                                                $admin_view_url = add_query_arg([
+                                                    'authdocs_admin_view' => '1',
+                                                    'file_id' => $file_id,
+                                                    'nonce' => wp_create_nonce('authdocs_admin_view_' . $file_id)
+                                                ], home_url());
+                                            ?>
+                                                <a href="<?php echo esc_url($admin_view_url); ?>" target="_blank" class="acf-button acf-button-small acf-button-primary">
+                                                    <span class="dashicons dashicons-media-document"></span>
+                                                    <?php _e('View PDF', 'protecteddocs'); ?>
+                                                </a>
+                                            <?php } ?>
                                             <button type="button" class="acf-button acf-button-small acf-button-remove" id="authdocs_remove_file">
                                                 <span class="dashicons dashicons-trash"></span>
                                                 <?php _e('Remove', 'protecteddocs'); ?>
