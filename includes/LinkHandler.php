@@ -6,7 +6,7 @@
  */
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class LinkHandler
 {
@@ -20,10 +20,9 @@ class LinkHandler
     /**
      * Public method to render error pages (can be called from other classes)
      */
-    public static function render_error_page(string $message, string $title = '', int $status_code = 403): void
+    public static function render_error_page(string $message, string $title = '', int $status_code = 403, array $document_info = []): void
     {
-        $error_handler = new self();
-        $error_handler->render_error($message, $status_code);
+        ErrorPageRenderer::render($message, $title, $status_code, $document_info);
     }
     
     /**
@@ -156,176 +155,4 @@ class LinkHandler
         <?php
     }
     
-    /**
-     * Render error page
-     */
-    private function render_error(string $message, int $status_code): void
-    {
-        http_response_code($status_code);
-        ?>
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?php _e('Access Denied', 'authdocs'); ?> - AuthDocs</title>
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    min-height: 100vh;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                    line-height: 1.6;
-                }
-                
-                .error-container {
-                    background: rgba(255, 255, 255, 0.95);
-                    backdrop-filter: blur(10px);
-                    border-radius: 20px;
-                    padding: 60px 40px;
-                    text-align: center;
-                    max-width: 500px;
-                    width: 100%;
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                }
-                
-                .error-icon {
-                    width: 80px;
-                    height: 80px;
-                    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin: 0 auto 30px;
-                    font-size: 36px;
-                    color: white;
-                    box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
-                }
-                
-                .error-title {
-                    font-size: 28px;
-                    font-weight: 700;
-                    color: #2c3e50;
-                    margin-bottom: 15px;
-                    letter-spacing: -0.5px;
-                }
-                
-                .error-message {
-                    font-size: 16px;
-                    color: #7f8c8d;
-                    margin-bottom: 40px;
-                    line-height: 1.7;
-                }
-                
-                .action-buttons {
-                    display: flex;
-                    gap: 15px;
-                    justify-content: center;
-                    flex-wrap: wrap;
-                }
-                
-                .btn {
-                    padding: 12px 24px;
-                    border-radius: 50px;
-                    text-decoration: none;
-                    font-weight: 600;
-                    font-size: 14px;
-                    transition: all 0.3s ease;
-                    border: none;
-                    cursor: pointer;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                
-                .btn-primary {
-                    background: linear-gradient(135deg, #667eea, #764ba2);
-                    color: white;
-                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-                }
-                
-                .btn-primary:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-                }
-                
-                .btn-secondary {
-                    background: rgba(255, 255, 255, 0.8);
-                    color: #667eea;
-                    border: 2px solid rgba(102, 126, 234, 0.2);
-                }
-                
-                .btn-secondary:hover {
-                    background: rgba(102, 126, 234, 0.1);
-                    transform: translateY(-2px);
-                }
-                
-                .help-text {
-                    margin-top: 30px;
-                    padding-top: 20px;
-                    border-top: 1px solid rgba(0, 0, 0, 0.1);
-                    font-size: 14px;
-                    color: #95a5a6;
-                }
-                
-                @media (max-width: 480px) {
-                    .error-container {
-                        padding: 40px 20px;
-                    }
-                    
-                    .error-title {
-                        font-size: 24px;
-                    }
-                    
-                    .action-buttons {
-                        flex-direction: column;
-                        align-items: center;
-                    }
-                    
-                    .btn {
-                        width: 100%;
-                        max-width: 200px;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="error-container">
-                <div class="error-icon">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
-                    </svg>
-                </div>
-                
-                <h1 class="error-title"><?php _e('Access Denied', 'authdocs'); ?></h1>
-                <p class="error-message"><?php echo esc_html($message); ?></p>
-                
-                <div class="action-buttons">
-                    <a href="<?php echo esc_url(home_url('/')); ?>" class="btn btn-primary">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
-                        </svg>
-                        <?php _e('Go Home', 'authdocs'); ?>
-                    </a>
-                </div>
-                
-                <div class="help-text">
-                    <?php _e('If you believe this is an error, please contact the administrator.', 'authdocs'); ?>
-                </div>
-            </div>
-        </body>
-        </html>
-        <?php
-    }
 }

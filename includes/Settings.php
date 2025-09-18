@@ -6,29 +6,27 @@
  */
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 /**
  * Settings management for AuthDocs plugin
  */
 class Settings {
     
-    private const OPTION_GROUP = 'authdocs_options';
-    private const ACCESS_REQUEST_TEMPLATE_NAME = 'authdocs_access_request_template';
-    private const AUTO_RESPONSE_TEMPLATE_NAME = 'authdocs_auto_response_template';
-    private const GRANT_DECLINE_TEMPLATE_NAME = 'authdocs_grant_decline_template';
-    private const ACCESS_REQUEST_RECIPIENTS_NAME = 'authdocs_access_request_recipients';
-    private const GRANT_DECLINE_RECIPIENTS_NAME = 'authdocs_grant_decline_recipients';
-    private const SECRET_KEY_OPTION_NAME = 'authdocs_secret_key';
-    private const FRONTEND_COLOR_PALETTE_NAME = 'authdocs_frontend_color_palette';
-    private const PAGINATION_STYLE_NAME = 'authdocs_pagination_style';
-    private const PAGINATION_TYPE_NAME = 'authdocs_pagination_type';
+    public const OPTION_GROUP = 'authdocs_options';
+    public const ACCESS_REQUEST_TEMPLATE_NAME = 'authdocs_access_request_template';
+    public const AUTO_RESPONSE_TEMPLATE_NAME = 'authdocs_auto_response_template';
+    public const GRANT_DECLINE_TEMPLATE_NAME = 'authdocs_grant_decline_template';
+    public const ACCESS_REQUEST_RECIPIENTS_NAME = 'authdocs_access_request_recipients';
+    public const GRANT_DECLINE_RECIPIENTS_NAME = 'authdocs_grant_decline_recipients';
+    public const SECRET_KEY_OPTION_NAME = 'authdocs_secret_key';
+    public const FRONTEND_COLOR_PALETTE_NAME = 'authdocs_frontend_color_palette';
+    public const PAGINATION_STYLE_NAME = 'authdocs_pagination_style';
+    public const PAGINATION_TYPE_NAME = 'authdocs_pagination_type';
     
     public function __construct() {
         add_action('admin_init', [$this, 'init_settings']);
         add_action('admin_init', [$this, 'ensure_default_templates']);
-        add_action('admin_init', [$this, 'handle_tab_preservation']);
-        add_filter('wp_redirect', [$this, 'preserve_tab_in_redirect'], 10, 2);
     }
     
     /**
@@ -80,6 +78,7 @@ class Settings {
         if (empty(get_option(self::PAGINATION_TYPE_NAME, ''))) {
             update_option(self::PAGINATION_TYPE_NAME, 'ajax');
         }
+        
     }
     
     /**
@@ -150,7 +149,7 @@ class Settings {
             [
                 'type' => 'string',
                 'sanitize_callback' => [$this, 'sanitize_color_palette'],
-                'default' => 'black_white'
+                'default' => 'black_white_blue'
             ]
         );
         
@@ -174,17 +173,18 @@ class Settings {
             ]
         );
         
+        
         // Access Request Email Section
         add_settings_section(
             'authdocs_access_request_section',
-            __('Access Request Email Template', 'authdocs'),
+            __('Access Request Email Template', 'protecteddocs'),
             [$this, 'render_access_request_section_description'],
             'authdocs-settings'
         );
         
         add_settings_field(
             'access_request_subject',
-            '<span class="authdocs-email-subject-label">' . __('Email Subject', 'authdocs') . '</span>',
+            '<span class="authdocs-email-subject-label">' . __('Email Subject', 'protecteddocs') . '</span>',
             [$this, 'render_access_request_subject_field'],
             'authdocs-settings',
             'authdocs_access_request_section'
@@ -192,7 +192,7 @@ class Settings {
         
         add_settings_field(
             'access_request_body',
-            __('Email Body (HTML)', 'authdocs'),
+            __('Email Body (HTML)', 'protecteddocs'),
             [$this, 'render_access_request_body_field'],
             'authdocs-settings',
             'authdocs_access_request_section'
@@ -200,7 +200,7 @@ class Settings {
         
         add_settings_field(
             'access_request_recipients',
-            __('Recipient Email Addresses', 'authdocs'),
+            __('Recipient Email Addresses', 'protecteddocs'),
             [$this, 'render_access_request_recipients_field'],
             'authdocs-settings',
             'authdocs_access_request_section'
@@ -208,7 +208,7 @@ class Settings {
         
         add_settings_field(
             'access_request_variables',
-            __('Available Variables', 'authdocs'),
+            __('Available Variables', 'protecteddocs'),
             [$this, 'render_access_request_variables_help'],
             'authdocs-settings',
             'authdocs_access_request_section'
@@ -217,14 +217,14 @@ class Settings {
         // Auto-Response Email Section
         add_settings_section(
             'authdocs_auto_response_section',
-            __('Auto-Response Email Template', 'authdocs'),
+            __('Auto-Response Email Template', 'protecteddocs'),
             [$this, 'render_auto_response_section_description'],
             'authdocs-settings'
         );
         
         add_settings_field(
             'auto_response_enable',
-            __('Enable Auto-Response', 'authdocs'),
+            __('Enable Auto-Response', 'protecteddocs'),
             [$this, 'render_auto_response_enable_field'],
             'authdocs-settings',
             'authdocs_auto_response_section'
@@ -232,7 +232,7 @@ class Settings {
         
         add_settings_field(
             'auto_response_subject',
-            '<span class="authdocs-email-subject-label">' . __('Email Subject', 'authdocs') . '</span>',
+            '<span class="authdocs-email-subject-label">' . __('Email Subject', 'protecteddocs') . '</span>',
             [$this, 'render_auto_response_subject_field'],
             'authdocs-settings',
             'authdocs_auto_response_section'
@@ -240,7 +240,7 @@ class Settings {
         
         add_settings_field(
             'auto_response_body',
-            __('Email Body (HTML)', 'authdocs'),
+            __('Email Body (HTML)', 'protecteddocs'),
             [$this, 'render_auto_response_body_field'],
             'authdocs-settings',
             'authdocs_auto_response_section'
@@ -248,7 +248,7 @@ class Settings {
         
         add_settings_field(
             'auto_response_variables',
-            __('Available Variables', 'authdocs'),
+            __('Available Variables', 'protecteddocs'),
             [$this, 'render_auto_response_variables_help'],
             'authdocs-settings',
             'authdocs_auto_response_section'
@@ -257,14 +257,14 @@ class Settings {
         // Grant/Decline Email Section
         add_settings_section(
             'authdocs_grant_decline_section',
-            __('Grant/Decline Email Template', 'authdocs'),
+            __('Grant/Decline Email Template', 'protecteddocs'),
             [$this, 'render_grant_decline_section_description'],
             'authdocs-settings'
         );
         
         add_settings_field(
             'grant_decline_subject',
-            '<span class="authdocs-email-subject-label">' . __('Email Subject', 'authdocs') . '</span>',
+            '<span class="authdocs-email-subject-label">' . __('Email Subject', 'protecteddocs') . '</span>',
             [$this, 'render_grant_decline_subject_field'],
             'authdocs-settings',
             'authdocs_grant_decline_section'
@@ -272,7 +272,7 @@ class Settings {
         
         add_settings_field(
             'grant_decline_body',
-            __('Email Body (HTML)', 'authdocs'),
+            __('Email Body (HTML)', 'protecteddocs'),
             [$this, 'render_grant_decline_body_field'],
             'authdocs-settings',
             'authdocs_grant_decline_section'
@@ -280,7 +280,7 @@ class Settings {
         
         add_settings_field(
             'grant_decline_recipients',
-            __('Recipient Email Addresses', 'authdocs'),
+            __('Recipient Email Addresses', 'protecteddocs'),
             [$this, 'render_grant_decline_recipients_field'],
             'authdocs-settings',
             'authdocs_grant_decline_section'
@@ -288,56 +288,49 @@ class Settings {
         
         add_settings_field(
             'grant_decline_variables',
-            __('Available Variables', 'authdocs'),
+            __('Available Variables', 'protecteddocs'),
             [$this, 'render_grant_decline_variables_help'],
             'authdocs-settings',
             'authdocs_grant_decline_section'
         );
         
-        // Frontend Color Palette Section
+        // Display & Navigation Section (Combined Color Palette and Pagination)
         add_settings_section(
-            'authdocs_frontend_colors_section',
-            __('Frontend Color Palette', 'authdocs'),
-            [$this, 'render_frontend_colors_section_description'],
+            'authdocs_display_navigation_section',
+            __('Display & Navigation Settings', 'protecteddocs'),
+            [$this, 'render_display_navigation_section_description'],
             'authdocs-settings'
         );
         
         add_settings_field(
             'frontend_color_palette',
-            '<span class="authdocs-color-palette-label">' . __('Color Palette', 'authdocs') . '</span>',
+            '<span class="authdocs-color-palette-label">' . __('Color Palette', 'protecteddocs') . '</span>',
             [$this, 'render_frontend_color_palette_field'],
             'authdocs-settings',
-            'authdocs_frontend_colors_section'
-        );
-        
-        // Pagination Section
-        add_settings_section(
-            'authdocs_pagination_section',
-            __('Pagination Settings', 'authdocs'),
-            [$this, 'render_pagination_section_description'],
-            'authdocs-settings'
+            'authdocs_display_navigation_section'
         );
         
         add_settings_field(
             'pagination_type',
-            '<span class="authdocs-pagination-type-label">' . __('Pagination Type', 'authdocs') . '</span>',
+            '<span class="authdocs-pagination-type-label">' . __('Pagination Type', 'protecteddocs') . '</span>',
             [$this, 'render_pagination_type_field'],
             'authdocs-settings',
-            'authdocs_pagination_section'
+            'authdocs_display_navigation_section'
         );
         
         add_settings_field(
             'pagination_style',
-            '<span class="authdocs-pagination-style-label">' . __('Pagination Style', 'authdocs') . '</span>',
+            '<span class="authdocs-pagination-style-label">' . __('Pagination Style', 'protecteddocs') . '</span>',
             [$this, 'render_pagination_style_field'],
             'authdocs-settings',
-            'authdocs_pagination_section'
+            'authdocs_display_navigation_section'
         );
+        
         
         // General Section
         add_settings_section(
             'authdocs_general_section',
-            __('General Settings', 'authdocs'),
+            __('General Settings', 'protecteddocs'),
             [$this, 'render_general_section_description'],
             'authdocs-settings'
         );
@@ -348,7 +341,7 @@ class Settings {
      */
     private function get_default_access_request_template(): array {
         return [
-            'subject' => __('New Document Access Request: {{file_name}}', 'authdocs'),
+            'subject' => __('New Document Access Request: {{file_name}}', 'protecteddocs'),
             'body' => $this->get_default_access_request_body_html()
         ];
     }
@@ -359,7 +352,7 @@ class Settings {
     private function get_default_auto_response_template(): array {
         return [
             'enabled' => true,
-            'subject' => __('Document Access Request Received - {{site_name}}', 'authdocs'),
+            'subject' => __('Document Access Request Received - {{site_name}}', 'protecteddocs'),
             'body' => $this->get_default_auto_response_body_html()
         ];
     }
@@ -369,7 +362,7 @@ class Settings {
      */
     private function get_default_grant_decline_template(): array {
         return [
-            'subject' => __('Document Access {{status}} - {{file_name}}', 'authdocs'),
+            'subject' => __('Document Access {{status}} - {{file_name}}', 'protecteddocs'),
             'body' => $this->get_default_grant_decline_body_html()
         ];
     }
@@ -398,7 +391,7 @@ class Settings {
             <p><strong>Request Date:</strong> ' . date_i18n(get_option('date_format') . ' ' . get_option('time_format')) . '</p>
         </div>
         
-        <p><a href="' . admin_url('edit.php?post_type=document&page=authdocs-requests') . '" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Review Request</a></p>
+        <p><a href="{{document_edit_url}}" style="display: inline-block; background: #007cba; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500;">Review Request</a></p>
         
         <p>You can review and manage this request from your WordPress admin panel.</p>
     </div>
@@ -539,11 +532,11 @@ class Settings {
     public function sanitize_color_palette($input): string {
         // Handle null or non-string input
         if (!is_string($input)) {
-            return 'black_white';
+            return 'black_white_blue';
         }
         
-        $allowed_palettes = ['black_white', 'blue_gray'];
-        return in_array($input, $allowed_palettes) ? $input : 'black_white';
+        $allowed_palettes = ['black_white_blue', 'black_gray'];
+        return in_array($input, $allowed_palettes) ? $input : 'black_white_blue';
     }
     
     /**
@@ -572,25 +565,22 @@ class Settings {
         return in_array($input, $allowed_types) ? $input : 'ajax';
     }
     
-    public function render_pagination_section_description(): void
-    {
-        echo '<p>' . __('Configure how pagination is displayed on the frontend.', 'authdocs') . '</p>';
-    }
+    
     
     public function render_pagination_type_field(): void
     {
         $current_type = $this->get_pagination_type();
         ?>
         <fieldset>
-            <legend class="screen-reader-text"><?php _e('Pagination Type', 'authdocs'); ?></legend>
+            <legend class="screen-reader-text"><?php _e('Pagination Type', 'protecteddocs'); ?></legend>
             
             <div class="authdocs-pagination-type-options">
                 <label class="authdocs-pagination-type-option">
                     <input type="radio" name="<?php echo self::PAGINATION_TYPE_NAME; ?>" value="ajax" 
                            <?php checked($current_type, 'ajax'); ?> />
                     <div class="authdocs-option-content">
-                        <strong class="authdocs-option-title"><?php _e('AJAX Pagination', 'authdocs'); ?></strong>
-                        <p class="authdocs-option-description"><?php _e('Fast, seamless pagination without page reloads.', 'authdocs'); ?></p>
+                        <strong class="authdocs-option-title"><?php _e('AJAX Pagination', 'protecteddocs'); ?></strong>
+                        <p class="authdocs-option-description"><?php _e('Fast, seamless pagination without page reloads.', 'protecteddocs'); ?></p>
                     </div>
                 </label>
                 
@@ -599,8 +589,8 @@ class Settings {
                            <?php checked($current_type, 'classic'); ?> 
                            onchange="authdocsConfirmClassicPagination(this)" />
                     <div class="authdocs-option-content">
-                        <strong class="authdocs-option-title"><?php _e('Classic Pagination', 'authdocs'); ?></strong>
-                        <p class="authdocs-option-description"><?php _e('Traditional pagination with full page reloads.', 'authdocs'); ?></p>
+                        <strong class="authdocs-option-title"><?php _e('Classic Pagination', 'protecteddocs'); ?></strong>
+                        <p class="authdocs-option-description"><?php _e('Traditional pagination with full page reloads.', 'protecteddocs'); ?></p>
                     </div>
                 </label>
             </div>
@@ -613,7 +603,7 @@ class Settings {
         $current_style = $this->get_pagination_style();
         ?>
         <fieldset>
-            <legend class="screen-reader-text"><?php _e('Pagination Style', 'authdocs'); ?></legend>
+            <legend class="screen-reader-text"><?php _e('Pagination Style', 'protecteddocs'); ?></legend>
             
             <div class="authdocs-pagination-options">
                 <label class="authdocs-pagination-option">
@@ -638,8 +628,8 @@ class Settings {
                         </div>
                     </div>
                     <div class="authdocs-option-content">
-                        <strong class="authdocs-option-title"><?php _e('Classic Pagination (AJAX)', 'authdocs'); ?></strong>
-                        <p class="authdocs-option-description"><?php _e('Traditional page numbers with Previous/Next buttons for easy navigation.', 'authdocs'); ?></p>
+                        <strong class="authdocs-option-title"><?php _e('Classic Pagination (AJAX)', 'protecteddocs'); ?></strong>
+                        <p class="authdocs-option-description"><?php _e('Traditional page numbers with Previous/Next buttons for easy navigation.', 'protecteddocs'); ?></p>
                     </div>
                 </label>
                 
@@ -661,8 +651,8 @@ class Settings {
                         </div>
                     </div>
                     <div class="authdocs-option-content">
-                        <strong class="authdocs-option-title"><?php _e('Load More (AJAX)', 'authdocs'); ?></strong>
-                        <p class="authdocs-option-description"><?php _e('Progressive loading with a "Load More" button for seamless browsing.', 'authdocs'); ?></p>
+                        <strong class="authdocs-option-title"><?php _e('Load More (AJAX)', 'protecteddocs'); ?></strong>
+                        <p class="authdocs-option-description"><?php _e('Progressive loading with a "Load More" button for seamless browsing.', 'protecteddocs'); ?></p>
                     </div>
                 </label>
             </div>
@@ -670,14 +660,15 @@ class Settings {
         <?php
     }
     
+    
     public function render_general_section_description(): void
     {
-        echo '<p>' . __('General plugin settings and information.', 'authdocs') . '</p>';
+        echo '<p>' . __('General plugin settings and information.', 'protecteddocs') . '</p>';
     }
     
     // Render methods for Access Request Email
     public function render_access_request_section_description(): void {
-        echo '<p>' . __('Configure the email template that will be sent to website owners when a document access request is submitted.', 'authdocs') . '</p>';
+        echo '<p>' . __('Configure the email template that will be sent to website owners when a document access request is submitted.', 'protecteddocs') . '</p>';
     }
     
     public function render_access_request_subject_field(): void {
@@ -691,7 +682,7 @@ class Settings {
         }
         
         echo '<input type="text" id="access_request_subject" name="' . self::ACCESS_REQUEST_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text authdocs-text-input" />';
-        echo '<p class="description">' . __('Subject line for the access request notification email.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('Subject line for the access request notification email.', 'protecteddocs') . '</p>';
     }
     
     public function render_access_request_body_field(): void {
@@ -733,31 +724,31 @@ class Settings {
         ];
         
         wp_editor($body, 'access_request_body', $editor_settings);
-        echo '<p class="description">' . __('HTML email body for access request notifications.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('HTML email body for access request notifications.', 'protecteddocs') . '</p>';
     }
     
     public function render_access_request_recipients_field(): void {
         $recipients = get_option(self::ACCESS_REQUEST_RECIPIENTS_NAME, get_option('admin_email'));
         
         echo '<input type="text" id="access_request_recipients" name="' . self::ACCESS_REQUEST_RECIPIENTS_NAME . '" value="' . esc_attr($recipients) . '" class="regular-text authdocs-text-input" placeholder="admin@example.com, manager@example.com" />';
-        echo '<p class="description">' . __('Enter email addresses separated by commas. These will receive notifications when access is requested.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('Enter email addresses separated by commas. These will receive notifications when access is requested.', 'protecteddocs') . '</p>';
     }
     
     public function render_access_request_variables_help(): void {
         echo '<div class="authdocs-variables-help">';
-        echo '<h4>' . __('Available Variables:', 'authdocs') . '</h4>';
+        echo '<h4>' . __('Available Variables:', 'protecteddocs') . '</h4>';
         echo '<ul style="list-style: disc; margin-left: 20px;">';
-        echo '<li><code>{{name}}</code> - <span>' . __('Requester\'s name', 'authdocs') . '</span></li>';
-        echo '<li><code>{{email}}</code> - <span>' . __('Requester\'s email address', 'authdocs') . '</span></li>';
-        echo '<li><code>{{file_name}}</code> - <span>' . __('Name of the requested file', 'authdocs') . '</span></li>';
-        echo '<li><code>{{site_name}}</code> - <span>' . __('Name of your website', 'authdocs') . '</span></li>';
+        echo '<li><code>{{name}}</code> - <span>' . __('Requester\'s name', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{email}}</code> - <span>' . __('Requester\'s email address', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{file_name}}</code> - <span>' . __('Name of the requested file', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{site_name}}</code> - <span>' . __('Name of your website', 'protecteddocs') . '</span></li>';
         echo '</ul>';
         echo '</div>';
     }
     
     // Render methods for Auto-Response Email
     public function render_auto_response_section_description(): void {
-        echo '<p>' . __('Configure the automatic response email that will be sent to users when they request document access.', 'authdocs') . '</p>';
+        echo '<p>' . __('Configure the automatic response email that will be sent to users when they request document access.', 'protecteddocs') . '</p>';
     }
     
     public function render_auto_response_enable_field(): void {
@@ -765,8 +756,8 @@ class Settings {
         $enabled = $template['enabled'] ?? false;
         
         echo '<label><input type="checkbox" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[enabled]" value="1" ' . checked(1, $enabled, false) . ' />';
-        echo ' <span>' . __('Enable auto-response emails', 'authdocs') . '</span></label>';
-        echo '<p class="description">' . __('When enabled, users will automatically receive a confirmation email after submitting a document access request.', 'authdocs') . '</p>';
+        echo ' <span>' . __('Enable auto-response emails', 'protecteddocs') . '</span></label>';
+        echo '<p class="description">' . __('When enabled, users will automatically receive a confirmation email after submitting a document access request.', 'protecteddocs') . '</p>';
     }
     
     public function render_auto_response_subject_field(): void {
@@ -780,7 +771,7 @@ class Settings {
         }
         
         echo '<input type="text" id="auto_response_subject" name="' . self::AUTO_RESPONSE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text authdocs-text-input" />';
-        echo '<p class="description">' . __('Subject line for the auto-response email.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('Subject line for the auto-response email.', 'protecteddocs') . '</p>';
     }
     
     public function render_auto_response_body_field(): void {
@@ -822,24 +813,24 @@ class Settings {
         ];
         
         wp_editor($body, 'auto_response_body', $editor_settings);
-        echo '<p class="description">' . __('HTML email body for auto-response emails.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('HTML email body for auto-response emails.', 'protecteddocs') . '</p>';
     }
     
     public function render_auto_response_variables_help(): void {
         echo '<div class="authdocs-variables-help">';
-        echo '<h4>' . __('Available Variables:', 'authdocs') . '</h4>';
+        echo '<h4>' . __('Available Variables:', 'protecteddocs') . '</h4>';
         echo '<ul style="list-style: disc; margin-left: 20px;">';
-        echo '<li><code>{{name}}</code> - <span>' . __('Requester\'s name', 'authdocs') . '</span></li>';
-        echo '<li><code>{{email}}</code> - <span>' . __('Requester\'s email address', 'authdocs') . '</span></li>';
-        echo '<li><code>{{file_name}}</code> - <span>' . __('Name of the requested file', 'authdocs') . '</span></li>';
-        echo '<li><code>{{site_name}}</code> - <span>' . __('Name of your website', 'authdocs') . '</span></li>';
+        echo '<li><code>{{name}}</code> - <span>' . __('Requester\'s name', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{email}}</code> - <span>' . __('Requester\'s email address', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{file_name}}</code> - <span>' . __('Name of the requested file', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{site_name}}</code> - <span>' . __('Name of your website', 'protecteddocs') . '</span></li>';
         echo '</ul>';
         echo '</div>';
     }
     
     // Render methods for Grant/Decline Email
     public function render_grant_decline_section_description(): void {
-        echo '<p>' . __('Configure the email template that will be sent when document access is granted or declined.', 'authdocs') . '</p>';
+        echo '<p>' . __('Configure the email template that will be sent when document access is granted or declined.', 'protecteddocs') . '</p>';
     }
     
     public function render_grant_decline_subject_field(): void {
@@ -853,7 +844,7 @@ class Settings {
         }
         
         echo '<input type="text" id="grant_decline_subject" name="' . self::GRANT_DECLINE_TEMPLATE_NAME . '[subject]" value="' . esc_attr($subject) . '" class="regular-text authdocs-text-input" />';
-        echo '<p class="description">' . __('Subject line for grant/decline emails. Use {{status}} for "Granted" or "Declined".', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('Subject line for grant/decline emails. Use {{status}} for "Granted" or "Declined".', 'protecteddocs') . '</p>';
     }
     
     public function render_grant_decline_body_field(): void {
@@ -895,27 +886,27 @@ class Settings {
         ];
         
         wp_editor($body, 'grant_decline_body', $editor_settings);
-        echo '<p class="description">' . __('HTML email body for grant/decline notifications. Use {{link}} for the document access link when granted.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('HTML email body for grant/decline notifications. Use {{link}} for the document access link when granted.', 'protecteddocs') . '</p>';
     }
     
     public function render_grant_decline_recipients_field(): void {
         $recipients = get_option(self::GRANT_DECLINE_RECIPIENTS_NAME, '{{email}}');
         
         echo '<input type="text" id="grant_decline_recipients" name="' . self::GRANT_DECLINE_RECIPIENTS_NAME . '" value="' . esc_attr($recipients) . '" class="regular-text authdocs-text-input" placeholder="{{email}}" />';
-        echo '<p class="description">' . __('Enter email addresses separated by commas, or use {{email}} to send to the requester.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('Enter email addresses separated by commas, or use {{email}} to send to the requester.', 'protecteddocs') . '</p>';
     }
     
     public function render_grant_decline_variables_help(): void {
         echo '<div class="authdocs-variables-help">';
-        echo '<h4>' . __('Available Variables:', 'authdocs') . '</h4>';
+        echo '<h4>' . __('Available Variables:', 'protecteddocs') . '</h4>';
         echo '<ul style="list-style: disc; margin-left: 20px;">';
-        echo '<li><code>{{name}}</code> - <span>' . __('Requester\'s name', 'authdocs') . '</span></li>';
-        echo '<li><code>{{email}}</code> - <span>' . __('Requester\'s email address', 'authdocs') . '</span></li>';
-        echo '<li><code>{{file_name}}</code> - <span>' . __('Name of the requested file', 'authdocs') . '</span></li>';
-        echo '<li><code>{{site_name}}</code> - <span>' . __('Name of your website', 'authdocs') . '</span></li>';
-        echo '<li><code>{{status}}</code> - <span>' . __('"Granted" or "Declined"', 'authdocs') . '</span></li>';
-        echo '<li><code>{{status_color}}</code> - <span>' . __('Color code for granted (#28a745) or declined (#dc3545)', 'authdocs') . '</span></li>';
-        echo '<li><code>{{link}}</code> - <span>' . __('Secure document access link (only available when granted)', 'authdocs') . '</span></li>';
+        echo '<li><code>{{name}}</code> - <span>' . __('Requester\'s name', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{email}}</code> - <span>' . __('Requester\'s email address', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{file_name}}</code> - <span>' . __('Name of the requested file', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{site_name}}</code> - <span>' . __('Name of your website', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{status}}</code> - <span>' . __('"Granted" or "Declined"', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{status_color}}</code> - <span>' . __('Color code for granted (#28a745) or declined (#dc3545)', 'protecteddocs') . '</span></li>';
+        echo '<li><code>{{link}}</code> - <span>' . __('Secure document access link (only available when granted)', 'protecteddocs') . '</span></li>';
         echo '</ul>';
         echo '</div>';
     }
@@ -1019,7 +1010,8 @@ class Settings {
             '{{site_name}}' => $variables['site_name'] ?? get_bloginfo('name'),
             '{{status}}' => $variables['status'] ?? '',
             '{{status_color}}' => $variables['status_color'] ?? '',
-            '{{link}}' => $variables['link'] ?? ''
+            '{{link}}' => $variables['link'] ?? '',
+            '{{document_edit_url}}' => $variables['document_edit_url'] ?? ''
         ];
         
         return str_replace(array_keys($replacements), array_values($replacements), $text);
@@ -1059,57 +1051,90 @@ class Settings {
         }
     }
     
-    // Render methods for Frontend Color Palette
-    public function render_frontend_colors_section_description(): void {
-        echo '<p>' . __('Choose a color palette for the frontend document display. Changes will apply to all shortcodes and document grids.', 'authdocs') . '</p>';
+    // Render methods for Display & Navigation Section
+    public function render_display_navigation_section_description(): void {
+        echo '<p>' . __('Configure the visual appearance and navigation behavior of your document displays. Choose color themes and pagination styles that match your website design.', 'protecteddocs') . '</p>';
     }
     
     public function render_frontend_color_palette_field(): void {
-        $current_palette = get_option(self::FRONTEND_COLOR_PALETTE_NAME, 'black_white');
+        $current_palette = get_option(self::FRONTEND_COLOR_PALETTE_NAME, 'black_white_blue');
         
         $palettes = [
-            'black_white' => [
-                'name' => __('Black & White', 'authdocs'),
-                'description' => __('Clean black and white theme with minimal styling', 'authdocs'),
+            'black_white_blue' => [
+                'name' => __('Black & White + Blue', 'protecteddocs'),
+                'description' => __('Clean black and white theme with blue accents for buttons and highlights', 'protecteddocs'),
                 'colors' => [
-                    'primary' => '#000000',
+                    'primary' => '#2563eb',
                     'secondary' => '#ffffff',
                     'text' => '#000000',
                     'background' => '#ffffff',
                     'border' => '#e5e5e5'
                 ]
             ],
-            'blue_gray' => [
-                'name' => __('Blue & Gray', 'authdocs'),
-                'description' => __('Professional blue and gray color scheme', 'authdocs'),
+            'black_gray' => [
+                'name' => __('Black & Gray', 'protecteddocs'),
+                'description' => __('Professional black and gray color scheme with subtle styling', 'protecteddocs'),
                 'colors' => [
-                    'primary' => '#2563eb',
-                    'secondary' => '#f8fafc',
-                    'text' => '#1e293b',
+                    'primary' => '#374151',
+                    'secondary' => '#f9fafb',
+                    'text' => '#111827',
                     'background' => '#ffffff',
-                    'border' => '#e2e8f0'
+                    'border' => '#d1d5db'
                 ]
             ]
         ];
         
-        echo '<div class="authdocs-color-palettes">';
+        echo '<div class="authdocs-color-palettes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;">';
         
         foreach ($palettes as $palette_key => $palette_data) {
             $checked = checked($palette_key, $current_palette, false);
+            $is_selected = $palette_key === $current_palette;
             
-            echo '<div class="authdocs-palette-option" style="margin-bottom: 20px; padding: 20px; border: 2px solid ' . ($palette_key === $current_palette ? $palette_data['colors']['primary'] : '#e5e5e5') . '; border-radius: 8px; background: ' . $palette_data['colors']['background'] . ';">';
-            echo '<label style="display: flex; align-items: center; cursor: pointer;">';
-            echo '<input type="radio" name="' . self::FRONTEND_COLOR_PALETTE_NAME . '" value="' . esc_attr($palette_key) . '" ' . $checked . ' style="margin-right: 12px;" />';
-            echo '<div class="authdocs-palette-content">';
-            echo '<h4 class="authdocs-palette-title" style="margin: 0 0 5px 0; color: ' . $palette_data['colors']['text'] . ';">' . esc_html($palette_data['name']) . '</h4>';
-            echo '<p class="authdocs-palette-description" style="margin: 0 0 10px 0; color: ' . $palette_data['colors']['text'] . '; opacity: 0.7;">' . esc_html($palette_data['description']) . '</p>';
+            echo '<div class="authdocs-palette-option" style="
+                padding: 16px; 
+                border: 2px solid ' . ($is_selected ? $palette_data['colors']['primary'] : '#e5e5e5') . '; 
+                border-radius: 8px; 
+                background: ' . $palette_data['colors']['background'] . ';
+                transition: all 0.2s ease;
+                cursor: pointer;
+                position: relative;
+            " onclick="document.querySelector(\'input[name=\\\'' . self::FRONTEND_COLOR_PALETTE_NAME . '\\\'][value=\\\'' . esc_attr($palette_key) . '\\\']\').checked = true; this.style.borderColor = \'' . $palette_data['colors']['primary'] . '\';">
+                <label style="display: block; cursor: pointer; margin: 0;">
+                    <input type="radio" name="' . self::FRONTEND_COLOR_PALETTE_NAME . '" value="' . esc_attr($palette_key) . '" ' . $checked . ' style="position: absolute; opacity: 0; pointer-events: none;" />
+                    
+                    <div class="authdocs-palette-header" style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <div style="
+                            width: 20px; 
+                            height: 20px; 
+                            border-radius: 50%; 
+                            background: ' . $palette_data['colors']['primary'] . '; 
+                            margin-right: 12px;
+                            border: 2px solid ' . ($is_selected ? $palette_data['colors']['primary'] : '#e5e5e5') . ';
+                        "></div>
+                        <h4 class="authdocs-palette-title" style="margin: 0; color: ' . $palette_data['colors']['text'] . '; font-size: 16px; font-weight: 600;">' . esc_html($palette_data['name']) . '</h4>
+                    </div>
+                    
+                    <p class="authdocs-palette-description" style="
+                        margin: 0 0 12px 0; 
+                        color: ' . $palette_data['colors']['text'] . '; 
+                        opacity: 0.7; 
+                        font-size: 14px; 
+                        line-height: 1.4;
+                    ">' . esc_html($palette_data['description']) . '</p>
+                    
+                    <div class="authdocs-palette-colors" style="display: flex; gap: 6px; align-items: center;">
+                        <span style="font-size: 12px; color: ' . $palette_data['colors']['text'] . '; opacity: 0.6; margin-right: 8px;">Colors:</span>';
             
-            // Color preview
-            echo '<div style="display: flex; gap: 8px;">';
             foreach ($palette_data['colors'] as $color_name => $color_value) {
-                echo '<div style="width: 24px; height: 24px; background: ' . $color_value . '; border: 1px solid #ddd; border-radius: 4px;" title="' . esc_attr($color_name) . '"></div>';
+                echo '<div style="
+                    width: 20px; 
+                    height: 20px; 
+                    background: ' . $color_value . '; 
+                    border: 1px solid rgba(0,0,0,0.1); 
+                    border-radius: 4px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                " title="' . esc_attr(ucfirst(str_replace('_', ' ', $color_name))) . ': ' . $color_value . '"></div>';
             }
-            echo '</div>';
             
             echo '</div>';
             echo '</label>';
@@ -1117,14 +1142,14 @@ class Settings {
         }
         
         echo '</div>';
-        echo '<p class="description">' . __('Select a color palette to customize the appearance of your document displays.', 'authdocs') . '</p>';
+        echo '<p class="description">' . __('Select a color palette to customize the appearance of your document displays.', 'protecteddocs') . '</p>';
     }
     
     /**
      * Get current frontend color palette
      */
     public function get_frontend_color_palette(): string {
-        return get_option(self::FRONTEND_COLOR_PALETTE_NAME, 'black_white');
+        return get_option(self::FRONTEND_COLOR_PALETTE_NAME, 'black_white_blue');
     }
     
     /**
@@ -1143,53 +1168,34 @@ class Settings {
         return get_option(self::PAGINATION_TYPE_NAME, 'ajax');
     }
     
-    /**
-     * Handle tab preservation after form submission
-     */
-    public function handle_tab_preservation(): void {
-        // Only handle POST requests from our settings page
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['authdocs_current_tab'])) {
-            $current_tab = sanitize_text_field($_POST['authdocs_current_tab']);
-            $allowed_tabs = ['email-templates', 'frontend-settings', 'about-plugin'];
-            
-            if (in_array($current_tab, $allowed_tabs)) {
-                // Store the current tab in a transient for the next page load
-                set_transient('authdocs_preserve_tab', $current_tab, 30); // 30 seconds
-            }
-        }
-    }
+    
     
     /**
-     * Get preserved tab from transient
+     * Get color palette colors (simplified version for error pages)
      */
-    public function get_preserved_tab(): string {
-        $preserved_tab = get_transient('authdocs_preserve_tab');
-        if ($preserved_tab) {
-            // Clear the transient after use
-            delete_transient('authdocs_preserve_tab');
-            return $preserved_tab;
+    public function get_color_palette_colors(string $palette_key = null): array {
+        if (!$palette_key) {
+            $palette_key = $this->get_frontend_color_palette();
         }
-        return '';
-    }
-    
-    /**
-     * Preserve tab parameter in settings redirect
-     */
-    public function preserve_tab_in_redirect($location, $status) {
-        // Only handle redirects from our settings page that are settings updates
-        if (strpos($location, 'page=authdocs-settings') !== false && strpos($location, 'settings-updated=true') !== false) {
-            // Get the preserved tab from transient
-            $preserved_tab = get_transient('authdocs_preserve_tab');
-            if ($preserved_tab) {
-                $allowed_tabs = ['email-templates', 'frontend-settings', 'about-plugin'];
-                if (in_array($preserved_tab, $allowed_tabs)) {
-                    // Add tab parameter to the redirect URL
-                    $separator = strpos($location, '?') !== false ? '&' : '?';
-                    $location .= $separator . 'tab=' . urlencode($preserved_tab);
-                }
-            }
-        }
-        return $location;
+        
+        $palettes = [
+            'black_white_blue' => [
+                'primary' => '#2563eb',
+                'secondary' => '#ffffff',
+                'text' => '#000000',
+                'background' => '#ffffff',
+                'border' => '#e5e5e5'
+            ],
+            'black_gray' => [
+                'primary' => '#374151',
+                'secondary' => '#f9fafb',
+                'text' => '#111827',
+                'background' => '#ffffff',
+                'border' => '#d1d5db'
+            ]
+        ];
+        
+        return $palettes[$palette_key] ?? $palettes['black_white_blue'];
     }
     
     /**
@@ -1201,8 +1207,8 @@ class Settings {
         }
         
         $palettes = [
-            'black_white' => [
-                'primary' => '#000000',
+            'black_white_blue' => [
+                'primary' => '#2563eb',
                 'secondary' => '#ffffff',
                 'text' => '#000000',
                 'text_secondary' => '#666666',
@@ -1212,20 +1218,20 @@ class Settings {
                 'border_radius' => '4px',
                 'shadow' => '0 2px 4px rgba(0, 0, 0, 0.1)'
             ],
-            'blue_gray' => [
-                'primary' => '#2563eb',
-                'secondary' => '#f8fafc',
-                'text' => '#1e293b',
-                'text_secondary' => '#64748b',
+            'black_gray' => [
+                'primary' => '#374151',
+                'secondary' => '#f9fafb',
+                'text' => '#111827',
+                'text_secondary' => '#6b7280',
                 'background' => '#ffffff',
-                'background_secondary' => '#f1f5f9',
-                'border' => '#e2e8f0',
+                'background_secondary' => '#f3f4f6',
+                'border' => '#d1d5db',
                 'border_radius' => '4px',
                 'shadow' => '0 2px 4px rgba(0, 0, 0, 0.1)'
             ]
         ];
         
-        return $palettes[$palette_key] ?? $palettes['black_white'];
+        return $palettes[$palette_key] ?? $palettes['black_white_blue'];
     }
     
     /**

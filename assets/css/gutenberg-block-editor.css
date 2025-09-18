@@ -1,0 +1,106 @@
+/* AuthDocs Gutenberg Block Editor Styles */
+
+/* Block preview styling */
+.authdocs-block-preview {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Center the block title and icon */
+.authdocs-block-preview > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Inspector controls styling */
+.components-panel__body .components-base-control {
+  margin-bottom: 16px;
+}
+
+.components-panel__body .components-base-control:last-child {
+  margin-bottom: 0;
+}
+
+/* Range control styling */
+.components-range-control .components-range-control__wrapper {
+  margin-top: 8px;
+}
+
+/* Number control styling */
+.components-number-control .components-input-control__input {
+  width: 100%;
+}
+
+/* Toggle control styling */
+.components-toggle-control .components-form-toggle {
+  margin-right: 8px;
+}
+
+/* Select control styling */
+.components-select-control .components-input-control__input {
+  width: 100%;
+}
+
+/* Radio control styling */
+.components-radio-control .components-radio-control__option {
+  margin-bottom: 8px;
+}
+
+.components-radio-control .components-radio-control__option:last-child {
+  margin-bottom: 0;
+}
+
+/* Panel body styling */
+.components-panel__body .components-panel__body-title {
+  font-weight: 600;
+  color: #1e1e1e;
+}
+
+/* Help text styling */
+.components-base-control__help {
+  font-size: 12px;
+  color: #757575;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Block editor specific adjustments */
+.block-editor-block-inspector .authdocs-block-preview {
+  margin: 16px 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 782px) {
+  .authdocs-block-preview {
+    padding: 15px;
+  }
+
+  .authdocs-block-preview div {
+    font-size: 16px !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .authdocs-block-preview {
+    background-color: #1e1e1e;
+    border-color: #3c434a;
+    color: #f0f0f1;
+  }
+
+  .authdocs-block-preview div[style*="color: #0073aa"] {
+    color: #72aee6 !important;
+  }
+
+  .authdocs-block-preview div[style*="color: #666"] {
+    color: #a7aaad !important;
+  }
+
+  .authdocs-block-preview div[style*="color: #999"] {
+    color: #8c8f94 !important;
+  }
+}

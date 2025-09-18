@@ -6,7 +6,7 @@
  */
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 /**
  * Email handling for AuthDocs plugin
@@ -50,7 +50,9 @@ class Email {
             'name' => $request->requester_name ?? '',
             'email' => $request->requester_email ?? '',
             'file_name' => get_the_title($request->document_id) ?: '',
-            'site_name' => get_bloginfo('name')
+            'site_name' => get_bloginfo('name'),
+            'document_id' => $request->document_id,
+            'document_edit_url' => admin_url('post.php?post=' . $request->document_id . '&action=edit')
         ];
         
         error_log("AuthDocs: Email variables: " . json_encode($variables));
@@ -282,28 +284,58 @@ class Email {
             '{{site_name}}' => $variables['site_name'] ?? get_bloginfo('name'),
             '{{status}}' => $variables['status'] ?? '',
             '{{status_color}}' => $variables['status_color'] ?? '',
-            '{{link}}' => $variables['link'] ?? ''
+            '{{link}}' => $variables['link'] ?? '',
+            '{{document_edit_url}}' => $variables['document_edit_url'] ?? ''
         ];
         
         return str_replace(array_keys($replacements), array_values($replacements), $text);
     }
     
     /**
-     * Generate secure download link for a request
+     * Generate fresh secure viewer link for a request
      */
     private function generate_secure_link(int $request_id): string {
         $request = Database::get_request_by_id($request_id);
-        if (!$request || empty($request->secure_hash)) {
+        if (!$request) {
+            error_log("AuthDocs: generate_secure_link - Request not found for ID: {$request_id}");
             return '';
         }
         
-        return add_query_arg([
-            'authdocs_download' => $request->document_id,
+        // If no secure_hash exists, generate one
+        if (empty($request->secure_hash)) {
+            error_log("AuthDocs: generate_secure_link - No secure_hash found for request ID: {$request_id}, generating new one");
+            $secure_hash = Database::generate_secure_hash($request_id);
+            
+            // Update the request with the new hash
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'authdocs_requests';
+            $wpdb->update(
+                $table_name,
+                ['secure_hash' => $secure_hash],
+                ['id' => $request_id],
+                ['%s'],
+                ['%d']
+            );
+            
+            $request->secure_hash = $secure_hash;
+            error_log("AuthDocs: generate_secure_link - Generated and saved new hash for request ID: {$request_id}");
+        }
+        
+        // Generate fresh token for the viewer
+        $token = Tokens::generate_download_token(intval($request->document_id));
+        
+        $link = add_query_arg([
+            'authdocs_viewer' => '1',
+            'document_id' => $request->document_id,
+            'token' => $token,
             'hash' => $request->secure_hash,
             'email' => $request->requester_email,
-            'request_id' => $request->id,
-            'filename' => $this->get_document_filename((int) $request->document_id)
+            'request_id' => $request->id
         ], home_url());
+        
+        error_log("AuthDocs: generate_secure_link - Generated link for request ID: {$request_id}: " . substr($link, 0, 100) . "...");
+        
+        return $link;
     }
     
     /**

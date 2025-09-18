@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class CustomPostType
 {
@@ -18,17 +18,17 @@ class CustomPostType
     public function register_document_post_type(): void
     {
         $labels = [
-            'name' => __('Documents', 'authdocs'),
-            'singular_name' => __('Document', 'authdocs'),
-            'menu_name' => __('Documents', 'authdocs'),
-            'add_new' => __('Add New Document', 'authdocs'),
-            'add_new_item' => __('Add New Document', 'authdocs'),
-            'edit_item' => __('Edit Document', 'authdocs'),
-            'new_item' => __('New Document', 'authdocs'),
-            'view_item' => __('View Document', 'authdocs'),
-            'search_items' => __('Search Documents', 'authdocs'),
-            'not_found' => __('No documents found', 'authdocs'),
-            'not_found_in_trash' => __('No documents found in trash', 'authdocs'),
+            'name' => __('Documents', 'protecteddocs'),
+            'singular_name' => __('Document', 'protecteddocs'),
+            'menu_name' => __('Documents', 'protecteddocs'),
+            'add_new' => __('Add New Document', 'protecteddocs'),
+            'add_new_item' => __('Add New Document', 'protecteddocs'),
+            'edit_item' => __('Edit Document', 'protecteddocs'),
+            'new_item' => __('New Document', 'protecteddocs'),
+            'view_item' => __('View Document', 'protecteddocs'),
+            'search_items' => __('Search Documents', 'protecteddocs'),
+            'not_found' => __('No documents found', 'protecteddocs'),
+            'not_found_in_trash' => __('No documents found in trash', 'protecteddocs'),
         ];
 
         $args = [
@@ -55,7 +55,7 @@ class CustomPostType
     {
         add_meta_box(
             'authdocs_document_settings',
-            __('Document Settings', 'authdocs'),
+            __('Document Settings', 'protecteddocs'),
             [$this, 'document_settings_callback'],
             'document',
             'normal',
@@ -64,11 +64,11 @@ class CustomPostType
 
         add_meta_box(
             'authdocs_shortcode_display',
-            __('Shortcode', 'authdocs'),
+            __('Shortcode', 'protecteddocs'),
             [$this, 'shortcode_display_callback'],
             'document',
-            'side',
-            'high'
+            'normal',
+            'core'
         );
     }
 
@@ -80,146 +80,238 @@ class CustomPostType
         $file_id = get_post_meta($post->ID, '_authdocs_file_id', true);
         
         ?>
-        <div class="authdocs-document-settings">
-            <!-- Document File Section -->
-            <div class="authdocs-settings-card">
-                <div class="authdocs-card-header">
-                    <div class="authdocs-card-icon">
-                        <span class="dashicons dashicons-media-document"></span>
-                    </div>
-                    <div class="authdocs-card-title">
-                        <h3><?php _e('Document File', 'authdocs'); ?></h3>
-                        <p><?php _e('Upload or select a PDF document for this post', 'authdocs'); ?></p>
-                    </div>
+        <div class="authdocs-acf-style-settings">
+            <!-- Document File Field -->
+            <div class="acf-field acf-field-file">
+                <div class="acf-label">
+                    <label for="authdocs_file_id"><?php _e('Document File', 'protecteddocs'); ?></label>
+                    <p class="description"><?php _e('Upload or select a document file (PDF, DOC, XLS, PPT, etc.) for this post', 'protecteddocs'); ?></p>
                 </div>
-                <div class="authdocs-card-content">
+                <div class="acf-input">
                     <input type="hidden" id="authdocs_file_id" name="authdocs_file_id" value="<?php echo esc_attr($file_id); ?>" />
-                    <div class="authdocs-file-upload">
-                        <button type="button" class="button button-primary authdocs-upload-btn" id="authdocs_upload_button">
-                            <span class="dashicons dashicons-upload"></span>
-                            <?php _e('Select Document', 'authdocs'); ?>
-                        </button>
-                        <button type="button" class="button authdocs-remove-btn" id="authdocs_remove_file" style="<?php echo $file_id ? '' : 'display:none;'; ?>">
-                            <span class="dashicons dashicons-trash"></span>
-                            <?php _e('Remove', 'authdocs'); ?>
-                        </button>
-                    </div>
-                    <div id="authdocs_file_preview" class="authdocs-file-preview">
-                        <?php if ($file_id): ?>
-                            <div class="authdocs-file-item">
-                                <?php echo wp_get_attachment_link($file_id, 'thumbnail', false, true, false); ?>
-                            </div>
-                        <?php else: ?>
-                            <div class="authdocs-no-file">
-                                <span class="dashicons dashicons-media-document"></span>
-                                <p><?php _e('No document selected', 'authdocs'); ?></p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Access Settings Section -->
-            <div class="authdocs-settings-card">
-                <div class="authdocs-card-header">
-                    <div class="authdocs-card-icon">
-                        <span class="dashicons dashicons-lock"></span>
-                    </div>
-                    <div class="authdocs-card-title">
-                        <h3><?php _e('Access Settings', 'authdocs'); ?></h3>
-                        <p><?php _e('Configure how users can access this document', 'authdocs'); ?></p>
-                    </div>
-                </div>
-                <div class="authdocs-card-content">
-                    <div class="authdocs-toggle-field">
-                        <label class="authdocs-toggle">
-                            <input type="checkbox" id="authdocs_restricted" name="authdocs_restricted" value="yes" <?php checked($restricted, 'yes'); ?> />
-                            <span class="authdocs-toggle-slider"></span>
-                        </label>
-                        <div class="authdocs-toggle-content">
-                            <h4><?php _e('Require Opt-in Form', 'authdocs'); ?></h4>
-                            <p><?php _e('Users must fill out an opt-in form before accessing this document', 'authdocs'); ?></p>
+                    <div class="acf-file-uploader" data-library="uploadedTo">
+                        <div class="acf-file-uploader-inner">
+                            <?php if ($file_id): ?>
+                                <div class="acf-file-uploader-preview">
+                                    <div class="acf-file-uploader-preview-inner">
+                                        <div class="acf-file-uploader-preview-icon">
+                                            <span class="dashicons dashicons-media-document"></span>
+                                        </div>
+                                        <div class="acf-file-uploader-preview-info">
+                                            <div class="acf-file-uploader-preview-name">
+                                                <?php echo esc_html(get_the_title($file_id)); ?>
+                                            </div>
+                                            <div class="acf-file-uploader-preview-meta">
+                                                <?php echo esc_html(size_format(filesize(get_attached_file($file_id)))); ?>
+                                            </div>
+                                        </div>
+                                        <div class="acf-file-uploader-preview-actions">
+                                            <?php 
+                                            // Add View PDF link for admin access
+                                            $file_data = Database::get_document_file($post->ID);
+                                            if ($file_data && $file_data['extension'] === 'pdf') {
+                                                $admin_view_url = add_query_arg([
+                                                    'authdocs_admin_view' => '1',
+                                                    'file_id' => $file_id,
+                                                    'nonce' => wp_create_nonce('authdocs_admin_view_' . $file_id)
+                                                ], home_url());
+                                            ?>
+                                                <a href="<?php echo esc_url($admin_view_url); ?>" target="_blank" class="acf-button acf-button-small acf-button-primary">
+                                                    <span class="dashicons dashicons-media-document"></span>
+                                                    <?php _e('View PDF', 'protecteddocs'); ?>
+                                                </a>
+                                            <?php } ?>
+                                            <button type="button" class="acf-button acf-button-small acf-button-remove" id="authdocs_remove_file">
+                                                <span class="dashicons dashicons-trash"></span>
+                                                <?php _e('Remove', 'protecteddocs'); ?>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="acf-file-uploader-empty">
+                                    <div class="acf-file-uploader-empty-icon">
+                                        <span class="dashicons dashicons-cloud-upload"></span>
+                                    </div>
+                                    <div class="acf-file-uploader-empty-text">
+                                        <p><?php _e('No file selected', 'protecteddocs'); ?></p>
+                                        <p class="description"><?php _e('Click the button below to select a document', 'protecteddocs'); ?></p>
+                                    </div>
+                                    <button type="button" class="acf-button acf-button-primary" id="authdocs_upload_button">
+                                        <span class="dashicons dashicons-upload"></span>
+                                        <?php _e('Select Document', 'protecteddocs'); ?>
+                                    </button>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Access Control Field -->
+            <div class="acf-field acf-field-true-false">
+                <div class="acf-label">
+                    <label for="authdocs_restricted"><?php _e('Access Control', 'protecteddocs'); ?></label>
+                    <p class="description"><?php _e('Control how users can access this document', 'protecteddocs'); ?></p>
+                </div>
+                <div class="acf-input">
+                    <div class="acf-true-false">
+                        <input type="checkbox" id="authdocs_restricted" name="authdocs_restricted" value="yes" <?php checked($restricted, 'yes'); ?> />
+                        <label for="authdocs_restricted">
+                            <span class="acf-true-false-label"><?php _e('Require Opt-in Form', 'protecteddocs'); ?></span>
+                            <span class="acf-true-false-description"><?php _e('Users must fill out an opt-in form before accessing this document', 'protecteddocs'); ?></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <script>
-        jQuery(document).ready(function($) {
-            var file_frame;
-            
-            $('#authdocs_upload_button').on('click', function(e) {
-                e.preventDefault();
-                
-                if (file_frame) {
-                    file_frame.open();
-                    return;
-                }
-                
-                file_frame = wp.media.frames.file_frame = wp.media({
-                    title: '<?php _e('Select Document', 'authdocs'); ?>',
-                    button: {
-                        text: '<?php _e('Use this document', 'authdocs'); ?>',
-                    },
-                    multiple: false,
-                    library: {
-                        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-                    }
-                });
-                
-                file_frame.on('select', function() {
-                    var attachment = file_frame.state().get('selection').first().toJSON();
-                    $('#authdocs_file_id').val(attachment.id);
-                    $('#authdocs_file_preview').html('<div class="authdocs-file-item"><a href="' + attachment.url + '" target="_blank">' + attachment.filename + '</a></div>');
-                    $('#authdocs_remove_file').show();
-                });
-                
-                file_frame.open();
-            });
-            
-            // Handle remove file button
-            $('#authdocs_remove_file').on('click', function(e) {
-                e.preventDefault();
-                $('#authdocs_file_id').val('');
-                $('#authdocs_file_preview').html('<div class="authdocs-no-file"><span class="dashicons dashicons-media-document"></span><p><?php _e('No document selected', 'authdocs'); ?></p></div>');
-                $(this).hide();
-            });
-        });
-        </script>
         <?php
     }
 
     public function shortcode_display_callback($post): void
     {
-        if ($post->post_status === 'publish') {
-            $restricted = get_post_meta($post->ID, '_authdocs_restricted', true);
-            $restricted_param = $restricted === 'yes' ? 'yes' : 'no';
-            $shortcode = sprintf('[authdocs id="%d" restricted="%s"]', $post->ID, $restricted_param);
+        ?>
+        <div class="authdocs-acf-style-settings">
+            <?php if ($post->post_status === 'publish'): 
+                $restricted = get_post_meta($post->ID, '_authdocs_restricted', true);
+                $restricted_param = $restricted === 'yes' ? 'yes' : 'no';
+                $shortcode = sprintf('[authdocs id="%d" restricted="%s"]', $post->ID, $restricted_param);
             ?>
-            <p><strong><?php _e('Single Document Shortcode:', 'authdocs'); ?></strong></p>
-            <input type="text" value="<?php echo esc_attr($shortcode); ?>" readonly style="width: 100%;" onclick="this.select();" />
-            <p class="description"><?php _e('Copy this shortcode to display the document on your pages.', 'authdocs'); ?></p>
+                <!-- Single Document Shortcode Field -->
+                <div class="acf-field acf-field-text">
+                    <div class="acf-label">
+                        <label><?php _e('Single Document Shortcode', 'protecteddocs'); ?></label>
+                        <p class="description"><?php _e('Copy this shortcode to display the document on your pages.', 'protecteddocs'); ?></p>
+                    </div>
+                    <div class="acf-input">
+                        <div class="acf-input-wrap">
+                            <input type="text" value="<?php echo esc_attr($shortcode); ?>" readonly class="acf-input-text" onclick="this.select();" />
+                            <button type="button" class="acf-button acf-button-small acf-copy-shortcode" data-shortcode="<?php echo esc_attr($shortcode); ?>">
+                                <span class="dashicons dashicons-admin-page"></span>
+                                <?php _e('Copy', 'protecteddocs'); ?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid View Shortcodes Field -->
+                <div class="acf-field acf-field-text">
+                    <div class="acf-label">
+                        <label><?php _e('Grid View Shortcodes', 'protecteddocs'); ?></label>
+                        <p class="description"><?php _e('Use these shortcodes to display multiple documents in a grid layout:', 'protecteddocs'); ?></p>
+                    </div>
+                    <div class="acf-input">
+                        <div class="acf-shortcode-examples">
+                            <div class="acf-shortcode-example">
+                                <label class="acf-shortcode-label"><?php _e('All Documents:', 'protecteddocs'); ?></label>
+                                <div class="acf-input-wrap">
+                                    <input type="text" value="[authdocs_grid limit=&quot;12&quot; columns=&quot;3&quot;]" readonly class="acf-input-text" onclick="this.select();" />
+                                    <button type="button" class="acf-button acf-button-small acf-copy-shortcode" data-shortcode="[authdocs_grid limit=&quot;12&quot; columns=&quot;3&quot;]">
+                                        <span class="dashicons dashicons-admin-page"></span>
+                                        <?php _e('Copy', 'protecteddocs'); ?>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="acf-shortcode-example">
+                                <label class="acf-shortcode-label"><?php _e('Restricted Documents Only:', 'protecteddocs'); ?></label>
+                                <div class="acf-input-wrap">
+                                    <input type="text" value="[authdocs_grid restriction=&quot;restricted&quot; limit=&quot;8&quot; columns=&quot;2&quot;]" readonly class="acf-input-text" onclick="this.select();" />
+                                    <button type="button" class="acf-button acf-button-small acf-copy-shortcode" data-shortcode="[authdocs_grid restriction=&quot;restricted&quot; limit=&quot;8&quot; columns=&quot;2&quot;]">
+                                        <span class="dashicons dashicons-admin-page"></span>
+                                        <?php _e('Copy', 'protecteddocs'); ?>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="acf-shortcode-example">
+                                <label class="acf-shortcode-label"><?php _e('Unrestricted Documents Only:', 'protecteddocs'); ?></label>
+                                <div class="acf-input-wrap">
+                                    <input type="text" value="[authdocs_grid restriction=&quot;unrestricted&quot; limit=&quot;6&quot; columns=&quot;4&quot;]" readonly class="acf-input-text" onclick="this.select();" />
+                                    <button type="button" class="acf-button acf-button-small acf-copy-shortcode" data-shortcode="[authdocs_grid restriction=&quot;unrestricted&quot; limit=&quot;6&quot; columns=&quot;4&quot;]">
+                                        <span class="dashicons dashicons-admin-page"></span>
+                                        <?php _e('Copy', 'protecteddocs'); ?>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <!-- Publish Notice -->
+                <div class="acf-field acf-field-message">
+                    <div class="acf-label">
+                        <label><?php _e('Shortcode Generation', 'protecteddocs'); ?></label>
+                    </div>
+                    <div class="acf-input">
+                        <div class="acf-notice acf-notice-info">
+                            <p><?php _e('Publish the document to generate the shortcode.', 'protecteddocs'); ?></p>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            // Ensure shortcode meta box is always first and non-draggable
+            function fixShortcodePosition() {
+                const $shortcodeBox = $('#authdocs_shortcode_display');
+                const $normalBoxes = $('#normal-sortables');
+                
+                if ($shortcodeBox.length && $normalBoxes.length) {
+                    // Move shortcode box to the top
+                    $normalBoxes.prepend($shortcodeBox);
+                    
+                    // Remove drag functionality
+                    $shortcodeBox.find('.postbox-header .handle').off('mousedown');
+                    $shortcodeBox.find('.postbox-header .handle').css('cursor', 'default');
+                    
+                    // Hide drag handles
+                    $shortcodeBox.find('.handle-order-higher, .handle-order-lower').hide();
+                }
+            }
             
-            <hr style="margin: 20px 0;">
+            // Fix position on page load
+            fixShortcodePosition();
             
-            <p><strong><?php _e('Grid View Shortcodes:', 'authdocs'); ?></strong></p>
-            <p class="description"><?php _e('Use these shortcodes to display multiple documents in a grid layout:', 'authdocs'); ?></p>
+            // Fix position after any meta box sorting
+            $(document).on('sortstop', '#normal-sortables', function() {
+                setTimeout(fixShortcodePosition, 100);
+            });
             
-            <p><strong><?php _e('All Documents:', 'authdocs'); ?></strong></p>
-            <input type="text" value="[authdocs_grid limit=&quot;12&quot; columns=&quot;3&quot;]" readonly style="width: 100%; margin-bottom: 10px;" onclick="this.select();" />
+            // Handle copy shortcode buttons
+            $(document).on('click', '.acf-copy-shortcode', function(e) {
+                e.preventDefault();
+                const shortcode = $(this).data('shortcode');
+                const $input = $(this).siblings('.acf-input-text');
+                
+                // Copy to clipboard
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(shortcode).then(function() {
+                        showCopySuccess($(e.target).closest('.acf-copy-shortcode'));
+                    });
+                } else {
+                    // Fallback for older browsers
+                    $input.select();
+                    document.execCommand('copy');
+                    showCopySuccess($(e.target).closest('.acf-copy-shortcode'));
+                }
+            });
             
-            <p><strong><?php _e('Restricted Documents Only:', 'authdocs'); ?></strong></p>
-            <input type="text" value="[authdocs_grid restriction=&quot;restricted&quot; limit=&quot;8&quot; columns=&quot;2&quot;]" readonly style="width: 100%; margin-bottom: 10px;" onclick="this.select();" />
-            
-            <p><strong><?php _e('Unrestricted Documents Only:', 'authdocs'); ?></strong></p>
-            <input type="text" value="[authdocs_grid restriction=&quot;unrestricted&quot; limit=&quot;6&quot; columns=&quot;4&quot;]" readonly style="width: 100%;" onclick="this.select();" />
-            <?php
-        } else {
-            ?>
-            <p><?php _e('Publish the document to generate the shortcode.', 'authdocs'); ?></p>
-            <?php
-        }
+            function showCopySuccess($btn) {
+                const originalText = $btn.html();
+                $btn.html('<span class="dashicons dashicons-yes-alt"></span> <?php _e('Copied!', 'protecteddocs'); ?>');
+                $btn.addClass('acf-button-success');
+                
+                setTimeout(function() {
+                    $btn.html(originalText);
+                    $btn.removeClass('acf-button-success');
+                }, 2000);
+            }
+        });
+        </script>
+        <?php
     }
 
     public function save_document_meta($post_id): void
@@ -253,13 +345,10 @@ class CustomPostType
         global $post_type;
         
         if ($post_type === 'document' && isset($_GET['post']) && get_post_status($_GET['post']) === 'publish') {
-            $restricted = get_post_meta($_GET['post'], '_authdocs_restricted', true);
-            $restricted_param = $restricted === 'yes' ? 'yes' : 'no';
-            $shortcode = sprintf('[authdocs id="%d" restricted="%s"]', $_GET['post'], $restricted_param);
+            // Simple success message without detailed shortcode information
             ?>
-            <div class="notice notice-info">
-                <p><strong><?php _e('Document Shortcode:', 'authdocs'); ?></strong> <code><?php echo esc_html($shortcode); ?></code></p>
-                <p><strong><?php _e('Grid View Shortcode:', 'authdocs'); ?></strong> <code>[authdocs_grid limit="12" columns="3"]</code></p>
+            <div class="notice notice-success">
+                <p><?php _e('Document published successfully!', 'protecteddocs'); ?></p>
             </div>
             <?php
         }
@@ -270,15 +359,43 @@ class CustomPostType
      */
     public function add_document_columns(array $columns): array
     {
-        // Insert featured image column after title
+        // Create custom column order: ID → Featured Image → Title → Document File → Date
         $new_columns = [];
+        
+        // Add ID column first (if it exists)
+        if (isset($columns['cb'])) {
+            $new_columns['cb'] = $columns['cb'];
+        }
+        
+        // Add ID column
+        $new_columns['id'] = __('ID', 'protecteddocs');
+        
+        // Add Featured Image column
+        $new_columns['featured_image'] = __('Featured Image', 'protecteddocs');
+        
+        // Add Title column
+        if (isset($columns['title'])) {
+            $new_columns['title'] = $columns['title'];
+        }
+        
+        // Add Document File column (renamed from pdf_file for clarity)
+        $new_columns['pdf_file'] = __('Document File', 'protecteddocs');
+        
+        // Add Document Status column
+        $new_columns['document_status'] = __('Document Status', 'protecteddocs');
+        
+        // Add Date column
+        if (isset($columns['date'])) {
+            $new_columns['date'] = $columns['date'];
+        }
+        
+        // Add any remaining columns (like status, author, etc.)
         foreach ($columns as $key => $value) {
-            $new_columns[$key] = $value;
-            if ($key === 'title') {
-                $new_columns['featured_image'] = __('Featured Image', 'authdocs');
-                $new_columns['pdf_file'] = __('PDF File', 'authdocs');
+            if (!isset($new_columns[$key]) && !in_array($key, ['cb', 'title', 'date'])) {
+                $new_columns[$key] = $value;
             }
         }
+        
         return $new_columns;
     }
 
@@ -288,6 +405,10 @@ class CustomPostType
     public function display_document_columns(string $column, int $post_id): void
     {
         switch ($column) {
+            case 'id':
+                echo '<strong>' . esc_html($post_id) . '</strong>';
+                break;
+
             case 'featured_image':
                 if (has_post_thumbnail($post_id)) {
                     $thumbnail = get_the_post_thumbnail($post_id, [50, 50], ['style' => 'max-width: 50px; height: auto;']);
@@ -308,10 +429,25 @@ class CustomPostType
                         echo esc_html($file_name);
                         echo '</a>';
                     } else {
-                        echo '<span style="color: #999;">' . __('No file attached', 'authdocs') . '</span>';
+                        echo '<span style="color: #999;">' . __('No file attached', 'protecteddocs') . '</span>';
                     }
                 } else {
-                    echo '<span style="color: #999;">' . __('No file attached', 'authdocs') . '</span>';
+                    echo '<span style="color: #999;">' . __('No file attached', 'protecteddocs') . '</span>';
+                }
+                break;
+
+            case 'document_status':
+                $restricted = get_post_meta($post_id, '_authdocs_restricted', true);
+                if ($restricted === 'yes') {
+                    echo '<span class="authdocs-status-locked" style="display: inline-flex; align-items: center; color: #d63638; font-weight: 500;">';
+                    echo '<span class="dashicons dashicons-lock" style="margin-right: 5px; font-size: 16px;"></span>';
+                    echo __('Locked', 'protecteddocs');
+                    echo '</span>';
+                } else {
+                    echo '<span class="authdocs-status-unlocked" style="display: inline-flex; align-items: center; color: #00a32a; font-weight: 500;">';
+                    echo '<span class="dashicons dashicons-unlock" style="margin-right: 5px; font-size: 16px;"></span>';
+                    echo __('Unlocked', 'protecteddocs');
+                    echo '</span>';
                 }
                 break;
         }

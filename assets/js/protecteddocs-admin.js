@@ -9,10 +9,10 @@ jQuery(document).ready(function ($) {
   console.log("AuthDocs: AJAX URL available:", typeof ajaxurl !== "undefined");
   console.log(
     "AuthDocs: Admin object available:",
-    typeof authdocs_admin !== "undefined"
+    typeof protecteddocs_admin !== "undefined"
   );
-  if (typeof authdocs_admin !== "undefined") {
-    console.log("AuthDocs: Admin object:", authdocs_admin);
+  if (typeof protecteddocs_admin !== "undefined") {
+    console.log("AuthDocs: Admin object:", protecteddocs_admin);
   }
 
   // Handle copy link button clicks
@@ -23,12 +23,12 @@ jQuery(document).ready(function ($) {
     var $btn = $(this);
     var linkToCopy = $btn.data("link");
 
-    // If data-link is not available, try to find the download link in the same row
+    // If data-link is not available, try to find the viewer link in the same row
     if (!linkToCopy) {
-      var $downloadLink = $btn.closest("tr").find(".authdocs-download-link");
-      if ($downloadLink.length > 0) {
-        linkToCopy = $downloadLink.attr("href");
-        console.log("AuthDocs: Found download link from href:", linkToCopy);
+      var $viewerLink = $btn.closest("tr").find(".authdocs-view-document-link");
+      if ($viewerLink.length > 0) {
+        linkToCopy = $viewerLink.attr("href");
+        console.log("AuthDocs: Found viewer link from href:", linkToCopy);
       }
     }
 
@@ -156,6 +156,21 @@ jQuery(document).ready(function ($) {
         applyFilters();
       });
     }
+
+    // Handle pagination style changes
+    $(document).on(
+      "change",
+      'input[name="authdocs_pagination_style"]',
+      function () {
+        const selectedStyle = $(this).val();
+        const $paginationType = $('input[name="authdocs_pagination_type"]');
+
+        if (selectedStyle === "load_more") {
+          // When Load More is selected, automatically set pagination type to AJAX
+          $paginationType.filter('[value="ajax"]').prop("checked", true);
+        }
+      }
+    );
 
     if ($clearFiltersBtn.length > 0) {
       $clearFiltersBtn.on("click", function () {
@@ -321,7 +336,7 @@ jQuery(document).ready(function ($) {
       "AuthDocs: About to call showConfirmDialog with action:",
       action
     );
-    showConfirmDialog(
+    window.showConfirmDialog(
       confirmMessage,
       function () {
         // User confirmed, proceed with action
@@ -330,6 +345,50 @@ jQuery(document).ready(function ($) {
           action,
           requestId
         );
+
+        // Handle delete action with form submission instead of AJAX
+        if (action === "delete") {
+          // Create a form for individual delete
+          var deleteForm = document.createElement("form");
+          deleteForm.method = "POST";
+          deleteForm.action = window.location.href;
+
+          // Add nonce (use the same nonce as the bulk delete form)
+          var nonceField = document.createElement("input");
+          nonceField.type = "hidden";
+          nonceField.name = "_wpnonce";
+          // Get the nonce from the existing bulk form
+          var existingNonce = jQuery(
+            "#authdocs-bulk-form input[name='_wpnonce']"
+          ).val();
+          if (!existingNonce) {
+            // Fallback: try to get nonce from any form on the page
+            existingNonce = jQuery("input[name='_wpnonce']").first().val();
+          }
+          nonceField.value = existingNonce || "";
+          deleteForm.appendChild(nonceField);
+
+          // Add action type
+          var actionField = document.createElement("input");
+          actionField.type = "hidden";
+          actionField.name = "individual_action";
+          actionField.value = "delete";
+          deleteForm.appendChild(actionField);
+
+          // Add request ID
+          var requestIdField = document.createElement("input");
+          requestIdField.type = "hidden";
+          requestIdField.name = "request_id";
+          requestIdField.value = requestId;
+          deleteForm.appendChild(requestIdField);
+
+          // Submit the form
+          document.body.appendChild(deleteForm);
+          deleteForm.submit();
+          return;
+        }
+
+        // For other actions, use AJAX
         proceedWithAction($btn, action, requestId);
       },
       action
@@ -358,8 +417,10 @@ jQuery(document).ready(function ($) {
         "</p></div>"
     );
 
-    // Remove any existing notices
-    $(".notice").remove();
+    // Remove any existing notices (but preserve WordPress core notices)
+    $(
+      ".notice:not(.lost-connection-notice):not(.local-storage-notice)"
+    ).remove();
 
     // Add notice to the top of the page
     $(".wrap h1").after($notice);
@@ -372,8 +433,39 @@ jQuery(document).ready(function ($) {
     });
   }
 
+  // Prevent false connection notices
+  function preventFalseConnectionNotices() {
+    // Remove any existing false connection notices
+    $(".lost-connection-notice, .local-storage-notice").remove();
+
+    // Monitor connection status
+    if (typeof navigator !== "undefined" && navigator.onLine !== undefined) {
+      // If we're online, remove any connection notices
+      if (navigator.onLine) {
+        $(".lost-connection-notice").remove();
+      }
+    }
+
+    // Check localStorage availability
+    try {
+      localStorage.setItem("test", "test");
+      localStorage.removeItem("test");
+      // If localStorage works, remove any storage notices
+      $(".local-storage-notice").remove();
+    } catch (e) {
+      // localStorage not available, but don't show notice unless actually needed
+    }
+  }
+
+  // Run connection check on page load
+  preventFalseConnectionNotices();
+
   // Modern flat design confirmation popup matching frontend style
-  function showConfirmDialog(message, onConfirm, actionType = "confirm") {
+  window.showConfirmDialog = function (
+    message,
+    onConfirm,
+    actionType = "confirm"
+  ) {
     console.log(
       "AuthDocs: Creating modern confirmation dialog with message:",
       message
@@ -383,7 +475,7 @@ jQuery(document).ready(function ($) {
     $(".authdocs-confirm-overlay").remove();
 
     // Get action-specific styling
-    var actionConfig = getActionConfig(actionType);
+    var actionConfig = window.getActionConfig(actionType);
 
     var $overlay = $('<div class="authdocs-confirm-overlay"></div>');
     var $dialog = $(
@@ -479,10 +571,10 @@ jQuery(document).ready(function ($) {
         $(document).off("keydown.authdocs-confirm");
       }
     });
-  }
+  };
 
   // Get action-specific configuration for styling
-  function getActionConfig(actionType) {
+  window.getActionConfig = function (actionType) {
     var configs = {
       accept: {
         title: "Accept Request",
@@ -532,7 +624,7 @@ jQuery(document).ready(function ($) {
     };
 
     return configs[actionType] || configs["confirm"];
-  }
+  };
 
   // Function to refresh row data after status change
   function refreshRowData($row, requestId) {
@@ -542,9 +634,9 @@ jQuery(document).ready(function ($) {
       url: ajaxurl,
       type: "POST",
       data: {
-        action: "authdocs_get_request_data",
+        action: "protecteddocs_get_request_data",
         request_id: requestId,
-        nonce: authdocs_admin.nonce,
+        nonce: protecteddocs_admin.nonce,
       },
       success: function (response) {
         console.log("AJAX response received:", response);
@@ -594,28 +686,27 @@ jQuery(document).ready(function ($) {
           var $fileLinkCell = $row.find("td[data-label='File Link']");
           if ($fileLinkCell.length && request.document_file) {
             if (request.status === "accepted" && request.secure_hash) {
-              var downloadUrl =
-                authdocs_admin.site_url +
-                "?authdocs_download=" +
-                request.document_id +
-                "&hash=" +
-                request.secure_hash +
-                "&email=" +
-                encodeURIComponent(request.requester_email) +
-                "&request_id=" +
-                request.id;
+              // Use viewer URL from AJAX response (has fresh token)
+              var viewerUrl = request.viewer_url;
+
+              if (!viewerUrl) {
+                console.error(
+                  "AuthDocs: No viewer URL provided in AJAX response"
+                );
+                return;
+              }
               $fileLinkCell.html(
                 '<div class="authdocs-file-status-modern authdocs-file-status-available">' +
                   '<span class="authdocs-file-status-icon">' +
                   '<span class="dashicons dashicons-visibility"></span>' +
                   "</span>" +
                   '<a href="' +
-                  downloadUrl +
+                  viewerUrl +
                   '" target="_blank" class="authdocs-file-status-text authdocs-view-document-link" title="Click to view document">' +
                   "View Document" +
                   "</a>" +
                   '<button type="button" class="authdocs-copy-link" title="Copy link" data-link="' +
-                  downloadUrl +
+                  viewerUrl +
                   '">' +
                   '<span class="dashicons dashicons-admin-page"></span>' +
                   "</button>" +
@@ -837,19 +928,21 @@ jQuery(document).ready(function ($) {
     $btn.addClass("loading").prop("disabled", true);
 
     console.log("AuthDocs: Making AJAX request with data:", {
-      action: "authdocs_manage_request",
+      action: "protecteddocs_manage_request",
       request_id: requestId,
       action_type: action,
-      nonce: authdocs_admin.nonce,
+      nonce: protecteddocs_admin.nonce,
     });
     var ajaxUrl =
       typeof ajaxurl !== "undefined"
         ? ajaxurl
-        : typeof authdocs_admin !== "undefined"
-        ? authdocs_admin.ajax_url
+        : typeof protecteddocs_admin !== "undefined"
+        ? protecteddocs_admin.ajax_url
         : "/wp-admin/admin-ajax.php";
     var nonce =
-      typeof authdocs_admin !== "undefined" ? authdocs_admin.nonce : "";
+      typeof protecteddocs_admin !== "undefined"
+        ? protecteddocs_admin.nonce
+        : "";
     console.log("AuthDocs: AJAX URL:", ajaxUrl);
     console.log("AuthDocs: Nonce value:", nonce);
 
@@ -857,7 +950,7 @@ jQuery(document).ready(function ($) {
       console.error(
         "AuthDocs: No nonce available, cannot proceed with AJAX request"
       );
-      showNotice("Security error: No nonce available.", "error");
+      showNotice("Security error. Please refresh the page.", "error");
       $btn.removeClass("loading").prop("disabled", false);
       return;
     }
@@ -866,7 +959,7 @@ jQuery(document).ready(function ($) {
       url: ajaxUrl,
       type: "POST",
       data: {
-        action: "authdocs_manage_request",
+        action: "protecteddocs_manage_request",
         request_id: requestId,
         action_type: action,
         nonce: nonce,
@@ -910,14 +1003,6 @@ jQuery(document).ready(function ($) {
 
           showNotice(actionMessage, messageType);
 
-          // Handle delete action - remove row completely
-          if (action === "delete" && response.data && response.data.deleted) {
-            $row.fadeOut(300, function () {
-              $(this).remove();
-            });
-            return;
-          }
-
           if (shouldRemoveRow) {
             // Add highlighting class for visual feedback
             $row.addClass("authdocs-row-updated");
@@ -950,6 +1035,8 @@ jQuery(document).ready(function ($) {
               requestId
             );
             refreshRowData($row, requestId);
+            // Update menu count after status change
+            updateDocumentsMenuCount();
           } else {
             // For inactive status, add highlighting and refresh the row data
             $row.addClass("authdocs-row-updated");
@@ -977,12 +1064,11 @@ jQuery(document).ready(function ($) {
             }, 5000);
 
             refreshRowData($row, requestId);
+            // Update menu count after status change
+            updateDocumentsMenuCount();
           }
         } else {
-          showNotice(
-            "Error: " + (response.data || "Unknown error occurred"),
-            "error"
-          );
+          showNotice("Error occurred. Please try again.", "error");
           $btn.removeClass("loading").prop("disabled", false);
         }
       },
@@ -991,7 +1077,7 @@ jQuery(document).ready(function ($) {
         console.error("AuthDocs: Response text:", xhr.responseText);
         console.error("AuthDocs: XHR status:", xhr.status);
         console.error("AuthDocs: XHR readyState:", xhr.readyState);
-        showNotice("Network error. Please try again.", "error");
+        showNotice("Connection error. Please try again.", "error");
         $btn.removeClass("loading").prop("disabled", false);
       },
     });
@@ -1104,25 +1190,260 @@ jQuery(document).ready(function ($) {
 // Global function for pagination type confirmation
 function authdocsConfirmClassicPagination(radioButton) {
   if (radioButton.checked) {
-    // Show confirmation popup
-    if (
-      confirm(
-        'You are switching to Classic Pagination. This will automatically set the pagination style to "Classic Pagination" without AJAX. The page will reload when users navigate between pages. Do you want to continue?'
-      )
-    ) {
-      // User confirmed, keep the selection
-      return true;
-    } else {
-      // User cancelled, uncheck the radio button and check AJAX instead
-      radioButton.checked = false;
-      var ajaxRadio = document.querySelector(
-        'input[name="authdocs_pagination_type"][value="ajax"]'
-      );
-      if (ajaxRadio) {
-        ajaxRadio.checked = true;
-      }
-      return false;
+    // Show modern confirmation popup instead of browser confirm
+    var message =
+      'You are switching to Classic Pagination. This will automatically set the pagination style to "Classic Pagination" without AJAX. The page will reload when users navigate between pages. Do you want to continue?';
+
+    // Use the same popup system as the request page
+    window.showConfirmDialog(
+      message,
+      function () {
+        // User confirmed, keep the selection
+        radioButton.checked = true;
+        // Also update the pagination style to classic
+        var classicStyleRadio = document.querySelector(
+          'input[name="authdocs_pagination_style"][value="classic"]'
+        );
+        if (classicStyleRadio) {
+          classicStyleRadio.checked = true;
+        }
+      },
+      "confirm"
+    );
+
+    // Uncheck the radio button initially since we're showing a confirmation
+    radioButton.checked = false;
+    var ajaxRadio = document.querySelector(
+      'input[name="authdocs_pagination_type"][value="ajax"]'
+    );
+    if (ajaxRadio) {
+      ajaxRadio.checked = true;
     }
+    return false;
   }
   return true;
+}
+
+// Function to update the Documents menu count
+function updateDocumentsMenuCount() {
+  // Get pending requests count via AJAX
+  jQuery.ajax({
+    url: ajaxurl,
+    type: "POST",
+    data: {
+      action: "protecteddocs_get_pending_count",
+      nonce: protecteddocs_admin.nonce,
+    },
+    success: function (response) {
+      if (response.success) {
+        var pendingCount = response.data.count;
+        var menuName = "Documents";
+
+        // Find the Documents menu item
+        var $menuItem = jQuery(
+          'a[href*="edit.php?post_type=document"]'
+        ).first();
+        if ($menuItem.length) {
+          var $menuText = $menuItem.find(".wp-menu-name");
+          if ($menuText.length) {
+            if (pendingCount > 0) {
+              // Remove existing badge if any
+              $menuText.find(".authdocs-pending-requests-count").remove();
+              // Add new badge
+              $menuText.html(
+                menuName +
+                  ' <span class="authdocs-pending-requests-count">' +
+                  pendingCount +
+                  "</span>"
+              );
+            } else {
+              // Remove badge if no pending requests
+              $menuText.html(menuName);
+              $menuText.find(".authdocs-pending-requests-count").remove();
+            }
+          }
+        }
+      }
+    },
+    error: function () {
+      console.log("AuthDocs: Failed to update menu count");
+    },
+  });
+}
+
+// Update menu count when page loads
+jQuery(document).ready(function ($) {
+  updateDocumentsMenuCount();
+
+  // Initialize bulk selection functionality
+  initializeBulkSelection();
+});
+
+// Bulk Selection Functionality
+function initializeBulkSelection() {
+  var $selectAllCheckbox = jQuery("#authdocs-select-all");
+  var $rowCheckboxes = jQuery(".authdocs-row-checkbox");
+  var $bulkActionsSection = jQuery("#authdocs-bulk-actions-section");
+  var $selectedCount = jQuery("#authdocs-selected-count");
+  var $bulkActionSelect = jQuery("#authdocs-bulk-action-select");
+  var $bulkActionApply = jQuery("#authdocs-bulk-action-apply");
+  var $bulkActionCancel = jQuery("#authdocs-bulk-action-cancel");
+  var $bulkActionInput = jQuery("#authdocs-bulk-action-input");
+  var $requestIdsInput = jQuery("#authdocs-request-ids-input");
+  var $bulkForm = jQuery("#authdocs-bulk-form");
+
+  // Select All checkbox functionality
+  $selectAllCheckbox.on("change", function () {
+    var isChecked = jQuery(this).is(":checked");
+    $rowCheckboxes.prop("checked", isChecked);
+    updateBulkActions();
+  });
+
+  // Individual row checkbox functionality
+  $rowCheckboxes.on("change", function () {
+    updateBulkActions();
+    updateSelectAllState();
+  });
+
+  // Update bulk actions visibility and state
+  function updateBulkActions() {
+    var selectedCount = $rowCheckboxes.filter(":checked").length;
+
+    if (selectedCount > 0) {
+      $bulkActionsSection.show();
+      $selectedCount.text(selectedCount);
+      $bulkActionApply.prop("disabled", false);
+    } else {
+      $bulkActionsSection.hide();
+      $bulkActionApply.prop("disabled", true);
+    }
+  }
+
+  // Update Select All checkbox state
+  function updateSelectAllState() {
+    var totalCheckboxes = $rowCheckboxes.length;
+    var checkedCheckboxes = $rowCheckboxes.filter(":checked").length;
+
+    if (checkedCheckboxes === 0) {
+      $selectAllCheckbox.prop("indeterminate", false).prop("checked", false);
+    } else if (checkedCheckboxes === totalCheckboxes) {
+      $selectAllCheckbox.prop("indeterminate", false).prop("checked", true);
+    } else {
+      $selectAllCheckbox.prop("indeterminate", true);
+    }
+  }
+
+  // Bulk action apply button
+  $bulkActionApply.on("click", function () {
+    var selectedAction = $bulkActionSelect.val();
+    var selectedIds = $rowCheckboxes
+      .filter(":checked")
+      .map(function () {
+        return jQuery(this).val();
+      })
+      .get();
+
+    if (!selectedAction) {
+      alert("Please select a bulk action.");
+      return;
+    }
+
+    if (selectedIds.length === 0) {
+      alert("Please select at least one item.");
+      return;
+    }
+
+    // Confirm deletion
+    if (selectedAction === "delete") {
+      var confirmMessage =
+        selectedIds.length === 1
+          ? "Are you sure you want to delete this request?"
+          : "Are you sure you want to delete " +
+            selectedIds.length +
+            " requests?";
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+    }
+
+    // Use standard form submission for all bulk actions (including delete)
+    $bulkActionInput.val(selectedAction);
+    $requestIdsInput.val(selectedIds.join(","));
+    $bulkForm.submit();
+  });
+
+  // Bulk action cancel button
+  $bulkActionCancel.on("click", function () {
+    $rowCheckboxes.prop("checked", false);
+    $selectAllCheckbox.prop("checked", false).prop("indeterminate", false);
+    $bulkActionsSection.hide();
+    $bulkActionSelect.val("");
+  });
+
+  // Initialize state
+  updateBulkActions();
+  updateSelectAllState();
+
+  // Initialize persistent bulk delete functionality
+  initializePersistentBulkDelete();
+}
+
+// Function to initialize persistent bulk delete functionality
+function initializePersistentBulkDelete() {
+  var $persistentBulkDeleteBtn = jQuery("#authdocs-persistent-bulk-delete");
+  var $rowCheckboxes = jQuery(".authdocs-row-checkbox");
+  var $selectAllCheckbox = jQuery("#authdocs-select-all");
+  var $bulkForm = jQuery("#authdocs-bulk-form");
+  var $bulkActionInput = jQuery("#authdocs-bulk-action-input");
+  var $requestIdsInput = jQuery("#authdocs-request-ids-input");
+
+  // Update persistent bulk delete button state
+  function updatePersistentBulkDeleteState() {
+    var selectedCount = $rowCheckboxes.filter(":checked").length;
+
+    if (selectedCount > 0) {
+      $persistentBulkDeleteBtn.prop("disabled", false);
+    } else {
+      $persistentBulkDeleteBtn.prop("disabled", true);
+    }
+  }
+
+  // Listen for checkbox changes
+  $rowCheckboxes.on("change", updatePersistentBulkDeleteState);
+  $selectAllCheckbox.on("change", updatePersistentBulkDeleteState);
+
+  // Handle persistent bulk delete button click
+  $persistentBulkDeleteBtn.on("click", function () {
+    var selectedIds = $rowCheckboxes
+      .filter(":checked")
+      .map(function () {
+        return jQuery(this).val();
+      })
+      .get();
+
+    if (selectedIds.length === 0) {
+      alert("Please select at least one item.");
+      return;
+    }
+
+    var confirmMessage =
+      selectedIds.length === 1
+        ? "Are you sure you want to delete this request?"
+        : "Are you sure you want to delete " +
+          selectedIds.length +
+          " requests?";
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Set form values and submit
+    $bulkActionInput.val("delete");
+    $requestIdsInput.val(selectedIds.join(","));
+    $bulkForm.submit();
+  });
+
+  // Initialize state
+  updatePersistentBulkDeleteState();
 }

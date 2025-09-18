@@ -1,0 +1,1940 @@
+/* AuthDocs Frontend Styles - Fresh Clean Design */
+
+/* Fresh Clean Card Layout */
+.authdocs-card {
+  min-height: 160px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Fallback for cards without featured images */
+.authdocs-card:not([style*="background-image"]) {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* Card Content Overlay - Centered */
+.authdocs-card-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  z-index: 2;
+}
+
+/* Dark overlay for text readability over background images */
+.authdocs-card[style*="background-image"] .authdocs-card-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: -1;
+  border-radius: 8px;
+}
+
+/* Legacy support for old thumbnail class */
+.authdocs-card-thumbnail {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.card:hover .authdocs-card-thumbnail {
+  transform: scale(1.02);
+}
+
+/* AuthDocs Frontend Styles - Minimal Design */
+.authdocs-document {
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.authdocs-document:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.authdocs-document-header {
+  margin-bottom: 16px;
+}
+
+.authdocs-document-title {
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #000000;
+  line-height: 1.3;
+}
+
+.authdocs-document-description {
+  color: #666666;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.authdocs-document-actions {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.authdocs-request-access-btn,
+.authdocs-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  background: #000000;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.authdocs-request-access-btn {
+  min-width: 48px;
+  padding: 12px;
+  position: relative;
+}
+
+.authdocs-lock-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  transition: transform 0.2s ease;
+}
+
+.authdocs-request-access-btn:hover .authdocs-lock-icon {
+  transform: scale(1.1);
+}
+
+.authdocs-request-access-btn:hover,
+.authdocs-download-btn:hover {
+  background: #333333;
+  color: #ffffff;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+/* Modern Modal Styles */
+.authdocs-modal {
+  display: none;
+  position: fixed;
+  z-index: 100000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  animation: authdocs-fadeIn 0.3s ease;
+}
+
+.authdocs-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.authdocs-modal-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.authdocs-modal-card {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: authdocs-slideIn 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.authdocs-modal-header {
+  padding: 32px 32px 24px 32px;
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.authdocs-modal-icon {
+  width: 48px;
+  height: 48px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.authdocs-modal-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #000000;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.authdocs-modal-close {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.authdocs-modal-close:hover {
+  color: #000000;
+  background: #f8f9fa;
+}
+
+.authdocs-modal-body {
+  padding: 0 32px 24px 32px;
+  background: #ffffff;
+}
+
+.authdocs-modal-description {
+  margin: 0 0 24px 0;
+  color: #6c757d;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.authdocs-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.authdocs-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.authdocs-form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #000000;
+  font-size: 0.875rem;
+}
+
+.authdocs-form-label svg {
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.authdocs-form-input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #000000;
+  font-family: inherit;
+}
+
+.authdocs-form-input:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.authdocs-form-input::placeholder {
+  color: #adb5bd;
+}
+
+.authdocs-modal-footer {
+  padding: 24px 32px 32px 32px;
+  background: #ffffff;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.authdocs-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  text-decoration: none;
+  min-height: 44px;
+}
+
+.authdocs-btn-primary {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
+}
+
+.authdocs-btn-primary:hover {
+  background: #333333;
+  border-color: #333333;
+  transform: translateY(-1px);
+}
+
+.authdocs-btn-primary:active {
+  transform: translateY(0);
+}
+
+.authdocs-btn-outline {
+  background: transparent;
+  color: #6c757d;
+  border: 2px solid #e9ecef;
+}
+
+.authdocs-btn-outline:hover {
+  background: #f8f9fa;
+  color: #000000;
+  border-color: #dee2e6;
+  transform: translateY(-1px);
+}
+
+.authdocs-btn-outline:active {
+  transform: translateY(0);
+}
+
+.authdocs-btn svg {
+  flex-shrink: 0;
+}
+
+/* Form Validation Styles */
+.authdocs-field-error {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+}
+
+.authdocs-field-error-message {
+  color: #dc3545;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.authdocs-field-error-message::before {
+  content: "⚠";
+  font-size: 0.9rem;
+}
+
+.authdocs-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.authdocs-btn:disabled:hover {
+  transform: none !important;
+}
+
+/* Loading State */
+.authdocs-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes authdocs-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes authdocs-slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+
+/* Card Styles for Grid Items */
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-body {
+  padding: 20px;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-icon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px auto;
+  text-align: center;
+  width: 48px;
+  height: 48px;
+}
+
+.card-icon svg {
+  width: 48px;
+  height: 48px;
+  fill: currentColor;
+  transition: all 0.3s ease;
+}
+
+/* Card Title Styling */
+.authdocs-card-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+/* Title styling for cards with background images */
+.authdocs-card[style*="background-image"] .authdocs-card-title {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Title styling for cards without background images */
+.authdocs-card:not([style*="background-image"]) .authdocs-card-title {
+  color: #000000;
+  text-shadow: none;
+}
+
+.card-desc {
+  color: #666666;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Card Date Styling */
+.authdocs-card-date {
+  font-size: 13px;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+/* Date styling for cards with background images */
+.authdocs-card[style*="background-image"] .authdocs-card-date {
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  opacity: 0.9;
+}
+
+/* Date styling for cards without background images */
+.authdocs-card:not([style*="background-image"]) .authdocs-card-date {
+  color: #666666;
+  text-shadow: none;
+  opacity: 1;
+}
+
+/* Hover Overlay */
+.authdocs-card-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 3;
+  border-radius: 8px;
+}
+
+.authdocs-card:hover .authdocs-card-hover-overlay {
+  opacity: 1;
+}
+
+/* Overlay Icon Styling - Circle Background */
+.authdocs-overlay-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Default circle background */
+.authdocs-overlay-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+/* Icon styling */
+.authdocs-overlay-icon .dashicons {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  color: #333333;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+/* Lock icon styling */
+.authdocs-overlay-icon .dashicons-lock {
+  color: #dc3545;
+}
+
+/* Link icon styling */
+.authdocs-overlay-icon .dashicons-admin-links {
+  color: #007cba;
+}
+
+/* Hover effects */
+.authdocs-card:hover .authdocs-overlay-icon {
+  transform: scale(1.1);
+}
+
+.authdocs-card:hover .authdocs-overlay-icon::before {
+  background: rgba(255, 255, 255, 1);
+}
+
+/* Color palette specific styling */
+.authdocs-card[data-color-palette="black_white_blue"] .authdocs-overlay-icon::before {
+  background: rgba(37, 99, 235, 0.9); /* Blue from black_white_blue palette */
+}
+
+.authdocs-card[data-color-palette="black_white_blue"] .authdocs-overlay-icon .dashicons {
+  color: #ffffff;
+}
+
+.authdocs-card[data-color-palette="black_white_blue"]:hover .authdocs-overlay-icon::before {
+  background: rgba(37, 99, 235, 1);
+}
+
+.authdocs-card[data-color-palette="black_gray"] .authdocs-overlay-icon::before {
+  background: rgba(55, 65, 81, 0.9); /* Gray from black_gray palette */
+}
+
+.authdocs-card[data-color-palette="black_gray"] .authdocs-overlay-icon .dashicons {
+  color: #ffffff;
+}
+
+.authdocs-card[data-color-palette="black_gray"]:hover .authdocs-overlay-icon::before {
+  background: rgba(55, 65, 81, 1);
+}
+
+/* Card Hover Effects */
+.authdocs-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Action Overlay */
+.authdocs-card-action-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 4;
+  border-radius: 8px;
+}
+
+.authdocs-card:hover .authdocs-card-action-overlay {
+  opacity: 1;
+}
+
+.overlay-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-overlay .authdocs-request-access-btn,
+.card-overlay .authdocs-download-btn {
+  background: transparent;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  min-width: auto;
+}
+
+.card-overlay .authdocs-request-access-btn:hover,
+.card-overlay .authdocs-download-btn:hover {
+  background: #ffffff;
+  color: #000000;
+  transform: scale(1.05);
+}
+
+/* Grid Container Setup */
+.authdocs-grid-container {
+  --columns-desktop: 5;
+  --columns-tablet: 3;
+  --columns-mobile: 1;
+  margin-bottom: 20px;
+}
+
+/* Grid Layout */
+.authdocs-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(var(--columns-desktop), 1fr);
+}
+
+/* Ensure grid inherits CSS variables from container */
+.authdocs-grid-container .authdocs-grid {
+  grid-template-columns: repeat(var(--columns-desktop), 1fr);
+}
+
+/* Ensure cards work properly in grid */
+.authdocs-grid .authdocs-card {
+  height: 100%;
+  display: block;
+  position: relative;
+  min-height: 160px;
+}
+
+/* Icon styling for cards */
+.authdocs-lock-icon,
+.authdocs-open-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* Responsive Grid System using data attributes */
+
+/* Desktop columns (1280px+) */
+.authdocs-grid-container[data-columns-desktop="1"] {
+  --columns-desktop: 1;
+}
+.authdocs-grid-container[data-columns-desktop="2"] {
+  --columns-desktop: 2;
+}
+.authdocs-grid-container[data-columns-desktop="3"] {
+  --columns-desktop: 3;
+}
+.authdocs-grid-container[data-columns-desktop="4"] {
+  --columns-desktop: 4;
+}
+.authdocs-grid-container[data-columns-desktop="5"] {
+  --columns-desktop: 5;
+}
+.authdocs-grid-container[data-columns-desktop="6"] {
+  --columns-desktop: 6;
+}
+
+/* Tablet columns (768px-1279px) */
+.authdocs-grid-container[data-columns-tablet="1"] {
+  --columns-tablet: 1;
+}
+.authdocs-grid-container[data-columns-tablet="2"] {
+  --columns-tablet: 2;
+}
+.authdocs-grid-container[data-columns-tablet="3"] {
+  --columns-tablet: 3;
+}
+.authdocs-grid-container[data-columns-tablet="4"] {
+  --columns-tablet: 4;
+}
+
+/* Mobile columns (below 768px) */
+.authdocs-grid-container[data-columns-mobile="1"] {
+  --columns-mobile: 1;
+}
+.authdocs-grid-container[data-columns-mobile="2"] {
+  --columns-mobile: 2;
+}
+
+
+/* Load More Section */
+.authdocs-load-more {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.authdocs-load-more-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #f5f5f5;
+  color: #000000;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: 1px solid #e5e5e5;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.authdocs-load-more-btn:hover {
+  background: #e5e5e5;
+  color: #000000;
+  transform: translateY(-1px);
+}
+
+.authdocs-no-documents {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666666;
+  font-size: 1rem;
+  background: #f9f9f9;
+  border-radius: 4px;
+  margin: 32px 0;
+}
+
+/* Pagination Styles */
+.authdocs-pagination {
+  margin-top: 32px;
+  padding: 20px 24px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.authdocs-compact-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.authdocs-pagination-info {
+  color: #666666;
+  font-size: 0.875rem;
+  font-weight: 500;
+  flex: 0 0 auto;
+  display: block;
+  text-align: left;
+}
+
+.authdocs-pagination-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.authdocs-pagination-numbers {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+.authdocs-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
+  color: #000000;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.authdocs-pagination-btn:hover {
+  background: #f5f5f5;
+  border-color: #000000;
+  color: #000000;
+  transform: translateY(-1px);
+}
+
+.authdocs-pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f9f9f9;
+  transform: none;
+}
+
+.authdocs-pagination-btn.active {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.authdocs-pagination-btn.active:hover {
+  background: #333333;
+  border-color: #333333;
+}
+
+.authdocs-load-more-btn {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  padding: 12px 24px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 20px;
+  display: inline-block;
+}
+
+.authdocs-load-more-btn:hover {
+  background: #333333;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Previous/Next buttons removed for compact design */
+
+.authdocs-pagination-numbers {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.authdocs-pagination-ellipsis {
+  padding: 0 8px;
+  color: #666666;
+  font-weight: 500;
+}
+
+/* Loading state for grid */
+.authdocs-grid-container.loading .authdocs-grid,
+.authdocs-grid-container .authdocs-grid.loading {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.authdocs-grid-container.loading .authdocs-grid::after,
+.authdocs-grid-container .authdocs-grid.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #000000;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+  z-index: 10;
+}
+
+/* Loading state for pagination buttons - removed to avoid loading icons */
+
+/* Loading state for load more button */
+.authdocs-load-more-btn.loading {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.authdocs-load-more-btn.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+}
+
+/* Status Badge Styling */
+.authdocs-card-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+}
+
+.authdocs-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.authdocs-status-locked {
+  background: rgba(220, 53, 69, 0.9);
+  color: #ffffff;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.authdocs-status-unlocked {
+  background: rgba(0, 163, 42, 0.9);
+  color: #ffffff;
+  border: 1px solid rgba(0, 163, 42, 0.3);
+}
+
+.authdocs-status-badge svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* Improved Hover Overlay Icons */
+.authdocs-overlay-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.authdocs-overlay-icon svg {
+  width: 32px;
+  height: 32px;
+  transition: all 0.3s ease;
+}
+
+.authdocs-overlay-text {
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  opacity: 0.9;
+}
+
+.authdocs-card:hover .authdocs-overlay-icon svg {
+  transform: scale(1.1);
+}
+
+/* Improved Action Overlay Buttons */
+.authdocs-card-action-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 4;
+  border-radius: 8px;
+}
+
+.authdocs-card:hover .authdocs-card-action-overlay {
+  opacity: 1;
+}
+
+.authdocs-request-access-btn,
+.authdocs-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333333;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.authdocs-request-access-btn:hover,
+.authdocs-download-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  color: #333333;
+  text-decoration: none;
+}
+
+.authdocs-request-access-btn svg,
+.authdocs-download-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.authdocs-request-access-btn svg {
+  color: #dc3545;
+}
+
+.authdocs-download-btn svg {
+  color: #007cba;
+}
+
+/* Color Palette Integration for Status Badges */
+/* Lock status always red regardless of color palette */
+.authdocs-card[data-color-palette="black_white_blue"] .authdocs-status-locked,
+.authdocs-card[data-color-palette="black_gray"] .authdocs-status-locked,
+.authdocs-status-locked {
+  background: rgba(220, 53, 69, 0.9) !important;
+  border-color: rgba(220, 53, 69, 0.3) !important;
+}
+
+.authdocs-card[data-color-palette="black_white_blue"] .authdocs-status-unlocked {
+  background: rgba(34, 197, 94, 0.9);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.authdocs-card[data-color-palette="black_gray"] .authdocs-status-unlocked {
+  background: rgba(34, 197, 94, 0.9);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+@keyframes authdocs-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading Spinner for Buttons */
+.authdocs-loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Enhanced Loading States for Request Access Modal */
+.authdocs-modal .authdocs-form-btn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+  position: relative;
+}
+
+.authdocs-modal .authdocs-form-btn.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+}
+
+/* Enhanced Loading States for Action Buttons */
+.authdocs-request-access-btn.loading,
+.authdocs-download-btn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+  position: relative;
+}
+
+.authdocs-request-access-btn.loading::after,
+.authdocs-download-btn.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+}
+
+/* Enhanced Loading States for Pagination Buttons - removed to avoid loading icons */
+
+/* Enhanced Loading States for Load More Button */
+.authdocs-load-more-btn.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+}
+
+/* Modern Notification Styles */
+.authdocs-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100001;
+  max-width: 400px;
+  animation: authdocs-slideInRight 0.3s ease;
+}
+
+.authdocs-notification-content {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e9ecef;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.authdocs-notification-success .authdocs-notification-content {
+  border-left: 4px solid #28a745;
+}
+
+.authdocs-notification-icon {
+  width: 40px;
+  height: 40px;
+  background: #d4edda;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #28a745;
+  flex-shrink: 0;
+}
+
+.authdocs-notification-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.authdocs-notification-title {
+  font-weight: 600;
+  color: #000000;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.authdocs-notification-message {
+  color: #6c757d;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.authdocs-notification-close {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.authdocs-notification-close:hover {
+  color: #000000;
+  background: #f8f9fa;
+}
+
+/* Legacy Message Styles (for error messages) */
+.authdocs-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 0.875rem;
+  z-index: 100001;
+  max-width: 400px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  animation: authdocs-slideInRight 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.authdocs-message-error {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  border-left: 4px solid #a71e2a;
+  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+}
+
+.authdocs-message-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.authdocs-message-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+@keyframes authdocs-slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Request Access Modal Styles */
+.authdocs-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: none;
+}
+
+.authdocs-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.authdocs-modal-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.authdocs-modal-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 480px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid #e5e5e5;
+  margin: 0 auto;
+}
+
+.authdocs-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px 16px 24px;
+  border-bottom: 1px solid #f0f0f1;
+  position: relative;
+}
+
+.authdocs-modal-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.authdocs-modal-icon svg {
+  width: 24px;
+  height: 24px;
+  color: #ffffff;
+}
+
+.authdocs-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1d2327;
+  margin: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+
+/*.authdocs-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f6f7f7;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #646970;
+}*/
+
+.authdocs-modal-close:hover {
+  background: #e5e5e5;
+  color: #1d2327;
+}
+
+.authdocs-modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.authdocs-modal-body {
+  padding: 20px 24px;
+}
+
+.authdocs-modal-description {
+  font-size: 14px;
+  color: #646970;
+  margin: 24px 0 24px 0;
+  line-height: 1.5;
+}
+
+.authdocs-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.authdocs-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.authdocs-form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2327;
+  margin: 0;
+}
+
+.authdocs-form-label svg {
+  width: 16px;
+  height: 16px;
+  color: #646970;
+  flex-shrink: 0;
+}
+
+.authdocs-form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1d2327;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.authdocs-form-input:focus {
+  outline: none;
+  border-color: #2271b1;
+  box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.1);
+}
+
+.authdocs-form-input::placeholder {
+  color: #a7aaad;
+}
+
+.authdocs-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px 24px 24px;
+  border-top: 1px solid #f0f0f1;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.authdocs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  min-height: 40px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.authdocs-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.authdocs-btn-primary {
+  background: #2271b1;
+  color: #ffffff;
+}
+
+.authdocs-btn-primary:hover {
+  background: #1e5a96;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 113, 177, 0.3);
+}
+
+.authdocs-btn-outline {
+  background: transparent;
+  color: #646970;
+  border: 2px solid #e5e5e5;
+}
+
+.authdocs-btn-outline:hover {
+  background: #f6f7f7;
+  border-color: #c3c4c7;
+  color: #1d2327;
+}
+
+/* Responsive Grid Design */
+@media (max-width: 1279px) {
+  /* Tablet breakpoint - use tablet columns */
+  .authdocs-grid-container .authdocs-grid {
+    grid-template-columns: repeat(var(--columns-tablet), 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Mobile breakpoint - use mobile columns */
+  .authdocs-grid-container .authdocs-grid {
+    grid-template-columns: repeat(var(--columns-mobile), 1fr);
+    gap: 16px;
+  }
+  
+  /* Mobile card adjustments */
+  .authdocs-card {
+    min-height: 140px;
+  }
+  
+  .authdocs-card-title {
+    font-size: 16px;
+  }
+  
+  .authdocs-card-date {
+    font-size: 12px;
+  }
+}
+  
+  /* Mobile modal adjustments */
+  .authdocs-modal-container {
+    padding: 16px;
+  }
+  
+  .authdocs-modal-card {
+    max-width: 100%;
+    width: 95%;
+    border-radius: 8px;
+  }
+  
+  .authdocs-modal-header {
+    padding: 20px 20px 16px 20px;
+  }
+  
+  .authdocs-modal-icon {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+  }
+  
+  .authdocs-modal-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .authdocs-modal-title {
+    font-size: 18px;
+  }
+  
+  .authdocs-modal-body {
+    padding: 20px;
+  }
+  
+  .authdocs-modal-footer {
+    padding: 16px 20px 20px 20px;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  
+  .authdocs-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  /* Cards are already centered by default */
+}
+
+  /* Button with icon for mobile */
+  .authdocs-request-access-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: auto;
+    padding: 12px 16px;
+  }
+
+  .authdocs-request-access-btn .authdocs-lock-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Pagination mobile adjustments */
+  .authdocs-pagination {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    padding: 16px 20px;
+  }
+
+  .authdocs-compact-pagination {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .authdocs-pagination-info {
+    text-align: center;
+    display: block;
+    width: 100%;
+  }
+
+  .authdocs-pagination-numbers {
+    justify-content: center;
+    display: flex;
+    width: 100%;
+  }
+
+  .authdocs-pagination-btn {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+  }
+
+  .authdocs-load-more-btn {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+
+  /* Modal responsive adjustments */
+  .authdocs-modal-container {
+    padding: 16px;
+  }
+
+  .authdocs-modal-card {
+    max-width: 480px;
+  }
+
+  .authdocs-modal-header {
+    padding: 24px 24px 20px 24px;
+    gap: 12px;
+  }
+
+  .authdocs-modal-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .authdocs-modal-title {
+    font-size: 1.25rem;
+  }
+
+  .authdocs-modal-body {
+    padding: 0 24px 20px 24px;
+  }
+
+  .authdocs-modal-footer {
+    padding: 20px 24px 24px 24px;
+    flex-direction: row;
+  }
+
+  .authdocs-btn {
+    width: 50%;
+    justify-content: center;
+  }
+
+  .authdocs-document {
+    padding: 20px;
+  }
+
+  .authdocs-document-title {
+    font-size: 1.125rem;
+  }
+
+  .authdocs-request-access-btn,
+  .authdocs-download-btn {
+    padding: 10px 20px;
+    font-size: 0.875rem;
+    min-width: 120px;
+  }
+
+  /* Grid responsive adjustments */
+  .authdocs-grid-container .authdocs-grid {
+    gap: 16px;
+  }
+
+  /* Pagination mobile adjustments */
+  .authdocs-pagination {
+    padding: 16px 12px;
+    gap: 14px;
+  }
+
+  .authdocs-compact-pagination {
+    padding: 16px 12px;
+    gap: 14px;
+  }
+
+  .authdocs-pagination-info {
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
+
+  .authdocs-pagination-numbers {
+    gap: 4px;
+    display: flex;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .authdocs-pagination-btn {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Single column layout for very small screens */
+  .authdocs-grid-container .authdocs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Button adjustments for very small screens */
+  .authdocs-request-access-btn {
+    padding: 10px 14px;
+    font-size: 0.875rem;
+  }
+
+  /* Pagination adjustments */
+  .authdocs-pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .authdocs-load-more-btn {
+    padding: 12px 16px;
+    font-size: 0.875rem;
+  }
+
+  /* Modal adjustments for very small screens */
+  .authdocs-modal-container {
+    padding: 12px;
+  }
+
+  .authdocs-modal-header {
+    padding: 20px 20px 16px 20px;
+    gap: 10px;
+  }
+
+  .authdocs-modal-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .authdocs-modal-title {
+    font-size: 1.125rem;
+  }
+
+  .authdocs-modal-body {
+    padding: 0 20px 16px 20px;
+  }
+
+  .authdocs-modal-footer {
+    padding: 16px 20px 20px 20px;
+    gap: 10px;
+  }
+
+  .authdocs-form-input {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+  }
+
+  .authdocs-document {
+    padding: 16px;
+  }
+
+  .authdocs-btn {
+    padding: 14px 20px;
+    font-size: 0.9rem;
+  }
+
+  /* Notification mobile adjustments */
+  .authdocs-notification {
+    top: 16px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
+
+  .authdocs-notification-content {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .authdocs-notification-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .authdocs-notification-title {
+    font-size: 0.9rem;
+  }
+
+  .authdocs-notification-message {
+    font-size: 0.8rem;
+  }
+
+  /* Grid mobile adjustments */
+  .authdocs-grid-container .authdocs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Pagination mobile adjustments */
+  .authdocs-pagination {
+    padding: 12px 8px;
+    gap: 12px;
+  }
+
+  .authdocs-compact-pagination {
+    padding: 12px 8px;
+    gap: 12px;
+  }
+
+  .authdocs-pagination-info {
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
+
+  .authdocs-pagination-numbers {
+    gap: 3px;
+    display: flex;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .authdocs-pagination-btn {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    font-size: 0.75rem;
+  }
+
+  .authdocs-load-more-btn {
+    width: 100%;
+    padding: 12px 20px;
+  }
+}
+
+/* Automatic Loading Styles */
+.authdocs-auto-pagination {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.authdocs-auto-loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+.authdocs-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007cba;
+  border-radius: 50%;
+  animation: authdocs-spin 1s linear infinite;
+}
+
+@keyframes authdocs-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

@@ -1,12 +1,12 @@
 <?php
 /**
- * Main plugin class for AuthDocs
+ * Main plugin class for ProtectedDocs
  * 
  * @since 1.1.0 Email logic separation; new autoresponder recipient; trigger fixes.
  */
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class Plugin
 {
@@ -14,32 +14,46 @@ class Plugin
     {
         $this->init_hooks();
         $this->load_dependencies();
+        $this->init_file_storage();
     }
 
     private function init_hooks(): void
     {
         add_action('init', [$this, 'init']);
         add_action('admin_menu', [$this, 'add_admin_menu']);
+        add_action('admin_menu', [$this, 'update_documents_menu_count'], 999);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
-        add_action('wp_ajax_authdocs_request_access', [$this, 'handle_access_request']);
-        add_action('wp_ajax_nopriv_authdocs_request_access', [$this, 'handle_access_request']);
-        add_action('wp_ajax_authdocs_manage_request', [$this, 'handle_request_management']);
-        add_action('wp_ajax_authdocs_test_email', [$this, 'handle_test_email']);
-        add_action('wp_ajax_authdocs_test_autoresponder', [$this, 'handle_test_autoresponder']);
-        add_action('wp_ajax_authdocs_test_access_request', [$this, 'handle_test_access_request']);
-        add_action('wp_ajax_authdocs_test_auto_response', [$this, 'handle_test_auto_response']);
-        add_action('wp_ajax_authdocs_test_grant_decline', [$this, 'handle_test_grant_decline']);
-        add_action('wp_ajax_authdocs_get_request_data', [$this, 'handle_get_request_data']);
-        add_action('wp_ajax_authdocs_load_more_documents', [$this, 'handle_load_more_documents']);
-        add_action('wp_ajax_nopriv_authdocs_load_more_documents', [$this, 'handle_load_more_documents']);
-        add_action('wp_ajax_authdocs_paginate_documents', [$this, 'handle_paginate_documents']);
-        add_action('wp_ajax_nopriv_authdocs_paginate_documents', [$this, 'handle_paginate_documents']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_menu_badge_assets']);
+        add_action('wp_ajax_protecteddocs_request_access', [$this, 'handle_access_request']);
+        add_action('wp_ajax_nopriv_protecteddocs_request_access', [$this, 'handle_access_request']);
+        add_action('wp_ajax_protecteddocs_manage_request', [$this, 'handle_request_management']);
+        add_action('wp_ajax_protecteddocs_test_email', [$this, 'handle_test_email']);
+        add_action('wp_ajax_protecteddocs_test_autoresponder', [$this, 'handle_test_autoresponder']);
+        add_action('wp_ajax_protecteddocs_test_access_request', [$this, 'handle_test_access_request']);
+        add_action('wp_ajax_protecteddocs_test_auto_response', [$this, 'handle_test_auto_response']);
+        add_action('wp_ajax_protecteddocs_test_grant_decline', [$this, 'handle_test_grant_decline']);
+        add_action('wp_ajax_protecteddocs_get_request_data', [$this, 'handle_get_request_data']);
+        add_action('wp_ajax_protecteddocs_get_pending_count', [$this, 'handle_get_pending_count']);
+        add_action('wp_ajax_protecteddocs_load_more_documents', [$this, 'handle_load_more_documents']);
+        add_action('wp_ajax_nopriv_protecteddocs_load_more_documents', [$this, 'handle_load_more_documents']);
+        add_action('wp_ajax_protecteddocs_paginate_documents', [$this, 'handle_paginate_documents']);
+        add_action('wp_ajax_nopriv_protecteddocs_paginate_documents', [$this, 'handle_paginate_documents']);
+        add_action('wp_ajax_protecteddocs_render_shortcode', [$this, 'handle_render_shortcode']);
+        add_action('wp_ajax_nopriv_protecteddocs_render_shortcode', [$this, 'handle_render_shortcode']);
+        add_action('wp_ajax_protecteddocs_validate_session', [$this, 'handle_validate_session']);
+        add_action('wp_ajax_nopriv_protecteddocs_validate_session', [$this, 'handle_validate_session']);
+        add_action('wp_ajax_protecteddocs_migrate_files', [$this, 'handle_migrate_files']);
+        add_action('wp_ajax_protecteddocs_debug_file_detection', [$this, 'handle_debug_file_detection']);
+        add_action('wp_ajax_protecteddocs_repair_file_associations', [$this, 'handle_repair_file_associations']);
         
         // Email hooks
         add_action('authdocs/request_submitted', [$this, 'handle_request_submitted_hook']);
         add_action('template_redirect', [$this, 'protect_document_files']);
         add_action('init', [$this, 'protect_media_files']);
+        add_action('robots_txt', [$this, 'add_robots_txt_rules']);
+        add_action('template_redirect', [$this, 'handle_access_request_page']);
+        add_action('template_redirect', [$this, 'handle_admin_pdf_view']);
     }
 
     private function load_dependencies(): void
@@ -50,37 +64,125 @@ class Plugin
         new Database();
         new Settings();
         new Email();
+        new FileViewer();
         
         // Initialize new components
         new LinkHandler();
         new Logs();
+        new GutenbergBlock();
+        
+        // Load ErrorPageRenderer (static class, no instantiation needed)
+        require_once PROTECTEDDOCS_PLUGIN_DIR . 'includes/ErrorPageRenderer.php';
+    }
+
+    private function init_file_storage(): void
+    {
+        require_once PROTECTEDDOCS_PLUGIN_DIR . 'includes/FileStorage.php';
+        new FileStorage();
     }
 
     public function init(): void
     {
-        load_plugin_textdomain('authdocs', false, dirname(plugin_basename(AUTHDOCS_PLUGIN_FILE)) . '/languages');
+        load_plugin_textdomain('protecteddocs', false, dirname(plugin_basename(PROTECTEDDOCS_PLUGIN_FILE)) . '/languages');
     }
 
     public function add_admin_menu(): void
     {
+        // Documents (Main menu - handled by custom post type)
+        // → All Documents (default post type list)
+        // → Add New Document (default post type add)
+        
+        // Access Requests
         add_submenu_page(
             'edit.php?post_type=document',
-            __('Document Requests', 'authdocs'),
-            __('Requests', 'authdocs'),
+            __('Access Requests', 'protecteddocs'),
+            __('Access Requests', 'protecteddocs'),
             'manage_options',
-            'authdocs-requests',
+            'protecteddocs-requests',
             [$this, 'requests_page']
         );
         
-        
+        // Email Templates
         add_submenu_page(
             'edit.php?post_type=document',
-            __('Email Settings', 'authdocs'),
-            __('Settings', 'authdocs'),
+            __('Email Templates', 'protecteddocs'),
+            __('Email Templates', 'protecteddocs'),
             'manage_options',
-            'authdocs-settings',
-            [$this, 'settings_page']
+            'protecteddocs-email-templates',
+            [$this, 'email_templates_page']
         );
+        
+        // Frontend Settings
+        add_submenu_page(
+            'edit.php?post_type=document',
+            __('Frontend Settings', 'protecteddocs'),
+            __('Frontend Settings', 'protecteddocs'),
+            'manage_options',
+            'protecteddocs-frontend-settings',
+            [$this, 'frontend_settings_page']
+        );
+        
+        // File Storage Management
+        add_submenu_page(
+            'edit.php?post_type=document',
+            __('File Storage', 'protecteddocs'),
+            __('File Storage', 'protecteddocs'),
+            'manage_options',
+            'protecteddocs-file-storage',
+            [$this, 'file_storage_page']
+        );
+        
+        // About ProtectedDocs
+        add_submenu_page(
+            'edit.php?post_type=document',
+            __('About ProtectedDocs', 'protecteddocs'),
+            __('About ProtectedDocs', 'protecteddocs'),
+            'manage_options',
+            'protecteddocs-about',
+            [$this, 'about_plugin_page']
+        );
+        
+        // Debug CSS Loading (temporary)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            add_submenu_page(
+                'edit.php?post_type=document',
+                __('Debug CSS', 'protecteddocs'),
+                __('Debug CSS', 'protecteddocs'),
+                'manage_options',
+                'protecteddocs-debug-css',
+                [$this, 'debug_admin_css_loading']
+            );
+        }
+    }
+
+    /**
+     * Update the Documents menu to show pending requests count badge
+     */
+    public function update_documents_menu_count(): void
+    {
+        global $menu;
+        
+        if (!$menu || !is_array($menu)) {
+            return;
+        }
+        
+        // Get pending access requests count (never been used)
+        $pending_count = Database::get_pending_requests_count();
+        
+        // Find the Documents menu item and update it
+        foreach ($menu as $key => $item) {
+            if (isset($item[2]) && $item[2] === 'edit.php?post_type=document') {
+                $menu_name = __('Documents', 'protecteddocs');
+                
+                // Add pending requests count badge if there are any pending requests
+                if ($pending_count > 0) {
+                    $menu_name .= ' <span class="authdocs-pending-requests-count">' . $pending_count . '</span>';
+                }
+                
+                $menu[$key][0] = $menu_name;
+                break;
+            }
+        }
     }
 
     public function enqueue_frontend_assets(): void
@@ -91,39 +193,107 @@ class Plugin
         }
 
         wp_enqueue_style(
-            'authdocs-frontend',
-            AUTHDOCS_PLUGIN_URL . 'assets/css/frontend.css',
+            'protecteddocs-frontend-css',
+            PROTECTEDDOCS_PLUGIN_URL . 'assets/css/protecteddocs-frontend.css',
             [],
-            AUTHDOCS_VERSION
+            PROTECTEDDOCS_VERSION
         );
 
         wp_enqueue_script(
-            'authdocs-frontend',
-            AUTHDOCS_PLUGIN_URL . 'assets/js/frontend.js',
+            'protecteddocs-frontend-js',
+            PROTECTEDDOCS_PLUGIN_URL . 'assets/js/protecteddocs-frontend.js',
             ['jquery'],
-            AUTHDOCS_VERSION,
+            PROTECTEDDOCS_VERSION,
             true
         );
 
-        wp_localize_script('authdocs-frontend', 'authdocs_frontend', [
+        wp_localize_script('protecteddocs-frontend-js', 'protecteddocs_frontend', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('authdocs_frontend_nonce'),
-            'request_access_title' => __('Request Document Access', 'authdocs'),
-            'name_label' => __('Full Name', 'authdocs'),
-            'email_label' => __('Email Address', 'authdocs'),
-            'cancel_label' => __('Cancel', 'authdocs'),
-            'submit_label' => __('Submit Request', 'authdocs'),
-            'submitting_label' => __('Submitting...', 'authdocs'),
-            'loading_label' => __('Loading...', 'authdocs'),
-            'load_more_label' => __('Load More Documents', 'authdocs')
+            'nonce' => wp_create_nonce('protecteddocs_frontend_nonce'),
+            'request_access_title' => __('Request Document Access', 'protecteddocs'),
+            'name_label' => __('Full Name', 'protecteddocs'),
+            'email_label' => __('Email Address', 'protecteddocs'),
+            'cancel_label' => __('Cancel', 'protecteddocs'),
+            'submit_label' => __('Submit Request', 'protecteddocs'),
+            'submitting_label' => __('Submitting...', 'protecteddocs'),
+            'loading_label' => __('Loading...', 'protecteddocs'),
+            'load_more_label' => __('Load More Documents', 'protecteddocs')
         ]);
     }
 
     public function enqueue_admin_assets(): void
     {
-        // Only load admin assets on our specific admin pages
         $screen = get_current_screen();
-        if (!$screen || !in_array($screen->id, ['document_page_authdocs-requests', 'document_page_authdocs-settings'])) {
+        if (!$screen) {
+            return;
+        }
+        
+        // Debug: Log screen ID for troubleshooting
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ProtectedDocs: Current screen ID: ' . $screen->id);
+        }
+
+        // Load admin-document.css and media scripts on individual document post type pages
+        if ($screen->id === 'document') {
+            wp_enqueue_style(
+                'protecteddocs-admin-document',
+                PROTECTEDDOCS_PLUGIN_URL . 'assets/css/admin-document.css',
+                [],
+                PROTECTEDDOCS_VERSION
+            );
+            
+            // Enqueue WordPress media scripts for file uploader
+            wp_enqueue_media();
+            
+            // Enqueue our custom media uploader script
+            wp_enqueue_script(
+                'protecteddocs-media-uploader',
+                PROTECTEDDOCS_PLUGIN_URL . 'assets/js/media-uploader.js',
+                ['jquery', 'media-upload', 'media-views'],
+                PROTECTEDDOCS_VERSION,
+                true
+            );
+            
+            // Localize script with translated strings
+            wp_localize_script('protecteddocs-media-uploader', 'protecteddocs_media_uploader', [
+                'select_document' => __('Select Document', 'protecteddocs'),
+                'use_document' => __('Use this document', 'protecteddocs'),
+                'view' => __('View', 'protecteddocs'),
+                'remove' => __('Remove', 'protecteddocs'),
+                'no_file_selected' => __('No file selected', 'protecteddocs'),
+                'click_to_select' => __('Click the button below to select a document', 'protecteddocs'),
+            ]);
+            
+            return;
+        }
+
+        // Load main protecteddocs-admin.css only on plugin admin pages
+        $allowed_screens = [
+            'document_page_protecteddocs-requests', 
+            'document_page_protecteddocs-email-templates',
+            'document_page_protecteddocs-frontend-settings',
+            'document_page_protecteddocs-about',
+            'document_page_protecteddocs-file-storage',
+            'edit-document', // Document post type list page
+            'document', // Document post type edit page
+        ];
+        
+        // Add debug page if WP_DEBUG is enabled
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $allowed_screens[] = 'document_page_protecteddocs-debug-css';
+        }
+        
+        // Check if current screen matches allowed screens
+        $is_allowed_screen = false;
+        foreach ($allowed_screens as $allowed_screen) {
+            if (strpos($screen->id, $allowed_screen) === 0) {
+                $is_allowed_screen = true;
+                break;
+            }
+        }
+        
+        // Only load on plugin-specific admin pages
+        if (!$is_allowed_screen) {
             return;
         }
 
@@ -131,33 +301,73 @@ class Plugin
         wp_enqueue_style('dashicons');
 
         wp_enqueue_style(
-            'authdocs-admin',
-            AUTHDOCS_PLUGIN_URL . 'assets/css/admin.css',
+            'protecteddocs-admin-css',
+            PROTECTEDDOCS_PLUGIN_URL . 'assets/css/protecteddocs-admin.css',
             [],
-            AUTHDOCS_VERSION
+            PROTECTEDDOCS_VERSION
         );
+        
+        // Debug: Log when admin CSS is enqueued
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ProtectedDocs: Admin CSS enqueued for screen: ' . $screen->id);
+            error_log('ProtectedDocs: CSS URL: ' . PROTECTEDDOCS_PLUGIN_URL . 'assets/css/protecteddocs-admin.css');
+        }
 
         wp_enqueue_script(
-            'authdocs-admin',
-            AUTHDOCS_PLUGIN_URL . 'assets/js/admin.js',
+            'protecteddocs-admin-js',
+            PROTECTEDDOCS_PLUGIN_URL . 'assets/js/protecteddocs-admin.js',
             ['jquery'],
-            AUTHDOCS_VERSION,
+            PROTECTEDDOCS_VERSION,
             true
         );
 
-        wp_localize_script('authdocs-admin', 'authdocs_admin', [
+        wp_localize_script('protecteddocs-admin-js', 'protecteddocs_admin', [
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('authdocs_manage_nonce'),
+            'nonce' => wp_create_nonce('protecteddocs_manage_nonce'),
             'site_url' => home_url('/'),
         ]);
     }
 
+    /**
+     * Enqueue menu badge assets on all admin pages
+     */
+    public function enqueue_menu_badge_assets(): void
+    {
+        // Only load on admin pages
+        if (!is_admin()) {
+            return;
+        }
+
+        // Enqueue minimal CSS for menu badge styling only
+        wp_enqueue_style(
+            'protecteddocs-menu-badge-css',
+            PROTECTEDDOCS_PLUGIN_URL . 'assets/css/menu-badge.css',
+            [],
+            PROTECTEDDOCS_VERSION
+        );
+    }
+
     public function handle_access_request(): void
     {
+        error_log('ProtectedDocs: handle_access_request() method called');
         try {
-            if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+            // Debug: Log received data
+            error_log('ProtectedDocs: Received POST data: ' . print_r($_POST, true));
+            error_log('ProtectedDocs: Received REQUEST data: ' . print_r($_REQUEST, true));
+            error_log('ProtectedDocs: Raw input: ' . file_get_contents('php://input'));
+
+            // Check if nonce exists
+            $nonce = $_POST['nonce'] ?? '';
+            error_log("ProtectedDocs: Nonce received: '{$nonce}'");
+            
+            if (!wp_verify_nonce($nonce, 'protecteddocs_frontend_nonce')) {
+                error_log('ProtectedDocs: Nonce verification failed');
                 wp_send_json_error([
-                    'message' => __('Security check failed', 'authdocs')
+                    'message' => __('Security check failed', 'protecteddocs'),
+                    'debug' => [
+                        'nonce_received' => $nonce,
+                        'nonce_valid' => false
+                    ]
                 ]);
             }
 
@@ -165,61 +375,102 @@ class Plugin
             $name = sanitize_text_field($_POST['name'] ?? '');
             $email = sanitize_email($_POST['email'] ?? '');
 
+            error_log("ProtectedDocs: Parsed values - document_id: {$document_id}, name: '{$name}', email: '{$email}'");
+            error_log("ProtectedDocs: Field validation - document_id empty: " . ($document_id ? 'false' : 'true'));
+            error_log("ProtectedDocs: Field validation - name empty: " . (empty($name) ? 'true' : 'false'));
+            error_log("ProtectedDocs: Field validation - email empty: " . (empty($email) ? 'true' : 'false'));
+
             if (!$document_id || !$name || !$email) {
+                error_log('ProtectedDocs: Missing required fields detected');
                 wp_send_json_error([
-                    'message' => __('Missing required fields', 'authdocs')
+                    'message' => __('Missing required fields', 'protecteddocs'),
+                    'debug' => [
+                        'document_id' => $document_id,
+                        'name' => $name,
+                        'email' => $email,
+                        'document_id_empty' => !$document_id,
+                        'name_empty' => !$name,
+                        'email_empty' => !$email,
+                        'raw_post' => $_POST
+                    ]
                 ]);
             }
 
+            // Bot protection temporarily disabled for debugging
+
+            // Check for existing requests first (only for the same document)
+            $existing_request = Database::check_existing_request($document_id, $email);
+            
+            if ($existing_request['exists'] && !$existing_request['is_deleted']) {
+                // Request already exists for this specific document and is not deleted
+                wp_send_json_error([
+                    'message' => __('You have already submitted a request for this document. Please wait for a response or contact the administrator.', 'protecteddocs'),
+                    'duplicate' => true
+                ]);
+            }
+
+            // Submit the request (save_access_request will handle its own duplicate checking)
             $result = Database::save_access_request($document_id, $name, $email);
             
             if ($result) {
                 // Fire the request submitted hook
                 do_action('authdocs/request_submitted', $result);
                 
-                wp_send_json_success([
-                    'message' => __('Request submitted successfully', 'authdocs'),
-                    'request_id' => $result
-                ]);
+                // Check if document is active for appropriate message
+                $document = get_post($document_id);
+                $is_document_active = $document && $document->post_status === 'publish';
+                
+                if (!$is_document_active) {
+                    wp_send_json_success([
+                        'message' => __('Request submitted successfully. Note: This document is currently inactive.', 'protecteddocs'),
+                        'request_id' => $result,
+                        'document_inactive' => true
+                    ]);
+                } else {
+                    wp_send_json_success([
+                        'message' => __('Request submitted successfully', 'protecteddocs'),
+                        'request_id' => $result
+                    ]);
+                }
             } else {
                 wp_send_json_error([
-                    'message' => __('Failed to submit request', 'authdocs')
+                    'message' => __('Failed to submit request. You may have already submitted a request for this document.', 'protecteddocs')
                 ]);
             }
         } catch (\Exception $e) {
-            error_log('AuthDocs: Error in handle_access_request: ' . $e->getMessage());
+            error_log('ProtectedDocs: Error in handle_access_request: ' . $e->getMessage());
             wp_send_json_error([
-                'message' => __('An unexpected error occurred', 'authdocs')
+                'message' => __('An unexpected error occurred', 'protecteddocs')
             ]);
         }
     }
 
     public function handle_request_management(): void
     {
-        error_log("AuthDocs: handle_request_management called");
-        error_log("AuthDocs: POST data: " . json_encode($_POST));
+        error_log("ProtectedDocs: handle_request_management called");
+        error_log("ProtectedDocs: POST data: " . json_encode($_POST));
         
         if (!current_user_can('manage_options')) {
-            error_log("AuthDocs: Insufficient permissions");
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            error_log("ProtectedDocs: Insufficient permissions");
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
 
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
-            error_log("AuthDocs: Security check failed");
-            wp_die(__('Security check failed', 'authdocs'));
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            error_log("ProtectedDocs: Security check failed");
+            wp_die(__('Security check failed', 'protecteddocs'));
         }
 
         $request_id = intval($_POST['request_id'] ?? 0);
         $action = sanitize_text_field($_POST['action_type'] ?? '');
 
         if (!$request_id || !in_array($action, ['accept', 'decline', 'inactive', 'delete'])) {
-            wp_send_json_error(__('Invalid request', 'authdocs'));
+            wp_send_json_error(__('Invalid request', 'protecteddocs'));
         }
 
         // Get current request to determine toggle behavior
         $current_request = Database::get_request_by_id($request_id);
         if (!$current_request) {
-            wp_send_json_error(__('Request not found', 'authdocs'));
+            wp_send_json_error(__('Request not found', 'protecteddocs'));
         }
 
         // Handle delete action separately
@@ -227,11 +478,11 @@ class Plugin
             $result = Database::delete_request($request_id);
             if ($result) {
                 wp_send_json_success([
-                    'message' => __('Request deleted successfully.', 'authdocs'),
+                    'message' => __('Request deleted successfully.', 'protecteddocs'),
                     'deleted' => true
                 ]);
             } else {
-                wp_send_json_error(__('Failed to delete request', 'authdocs'));
+                wp_send_json_error(__('Failed to delete request', 'protecteddocs'));
             }
         }
 
@@ -244,7 +495,7 @@ class Plugin
         
         $status = $status_map[$action] ?? $action;
         
-        error_log("AuthDocs: Updating request ID {$request_id} from action '{$action}' to status '{$status}'");
+        error_log("ProtectedDocs: Updating request ID {$request_id} from action '{$action}' to status '{$status}'");
         
         $old_status = Database::get_request_status($request_id);
         $result = Database::update_request_status($request_id, $status);
@@ -252,10 +503,10 @@ class Plugin
         if ($result) {
             // Get the actual final status after update (in case it was restored from pending)
             $final_status = Database::get_request_status($request_id);
-            error_log("AuthDocs: Request updated successfully. Old status: {$old_status}, Final status: {$final_status}");
+            error_log("ProtectedDocs: Request updated successfully. Old status: {$old_status}, Final status: {$final_status}");
             
             // Fire the status change hook with the final status and capture email result
-            error_log("AuthDocs: Firing status change hook with final status: {$final_status}");
+            error_log("ProtectedDocs: Firing status change hook with final status: {$final_status}");
             $email_sent = $this->handle_status_change_with_email($request_id, $old_status, $final_status);
             
             // Prepare response message based on action and email result
@@ -267,8 +518,8 @@ class Plugin
                 'status' => $final_status
             ]);
         } else {
-            error_log("AuthDocs: Failed to update request status");
-            wp_send_json_error(__('Failed to update request', 'authdocs'));
+            error_log("ProtectedDocs: Failed to update request status");
+            wp_send_json_error(__('Failed to update request', 'protecteddocs'));
         }
     }
     
@@ -281,13 +532,13 @@ class Plugin
         
         // Send grant/decline email based on status
         if ($new_status === 'accepted') {
-            error_log("AuthDocs: Status is 'accepted', sending grant email");
+            error_log("ProtectedDocs: Status is 'accepted', sending grant email");
             $email_sent = $email->send_grant_decline_email($request_id, true);
         } elseif ($new_status === 'declined') {
-            error_log("AuthDocs: Status is 'declined', sending decline email");
+            error_log("ProtectedDocs: Status is 'declined', sending decline email");
             $email_sent = $email->send_grant_decline_email($request_id, false);
         } else {
-            error_log("AuthDocs: Status is not 'accepted' or 'declined' ({$new_status}), not sending email");
+            error_log("ProtectedDocs: Status is not 'accepted' or 'declined' ({$new_status}), not sending email");
         }
         
         return $email_sent;
@@ -304,30 +555,30 @@ class Plugin
         switch ($action) {
             case 'accept':
                 $base_message = $status === 'accepted' ? 
-                    __('Request accepted successfully.', 'authdocs') : 
-                    __('Request re-accepted successfully.', 'authdocs');
+                    __('Request accepted successfully.', 'protecteddocs') : 
+                    __('Request re-accepted successfully.', 'protecteddocs');
                 break;
             case 'decline':
                 $base_message = $status === 'declined' ? 
-                    __('Request declined successfully.', 'authdocs') : 
-                    __('Request re-declined successfully.', 'authdocs');
+                    __('Request declined successfully.', 'protecteddocs') : 
+                    __('Request re-declined successfully.', 'protecteddocs');
                 break;
             case 'inactive':
                 $base_message = $status === 'inactive' ? 
-                    __('Document link hidden successfully.', 'authdocs') : 
-                    __('Document link restored successfully.', 'authdocs');
+                    __('Document link hidden successfully.', 'protecteddocs') : 
+                    __('Document link restored successfully.', 'protecteddocs');
                 break;
             default:
-                $base_message = __('Request updated successfully.', 'authdocs');
+                $base_message = __('Request updated successfully.', 'protecteddocs');
         }
         
         // Email message based on result
         if ($email_sent && in_array($status, ['accepted', 'declined'])) {
             $email_message = $status === 'accepted' ? 
-                __(' Grant email sent to requester.', 'authdocs') : 
-                __(' Decline email sent to requester.', 'authdocs');
+                __(' Grant email sent to requester.', 'protecteddocs') : 
+                __(' Decline email sent to requester.', 'protecteddocs');
         } elseif (!$email_sent && in_array($status, ['accepted', 'declined'])) {
-            $email_message = __(' Warning: Email could not be sent.', 'authdocs');
+            $email_message = __(' Warning: Email could not be sent.', 'protecteddocs');
         }
         
         return $base_message . $email_message;
@@ -335,13 +586,126 @@ class Plugin
     
     public function requests_page(): void
     {
+        // Handle individual delete action
+        if (isset($_POST['individual_action']) && $_POST['individual_action'] === 'delete' && isset($_POST['request_id'])) {
+            $this->handle_individual_delete();
+        }
+        
+        // Handle bulk delete action
+        if (isset($_POST['bulk_action']) && $_POST['bulk_action'] === 'delete' && isset($_POST['request_ids'])) {
+            $this->handle_bulk_delete();
+        }
+        
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $per_page = 5;
         $total_requests = Database::get_total_requests_count();
         $total_pages = ceil($total_requests / $per_page);
         $requests = Database::get_paginated_requests($current_page, $per_page);
         
-        include AUTHDOCS_PLUGIN_DIR . 'templates/admin/requests-page.php';
+        include PROTECTEDDOCS_PLUGIN_DIR . 'templates/admin/requests-page.php';
+    }
+    
+    /**
+     * Handle individual delete action
+     */
+    private function handle_individual_delete(): void
+    {
+        // Check nonce
+        if (!wp_verify_nonce($_POST['_wpnonce'] ?? '', 'bulk-delete-requests')) {
+            wp_die(__('Security check failed', 'protecteddocs'));
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
+        }
+        
+        $request_id = intval($_POST['request_id'] ?? 0);
+        
+        if ($request_id <= 0) {
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-error is-dismissible"><p>' . esc_html(__('Invalid request ID.', 'protecteddocs')) . '</p></div>';
+            });
+            return;
+        }
+        
+        $result = Database::delete_request($request_id);
+        
+        if ($result) {
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(__('Request deleted successfully.', 'protecteddocs')) . '</p></div>';
+            });
+        } else {
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-error is-dismissible"><p>' . esc_html(__('Failed to delete request.', 'protecteddocs')) . '</p></div>';
+            });
+        }
+    }
+    
+    /**
+     * Handle bulk delete action
+     */
+    private function handle_bulk_delete(): void
+    {
+        // Check nonce
+        if (!wp_verify_nonce($_POST['_wpnonce'] ?? '', 'bulk-delete-requests')) {
+            wp_die(__('Security check failed', 'protecteddocs'));
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
+        }
+        
+        // Handle request_ids - it comes as comma-separated string from JavaScript
+        $request_ids_string = $_POST['request_ids'] ?? '';
+        $request_ids = array_map('intval', explode(',', $request_ids_string));
+        $deleted_count = 0;
+        $errors = [];
+        
+        foreach ($request_ids as $request_id) {
+            if ($request_id > 0) {
+                $result = Database::delete_request($request_id);
+                if ($result) {
+                    $deleted_count++;
+                } else {
+                    $errors[] = sprintf(__('Failed to delete request ID %d', 'protecteddocs'), $request_id);
+                }
+            }
+        }
+        
+        // Set admin notice
+        if ($deleted_count > 0) {
+            $message = sprintf(
+                _n(
+                    '%d request deleted successfully.',
+                    '%d requests deleted successfully.',
+                    $deleted_count,
+                    'protecteddocs'
+                ),
+                $deleted_count
+            );
+            
+            if (!empty($errors)) {
+                $message .= ' ' . sprintf(
+                    _n(
+                        '%d request could not be deleted.',
+                        '%d requests could not be deleted.',
+                        count($errors),
+                        'protecteddocs'
+                    ),
+                    count($errors)
+                );
+            }
+            
+            add_action('admin_notices', function() use ($message) {
+                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
+            });
+        } else {
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-error is-dismissible"><p>' . esc_html(__('No requests were deleted.', 'protecteddocs')) . '</p></div>';
+            });
+        }
     }
 
     public function protect_document_files(): void
@@ -353,7 +717,7 @@ class Plugin
 
         $attachment_id = intval($_GET['attachment_id']);
         
-        // Check if this attachment is used by any AuthDocs document
+        // Check if this attachment is used by any ProtectedDocs document
         $document_posts = get_posts([
             'post_type' => 'document',
             'meta_query' => [
@@ -366,9 +730,9 @@ class Plugin
             'posts_per_page' => 1
         ]);
 
-        // If this file is used by an AuthDocs document, block direct access
+        // If this file is used by a ProtectedDocs document, block direct access
         if (!empty($document_posts)) {
-            wp_die(__('Access denied. This file requires authorization through the document sharing system.', 'authdocs'), __('Access Denied', 'authdocs'), ['response' => 403]);
+            wp_die(__('Access denied. This file requires authorization through the document sharing system.', 'protecteddocs'), __('Access Denied', 'protecteddocs'), ['response' => 403]);
         }
     }
 
@@ -377,7 +741,22 @@ class Plugin
         // Get the current request URI
         $request_uri = $_SERVER['REQUEST_URI'];
         
-        // Check if this is a media file request
+        // Check if this is a request to the AuthDocs dedicated folder
+        if (!class_exists('ProtectedDocs\FileStorage')) {
+            require_once PROTECTEDDOCS_PLUGIN_DIR . 'includes/FileStorage.php';
+        }
+        if (strpos($request_uri, '/' . FileStorage::FOLDER_NAME . '/') !== false) {
+            // Allow admin access if user is logged in and has admin capabilities
+            if (is_user_logged_in() && current_user_can('manage_options')) {
+                // Admin access allowed - let the request continue
+                return;
+            }
+            
+            // Block all other direct access to AuthDocs files
+            wp_die(__('Access denied. This file requires authorization through the document sharing system.', 'protecteddocs'), __('Access Denied', 'protecteddocs'), ['response' => 403]);
+        }
+        
+        // Check if this is a media file request in regular uploads
         if (strpos($request_uri, '/wp-content/uploads/') !== false) {
             // Extract the file path
             $upload_dir = wp_upload_dir();
@@ -386,7 +765,7 @@ class Plugin
             
             // Check if file exists
             if (file_exists($file_path)) {
-                // Get all AuthDocs documents and check if this file is used
+                // Get all ProtectedDocs documents and check if this file is used
                 $document_posts = get_posts([
                     'post_type' => 'document',
                     'meta_key' => '_authdocs_file_id',
@@ -398,7 +777,7 @@ class Plugin
                     if ($file_id) {
                         $attachment_path = get_attached_file($file_id);
                         if ($attachment_path && realpath($attachment_path) === realpath($file_path)) {
-                            wp_die(__('Access denied. This file requires authorization through the document sharing system.', 'authdocs'), __('Access Denied', 'authdocs'), ['response' => 403]);
+                            wp_die(__('Access denied. This file requires authorization through the document sharing system.', 'protecteddocs'), __('Access Denied', 'protecteddocs'), ['response' => 403]);
                         }
                     }
                 }
@@ -406,114 +785,629 @@ class Plugin
         }
     }
 
+    /**
+     * Handle access request page
+     */
+    public function handle_access_request_page(): void
+    {
+        // Check if this is an access request page
+        if (!isset($_GET['authdocs_access']) || !isset($_GET['document_id'])) {
+            return;
+        }
+
+        $document_id = intval($_GET['document_id']);
+        $hash = sanitize_text_field($_GET['hash'] ?? '');
+        $email = sanitize_email($_GET['email'] ?? '');
+        $request_id = intval($_GET['request_id'] ?? 0);
+
+        // Get document information
+        $document = get_post($document_id);
+        if (!$document || $document->post_type !== 'document') {
+            LinkHandler::render_error_page(
+                __('Document not found', 'protecteddocs'),
+                __('Access Denied', 'protecteddocs'),
+                404
+            );
+            return;
+        }
+
+        // Check if document is restricted
+        $is_restricted = get_post_meta($document_id, '_authdocs_restricted', true) === 'yes';
+        
+        if (!$is_restricted) {
+            // Document is not restricted, redirect to download
+            $download_url = $this->get_document_download_url($document_id);
+            wp_redirect($download_url);
+            exit;
+        }
+
+        // Check if user has valid access
+        if (!empty($hash) && !empty($email)) {
+            $has_access = Database::validate_secure_access($hash, $email, $document_id, $request_id > 0 ? $request_id : null);
+            
+            if ($has_access) {
+                // User has access, redirect to dedicated file viewer
+                $viewer_url = $this->get_document_viewer_url($document_id, $hash, $email, $request_id);
+                wp_redirect($viewer_url);
+                exit;
+            }
+        }
+
+        // User doesn't have access, show access request page
+        $this->render_access_request_page($document_id, $document);
+        exit;
+    }
+
+    /**
+     * Handle file migration AJAX request
+     */
+    public function handle_migrate_files(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'protecteddocs'));
+        }
+        
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_migrate_files')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
+        }
+        
+        // Ensure FileStorage class is loaded
+        if (!class_exists('ProtectedDocs\FileStorage')) {
+            require_once PROTECTEDDOCS_PLUGIN_DIR . 'includes/FileStorage.php';
+        }
+        
+        $results = FileStorage::migrate_existing_files();
+        
+        if ($results['success'] > 0 || $results['already_moved'] > 0) {
+            wp_send_json_success([
+                'message' => sprintf(
+                    __('Migration completed. %d files moved, %d already in place, %d failed.', 'protecteddocs'),
+                    $results['success'],
+                    $results['already_moved'],
+                    $results['failed']
+                ),
+                'results' => $results
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('Migration failed. No files were moved.', 'protecteddocs'),
+                'results' => $results
+            ]);
+        }
+    }
+    
+    /**
+     * Handle debug file detection AJAX request
+     */
+    public function handle_debug_file_detection(): void
+    {
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Access denied. Admin privileges required.', 'protecteddocs')
+            ]);
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_admin_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed.', 'protecteddocs')
+            ]);
+        }
+        
+        // Run the debug method
+        Database::debug_file_detection();
+        
+        wp_send_json_success([
+            'message' => __('Debug information logged. Check your error logs.', 'protecteddocs')
+        ]);
+    }
+    
+    /**
+     * Handle repair file associations AJAX request
+     */
+    public function handle_repair_file_associations(): void
+    {
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Access denied. Admin privileges required.', 'protecteddocs')
+            ]);
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_admin_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed.', 'protecteddocs')
+            ]);
+        }
+        
+        // Run the repair method
+        $results = Database::repair_corrupted_file_associations();
+        
+        $message = sprintf(
+            __('Repair completed. %d documents repaired, %d failed, %d skipped.', 'protecteddocs'),
+            $results['repaired'],
+            $results['failed'],
+            $results['skipped']
+        );
+        
+        wp_send_json_success([
+            'message' => $message,
+            'results' => $results
+        ]);
+    }
+
+    /**
+     * Get document download URL
+     */
+    private function get_document_download_url(int $document_id): string
+    {
+        $token = Tokens::generate_download_token($document_id);
+        return add_query_arg([
+            'authdocs_download' => $document_id,
+            'token' => $token
+        ], home_url('/'));
+    }
+
+    /**
+     * Get access request URL for a document
+     */
+    private function get_access_request_url(int $document_id): string
+    {
+        return add_query_arg([
+            'authdocs_access' => '1',
+            'document_id' => $document_id
+        ], home_url('/'));
+    }
+
+    /**
+     * Get document viewer URL for approved access
+     */
+    private function get_document_viewer_url(int $document_id, string $hash, string $email, int $request_id = 0): string
+    {
+        $token = Tokens::generate_download_token($document_id);
+        return add_query_arg([
+            'authdocs_viewer' => '1',
+            'document_id' => $document_id,
+            'token' => $token,
+            'hash' => $hash,
+            'email' => $email,
+            'request_id' => $request_id
+        ], home_url('/'));
+    }
+
+    /**
+     * Render access request page
+     */
+    private function render_access_request_page(int $document_id, \WP_Post $document): void
+    {
+        $settings = new Settings();
+        $color_palette = $settings->get_color_palette_colors();
+        
+        // Get document file information
+        $file_data = Database::get_document_file($document_id);
+        $file_name = $file_data['filename'] ?? __('Unknown file', 'protecteddocs');
+        $file_size = $file_data['size'] ?? 0;
+        $file_size_formatted = $file_size ? size_format($file_size) : '';
+
+        // Set proper security headers
+        http_response_code(200);
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: SAMEORIGIN');
+        header('X-XSS-Protection: 1; mode=block');
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+        header('Content-Security-Policy: default-src \'self\'; script-src \'self\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data:; font-src \'self\'; connect-src \'self\'; frame-ancestors \'self\';');
+        
+        // Debug logging for Chrome blocking issues
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ProtectedDocs: Rendering access request page for document ID: ' . $document_id);
+            error_log('ProtectedDocs: Security headers set successfully');
+        }
+        ?>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title><?php _e('Request Access', 'protecteddocs'); ?> - <?php echo esc_html($document->post_title); ?></title>
+            
+            <!-- SEO Protection -->
+            <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+            <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+            <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+            
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                    background: <?php echo esc_attr($color_palette['background']); ?>;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                    line-height: 1.6;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                }
+                
+                .request-container {
+                    background: <?php echo esc_attr($color_palette['secondary']); ?>;
+                    border: 2px solid <?php echo esc_attr($color_palette['border']); ?>;
+                    border-radius: 16px;
+                    padding: 48px 32px;
+                    text-align: center;
+                    max-width: 480px;
+                    width: 100%;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+                }
+                
+                .document-icon {
+                    width: 72px;
+                    height: 72px;
+                    background: <?php echo esc_attr($color_palette['primary']); ?>;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 24px;
+                    font-size: 32px;
+                    color: white;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+                }
+                
+                .document-title {
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    margin-bottom: 12px;
+                    letter-spacing: -0.3px;
+                }
+                
+                .document-info {
+                    background: <?php echo esc_attr($color_palette['secondary']); ?>;
+                    border: 1px solid <?php echo esc_attr($color_palette['border']); ?>;
+                    border-radius: 8px;
+                    padding: 16px;
+                    margin: 20px 0;
+                    text-align: left;
+                }
+                
+                .document-info h3 {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    margin: 0 0 8px 0;
+                }
+                
+                .document-info p {
+                    font-size: 13px;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    opacity: 0.8;
+                    margin: 4px 0;
+                }
+                
+                .request-form {
+                    margin-top: 32px;
+                }
+                
+                .form-group {
+                    margin-bottom: 20px;
+                    text-align: left;
+                }
+                
+                .form-group label {
+                    display: block;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    margin-bottom: 8px;
+                }
+                
+                .form-group input {
+                    width: 100%;
+                    padding: 12px 16px;
+                    border: 2px solid <?php echo esc_attr($color_palette['border']); ?>;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    background: <?php echo esc_attr($color_palette['background']); ?>;
+                    color: <?php echo esc_attr($color_palette['text']); ?>;
+                    transition: border-color 0.2s ease;
+                }
+                
+                .form-group input:focus {
+                    outline: none;
+                    border-color: <?php echo esc_attr($color_palette['primary']); ?>;
+                }
+                
+                .btn {
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 500;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                    border: none;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    width: 100%;
+                    justify-content: center;
+                }
+                
+                .btn-primary {
+                    background: <?php echo esc_attr($color_palette['primary']); ?>;
+                    color: white;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }
+                
+                .btn-primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    opacity: 0.9;
+                }
+                
+                .btn-primary:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+                
+                .back-link {
+                    margin-top: 24px;
+                }
+                
+                .back-link a {
+                    color: <?php echo esc_attr($color_palette['primary']); ?>;
+                    text-decoration: none;
+                    font-size: 14px;
+                }
+                
+                .back-link a:hover {
+                    text-decoration: underline;
+                }
+                
+                @media (max-width: 480px) {
+                    .request-container {
+                        padding: 32px 20px;
+                        margin: 10px;
+                    }
+                    
+                    .document-title {
+                        font-size: 20px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="request-container">
+                <div class="document-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="currentColor"/>
+                        <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                
+                <h1 class="document-title"><?php echo esc_html($document->post_title); ?></h1>
+                
+                <div class="document-info">
+                    <h3><?php _e('Document Information', 'protecteddocs'); ?></h3>
+                    <p><strong><?php _e('File:', 'protecteddocs'); ?></strong> <?php echo esc_html($file_name); ?></p>
+                    <?php if ($file_size_formatted): ?>
+                        <p><strong><?php _e('Size:', 'protecteddocs'); ?></strong> <?php echo esc_html($file_size_formatted); ?></p>
+                    <?php endif; ?>
+                    <p><strong><?php _e('Status:', 'protecteddocs'); ?></strong> <?php _e('Restricted Access', 'protecteddocs'); ?></p>
+                </div>
+                
+                <div class="request-form">
+                    <form id="authdocs-request-form" method="post">
+                        <div class="form-group">
+                            <label for="authdocs-name"><?php _e('Your Name', 'protecteddocs'); ?> *</label>
+                            <input type="text" id="authdocs-name" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="authdocs-email"><?php _e('Your Email', 'protecteddocs'); ?> *</label>
+                            <input type="email" id="authdocs-email" name="email" required>
+                        </div>
+                        
+                        <input type="hidden" name="document_id" value="<?php echo esc_attr($document_id); ?>">
+                        <input type="hidden" name="action" value="protecteddocs_request_access">
+                        <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('protecteddocs_frontend_nonce'); ?>">
+                        
+                        <button type="submit" class="btn btn-primary" id="authdocs-submit-request">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
+                            </svg>
+                            <?php _e('Request Access', 'protecteddocs'); ?>
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="back-link">
+                    <a href="<?php echo esc_url(home_url('/')); ?>">← <?php _e('Back to Home', 'protecteddocs'); ?></a>
+                </div>
+            </div>
+            
+            <!-- Load external JavaScript -->
+            <script src="<?php echo esc_url(PROTECTEDDOCS_PLUGIN_URL . 'assets/js/access-request.js'); ?>" defer></script>
+            <script>
+                // Pass data to external script
+                document.getElementById('authdocs-request-form').dataset.ajaxUrl = '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
+                document.getElementById('authdocs-request-form').dataset.redirectUrl = '<?php echo esc_url(home_url('/')); ?>';
+            </script>
+        </body>
+        </html>
+        <?php
+    }
+
+    /**
+     * Add robots.txt rules to prevent crawling of access denied pages
+     */
+    public function add_robots_txt_rules(string $output): string
+    {
+        $output .= "\n# ProtectedDocs - Block access denied pages\n";
+        $output .= "Disallow: /*?authdocs_access=*\n";
+        $output .= "Disallow: /*?hash=*\n";
+        $output .= "Disallow: /*?document_id=*\n";
+        
+        return $output;
+    }
 
     
     public function settings_page(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
         
-        include AUTHDOCS_PLUGIN_DIR . 'templates/admin/settings-page.php';
+        include PROTECTEDDOCS_PLUGIN_DIR . 'templates/admin/settings-page.php';
+    }
+    
+    public function email_templates_page(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
+        }
+        
+        include PROTECTEDDOCS_PLUGIN_DIR . 'templates/admin/email-templates-page.php';
+    }
+    
+    public function frontend_settings_page(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
+        }
+        
+        include PROTECTEDDOCS_PLUGIN_DIR . 'templates/admin/frontend-settings-page.php';
+    }
+    
+    public function file_storage_page(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
+        }
+        
+        // Ensure FileStorage class is loaded
+        if (!class_exists('ProtectedDocs\FileStorage')) {
+            require_once PROTECTEDDOCS_PLUGIN_DIR . 'includes/FileStorage.php';
+        }
+        
+        include PROTECTEDDOCS_PLUGIN_DIR . 'templates/admin/file-storage-page.php';
+    }
+    
+    public function about_plugin_page(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
+        }
+        
+        include PROTECTEDDOCS_PLUGIN_DIR . 'templates/admin/about-plugin-page.php';
     }
     
     public function handle_test_email(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
         
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
-            wp_send_json_error(__('Security check failed', 'authdocs'));
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
         }
         
         $email = new Email();
         $result = $email->send_test_email();
         
         if ($result) {
-            wp_send_json_success(__('Test email sent successfully! Check your admin email.', 'authdocs'));
+            wp_send_json_success(__('Test email sent successfully! Check your admin email.', 'protecteddocs'));
         } else {
-            wp_send_json_error(__('Failed to send test email. Check your WordPress email configuration.', 'authdocs'));
+            wp_send_json_error(__('Failed to send test email. Check your WordPress email configuration.', 'protecteddocs'));
         }
     }
     
     public function handle_test_autoresponder(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
         
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
-            wp_send_json_error(__('Security check failed', 'authdocs'));
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
         }
         
         $email = new Email();
         $result = $email->send_test_autoresponder_email();
         
         if ($result) {
-            wp_send_json_success(__('Test autoresponder email sent successfully! Check your admin email.', 'authdocs'));
+            wp_send_json_success(__('Test autoresponder email sent successfully! Check your admin email.', 'protecteddocs'));
         } else {
-            wp_send_json_error(__('Failed to send test autoresponder email. Make sure autoresponder is enabled and check your WordPress email configuration.', 'authdocs'));
+            wp_send_json_error(__('Failed to send test autoresponder email. Make sure autoresponder is enabled and check your WordPress email configuration.', 'protecteddocs'));
         }
     }
     
     public function handle_test_access_request(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
         
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
-            wp_send_json_error(__('Security check failed', 'authdocs'));
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
         }
         
         $email = new Email();
         $result = $email->send_test_access_request_email();
         
         if ($result) {
-            wp_send_json_success(__('Test access request email sent successfully! Check your admin email.', 'authdocs'));
+            wp_send_json_success(__('Test access request email sent successfully! Check your admin email.', 'protecteddocs'));
         } else {
-            wp_send_json_error(__('Failed to send test access request email. Check your WordPress email configuration.', 'authdocs'));
+            wp_send_json_error(__('Failed to send test access request email. Check your WordPress email configuration.', 'protecteddocs'));
         }
     }
     
     public function handle_test_auto_response(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
         
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
-            wp_send_json_error(__('Security check failed', 'authdocs'));
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
         }
         
         $email = new Email();
         $result = $email->send_test_auto_response_email();
         
         if ($result) {
-            wp_send_json_success(__('Test auto-response email sent successfully! Check your admin email.', 'authdocs'));
+            wp_send_json_success(__('Test auto-response email sent successfully! Check your admin email.', 'protecteddocs'));
         } else {
-            wp_send_json_error(__('Failed to send test auto-response email. Make sure auto-response is enabled and check your WordPress email configuration.', 'authdocs'));
+            wp_send_json_error(__('Failed to send test auto-response email. Make sure auto-response is enabled and check your WordPress email configuration.', 'protecteddocs'));
         }
     }
     
     public function handle_test_grant_decline(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
         
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
-            wp_send_json_error(__('Security check failed', 'authdocs'));
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
         }
         
         $email = new Email();
         $result = $email->send_test_grant_decline_email(true); // Test with granted status
         
         if ($result) {
-            wp_send_json_success(__('Test grant/decline email sent successfully! Check your admin email.', 'authdocs'));
+            wp_send_json_success(__('Test grant/decline email sent successfully! Check your admin email.', 'protecteddocs'));
         } else {
-            wp_send_json_error(__('Failed to send test grant/decline email. Check your WordPress email configuration.', 'authdocs'));
+            wp_send_json_error(__('Failed to send test grant/decline email. Check your WordPress email configuration.', 'protecteddocs'));
         }
     }
     
@@ -553,22 +1447,22 @@ class Plugin
     public function handle_get_request_data(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions', 'authdocs'));
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
         }
 
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_manage_nonce')) {
-            wp_send_json_error(__('Security check failed', 'authdocs'));
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
         }
 
         $request_id = intval($_POST['request_id'] ?? 0);
         
         if (!$request_id) {
-            wp_send_json_error(__('Request ID required', 'authdocs'));
+            wp_send_json_error(__('Request ID required', 'protecteddocs'));
         }
 
         $request = Database::get_request_by_id($request_id);
         if (!$request) {
-            wp_send_json_error(__('Request not found', 'authdocs'));
+            wp_send_json_error(__('Request not found', 'protecteddocs'));
         }
 
         // Get document file information
@@ -576,6 +1470,20 @@ class Plugin
         
         // Get document title using the robust helper method
         $document_title = Database::get_document_title(intval($request->document_id));
+        
+        // Generate viewer URL if request is accepted and has hash
+        $viewer_url = '';
+        if ($request->status === 'accepted' && !empty($request->secure_hash)) {
+            $token = Tokens::generate_download_token(intval($request->document_id));
+            $viewer_url = add_query_arg([
+                'authdocs_viewer' => '1',
+                'document_id' => intval($request->document_id),
+                'token' => $token,
+                'hash' => $request->secure_hash,
+                'email' => $request->requester_email,
+                'request_id' => intval($request->id)
+            ], home_url('/'));
+        }
         
         // Prepare response data
         $response_data = [
@@ -587,10 +1495,31 @@ class Plugin
             'status' => $request->status,
             'secure_hash' => $request->secure_hash,
             'created_at' => $request->created_at,
-            'document_file' => $document_file
+            'document_file' => $document_file,
+            'viewer_url' => $viewer_url
         ];
 
         wp_send_json_success($response_data);
+    }
+    
+    /**
+     * Handle AJAX request to get pending requests count
+     */
+    public function handle_get_pending_count(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'protecteddocs'));
+        }
+
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_manage_nonce')) {
+            wp_send_json_error(__('Security check failed', 'protecteddocs'));
+        }
+
+        $pending_count = Database::get_pending_requests_count();
+        
+        wp_send_json_success([
+            'count' => $pending_count
+        ]);
     }
     
     /**
@@ -624,13 +1553,21 @@ class Plugin
                 <div class="card-overlay" aria-hidden="true">
                     <div class="overlay-content">
                         <?php if ($document['restricted']): ?>
-                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'authdocs'); ?>">
+                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'protecteddocs'); ?>">
                                 <svg class="authdocs-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                                 </svg>
                             </button>
                         <?php else: ?>
-                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download title="<?php _e('Open Document', 'authdocs'); ?>">
+                            <?php 
+                            $file_type = $document['file_data']['type'] ?? 'file';
+                            $link_behavior = Database::get_file_link_behavior($file_type);
+                            $link_attributes = 'target="' . esc_attr($link_behavior['target']) . '" title="' . esc_attr($link_behavior['title']) . '"';
+                            if ($link_behavior['download']) {
+                                $link_attributes .= ' download';
+                            }
+                            ?>
+                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" <?php echo $link_attributes; ?>>
                                 <svg class="authdocs-open-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
                                 </svg>
@@ -798,21 +1735,21 @@ class Plugin
                 <?php 
                 $start = (($page - 1) * $limit) + 1;
                 $end = min($page * $limit, $total_documents);
-                printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                printf(__('Showing %d-%d of %d documents', 'protecteddocs'), $start, $end, $total_documents);
                 ?>
             </div>
             
             <?php if ($pagination_style === 'load_more'): ?>
                 <?php if ($page < $total_pages): ?>
-                    <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="all">
-                        <?php _e('Load More Documents', 'authdocs'); ?>
+                    <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="all" data-featured-image="yes">
+                        <?php _e('Load More Documents', 'protecteddocs'); ?>
                     </button>
                 <?php endif; ?>
             <?php else: ?>
                 <div class="authdocs-pagination-links">
                     <?php if ($page > 1): ?>
                         <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($page - 1); ?>">
-                            <?php _e('Previous', 'authdocs'); ?>
+                            <?php _e('Previous', 'protecteddocs'); ?>
                         </button>
                     <?php endif; ?>
                     
@@ -844,7 +1781,7 @@ class Plugin
                     
                     <?php if ($page < $total_pages): ?>
                         <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($page + 1); ?>">
-                            <?php _e('Next', 'authdocs'); ?>
+                            <?php _e('Next', 'protecteddocs'); ?>
                         </button>
                     <?php endif; ?>
                 </div>
@@ -859,20 +1796,23 @@ class Plugin
      */
     public function handle_load_more_documents(): void
     {
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_frontend_nonce')) {
             wp_send_json_error([
-                'message' => __('Security check failed', 'authdocs')
+                'message' => __('Security check failed', 'protecteddocs')
             ]);
         }
 
         $current_limit = intval($_POST['limit'] ?? 12);
         $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
         $load_more_count = intval($_POST['load_more_limit'] ?? 12); // Number of additional documents to load
+        $show_featured_image = sanitize_text_field($_POST['featured_image'] ?? 'yes') === 'yes';
+        $color_palette = sanitize_text_field($_POST['color_palette'] ?? 'default');
         
         // Validate inputs
         if ($current_limit < 1) $current_limit = 12;
         if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
         if ($load_more_count < 1) $load_more_count = 12;
+        if (!in_array($color_palette, ['default', 'black_white_blue', 'black_gray'])) $color_palette = 'default';
         
         // Get total documents count for this restriction
         $total_documents = Database::get_published_documents_count($restriction);
@@ -880,12 +1820,15 @@ class Plugin
         // Calculate new limit
         $new_limit = $current_limit + $load_more_count;
         
-        // Get documents with the new limit
-        $documents = Database::get_published_documents($new_limit, $restriction);
+        // Get documents with the new limit (page 1 to get all documents up to the new limit)
+        $documents = Database::get_published_documents($new_limit, $restriction, 1);
+        
+        // Debug: Log document count for load more
+        error_log("AuthDocs AJAX Load More Debug - Current limit: {$current_limit}, New limit: {$new_limit}, Documents found: " . count($documents) . ", Total documents: {$total_documents}");
         
         if (empty($documents)) {
             wp_send_json_error([
-                'message' => __('No documents found.', 'authdocs')
+                'message' => __('No documents with attached files found.', 'protecteddocs')
             ]);
         }
         
@@ -894,18 +1837,31 @@ class Plugin
         
         if (empty($additional_documents)) {
             wp_send_json_error([
-                'message' => __('No more documents to load.', 'authdocs')
+                'message' => __('No more documents to load.', 'protecteddocs')
             ]);
         }
         
-        // Generate HTML for the additional grid items (without CSS to avoid JSON issues)
-        $html = $this->generate_grid_items_html_clean($additional_documents);
+        // Generate HTML for the additional grid items
+        $html = $this->generate_grid_items_html_clean($additional_documents, $show_featured_image);
+        
+        // Generate CSS for the new items
+        $settings = new Settings();
+        
+        // Use custom color palette if specified, otherwise use frontend settings
+        if ($color_palette !== 'default') {
+            $color_palette = $settings->get_color_palette_data($color_palette);
+        } else {
+            $color_palette = $settings->get_color_palette_data();
+        }
+        
+        $css = $this->generate_dynamic_css_for_ajax($color_palette);
         
         // Check if there are more documents available
         $has_more = $new_limit < $total_documents;
         
         wp_send_json_success([
             'html' => $html,
+            'css' => $css,
             'has_more' => $has_more,
             'total' => $total_documents,
             'current_limit' => $new_limit
@@ -917,9 +1873,9 @@ class Plugin
      */
     public function handle_paginate_documents(): void
     {
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'authdocs_frontend_nonce')) {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_frontend_nonce')) {
             wp_send_json_error([
-                'message' => __('Security check failed', 'authdocs')
+                'message' => __('Security check failed', 'protecteddocs')
             ]);
         }
 
@@ -928,6 +1884,10 @@ class Plugin
         $restriction = sanitize_text_field($_POST['restriction'] ?? 'all');
         $orderby = sanitize_text_field($_POST['orderby'] ?? 'date');
         $order = sanitize_text_field($_POST['order'] ?? 'DESC');
+        $show_featured_image = sanitize_text_field($_POST['featured_image'] ?? 'yes') === 'yes';
+        $pagination_style = sanitize_text_field($_POST['pagination_style'] ?? 'classic');
+        $pagination_type = sanitize_text_field($_POST['pagination_type'] ?? 'ajax');
+        $color_palette = sanitize_text_field($_POST['color_palette'] ?? 'default');
         
         // Validate inputs
         if ($page < 1) $page = 1;
@@ -935,26 +1895,43 @@ class Plugin
         if (!in_array($restriction, ['all', 'restricted', 'unrestricted'])) $restriction = 'all';
         if (!in_array($orderby, ['date', 'title'])) $orderby = 'date';
         if (!in_array($order, ['ASC', 'DESC'])) $order = 'DESC';
+        if (!in_array($color_palette, ['default', 'black_white_blue', 'black_gray'])) $color_palette = 'default';
         
         $documents = Database::get_published_documents($limit, $restriction, $page, $orderby, $order);
         $total_documents = Database::get_published_documents_count($restriction);
         $total_pages = (int) ceil($total_documents / $limit);
         
+        // Debug: Log document count and file resolution
+        error_log("AuthDocs AJAX Pagination Debug - Page: {$page}, Documents found: " . count($documents) . ", Total documents: {$total_documents}");
+        
         if (empty($documents)) {
             wp_send_json_error([
-                'message' => __('No documents found.', 'authdocs')
+                'message' => __('No documents with attached files found.', 'protecteddocs')
             ]);
         }
         
-        // Generate HTML for the grid items (without CSS to avoid JSON issues)
-        $html = $this->generate_grid_items_html_clean($documents);
+        // Generate HTML for the grid items
+        $html = $this->generate_grid_items_html_clean($documents, $show_featured_image);
         
-        // Generate pagination HTML (without CSS to avoid JSON issues)
-        $pagination_html = $this->generate_pagination_html_clean($page, $total_pages, $limit, $total_documents);
+        // Generate pagination HTML
+        $pagination_html = $this->generate_pagination_html_clean($page, $total_pages, $limit, $total_documents, $pagination_style, $pagination_type);
+        
+        // Generate CSS for the items
+        $settings = new Settings();
+        
+        // Use custom color palette if specified, otherwise use frontend settings
+        if ($color_palette !== 'default') {
+            $color_palette = $settings->get_color_palette_data($color_palette);
+        } else {
+            $color_palette = $settings->get_color_palette_data();
+        }
+        
+        $css = $this->generate_dynamic_css_for_ajax($color_palette);
         
         wp_send_json_success([
             'html' => $html,
             'pagination_html' => $pagination_html,
+            'css' => $css,
             'current_page' => $page,
             'total_pages' => $total_pages,
             'total_documents' => $total_documents
@@ -962,46 +1939,331 @@ class Plugin
     }
     
     /**
+     * Handle AJAX request to render shortcode content
+     */
+    public function handle_render_shortcode(): void
+    {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_frontend_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed', 'protecteddocs')
+            ]);
+        }
+
+        $shortcode = sanitize_text_field($_POST['shortcode'] ?? '');
+        
+        if (empty($shortcode)) {
+            wp_send_json_error([
+                'message' => __('No shortcode provided', 'protecteddocs')
+            ]);
+        }
+
+        // Execute the shortcode
+        $html = do_shortcode($shortcode);
+        
+        wp_send_json_success([
+            'html' => $html
+        ]);
+    }
+    
+    /**
+     * Handle AJAX request to validate session token
+     */
+    public function handle_validate_session(): void
+    {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'protecteddocs_frontend_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security check failed', 'protecteddocs')
+            ]);
+        }
+
+        $session_token = sanitize_text_field($_POST['session_token'] ?? '');
+        
+        if (empty($session_token)) {
+            wp_send_json_error([
+                'message' => __('No session token provided', 'protecteddocs')
+            ]);
+        }
+
+        // Store the session token for validation
+        BotProtection::store_session_token($session_token);
+        
+        wp_send_json_success([
+            'message' => __('Session validated successfully', 'protecteddocs')
+        ]);
+    }
+    
+    /**
+     * Generate dynamic CSS for AJAX responses (with higher specificity)
+     */
+    private function generate_dynamic_css_for_ajax(array $color_palette): string
+    {
+        $css = "
+        .authdocs-grid-container .card {
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
+        }
+        
+        .authdocs-grid-container .card-title {
+            color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-grid-container .card-desc {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-grid-container .card-date {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        /* Use maximum specificity to override instance-specific CSS */
+        .authdocs-grid-container .authdocs-request-access-btn,
+        .authdocs-grid-container .authdocs-download-btn,
+        .authdocs-grid-container .authdocs-load-more-btn,
+        .authdocs-grid-container .authdocs-pagination-btn,
+        .authdocs-grid-container .card .authdocs-request-access-btn,
+        .authdocs-grid-container .card .authdocs-download-btn {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border: 1px solid {$color_palette['primary']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        .authdocs-grid-container .authdocs-request-access-btn:hover,
+        .authdocs-grid-container .authdocs-download-btn:hover {
+            background: {$color_palette['text']} !important;
+            color: {$color_palette['background']} !important;
+            border-color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-grid-container .authdocs-lock-icon,
+        .authdocs-grid-container .authdocs-open-icon {
+            color: {$color_palette['secondary']} !important;
+        }
+        
+        /* Lock status always red regardless of color palette */
+        .authdocs-grid-container .authdocs-status-locked {
+            background: rgba(220, 53, 69, 0.9) !important;
+            border-color: rgba(220, 53, 69, 0.3) !important;
+        }
+        
+        .authdocs-grid-container .card:hover .authdocs-request-access-btn .authdocs-lock-icon,
+        .authdocs-grid-container .authdocs-download-btn:hover .authdocs-open-icon {
+            color: {$color_palette['background']} !important;
+        }
+        
+        .authdocs-grid-container .card:hover .card-overlay {
+            background: {$color_palette['primary']}20 !important;
+            backdrop-filter: blur(2px);
+        }
+        
+        .authdocs-grid-container .authdocs-pagination-btn:hover,
+        .authdocs-grid-container .authdocs-load-more-btn:hover {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border-color: {$color_palette['primary']} !important;
+        }
+        
+        .authdocs-grid-container .authdocs-pagination-btn.active {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border-color: {$color_palette['primary']} !important;
+        }
+        
+        /* Popup styling with color palette */
+        .authdocs-modal-card {
+            background: {$color_palette['background']} !important;
+            border: 1px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+            box-shadow: {$color_palette['shadow']} !important;
+        }
+        
+        .authdocs-modal-header {
+            border-bottom: 1px solid {$color_palette['border']} !important;
+        }
+        
+        .authdocs-modal-icon {
+            background: {$color_palette['primary']} !important;
+        }
+        
+        .authdocs-modal-title {
+            color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-modal-close {
+            background: {$color_palette['background_secondary']} !important;
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-modal-close:hover {
+            background: {$color_palette['border']} !important;
+            color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-modal-description {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-form-label {
+            color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-form-label svg {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-form-input {
+            background: {$color_palette['background']} !important;
+            color: {$color_palette['text']} !important;
+            border: 2px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        .authdocs-form-input:focus {
+            border-color: {$color_palette['primary']} !important;
+            box-shadow: 0 0 0 3px rgba(" . $this->hex_to_rgb($color_palette['primary']) . ", 0.1) !important;
+        }
+        
+        .authdocs-form-input::placeholder {
+            color: {$color_palette['text_secondary']} !important;
+        }
+        
+        .authdocs-modal-footer {
+            border-top: 1px solid {$color_palette['border']} !important;
+        }
+        
+        .authdocs-btn-primary {
+            background: {$color_palette['primary']} !important;
+            color: {$color_palette['secondary']} !important;
+            border: 1px solid {$color_palette['primary']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        .authdocs-btn-primary:hover {
+            background: {$color_palette['text']} !important;
+            color: {$color_palette['background']} !important;
+            border-color: {$color_palette['text']} !important;
+        }
+        
+        .authdocs-btn-outline {
+            background: transparent !important;
+            color: {$color_palette['text_secondary']} !important;
+            border: 2px solid {$color_palette['border']} !important;
+            border-radius: {$color_palette['border_radius']} !important;
+        }
+        
+        .authdocs-btn-outline:hover {
+            background: {$color_palette['background_secondary']} !important;
+            border-color: {$color_palette['text_secondary']} !important;
+            color: {$color_palette['text']} !important;
+        }
+        ";
+        
+        return $css;
+    }
+
+    /**
+     * Convert hex color to RGB values
+     */
+    private function hex_to_rgb(string $hex): string
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        return "$r, $g, $b";
+    }
+    
+    /**
      * Generate grid items HTML without CSS (for AJAX responses)
      */
-    private function generate_grid_items_html_clean(array $documents): string
+    private function generate_grid_items_html_clean(array $documents, bool $show_featured_image = true): string
     {
         ob_start();
-        foreach ($documents as $document): ?>
-            <!-- Card -->
-            <article class="card">
-                <div class="card-body">
-                    <?php if (has_post_thumbnail($document['id'])): ?>
-                        <div class="card-featured-image">
-                            <?php echo get_the_post_thumbnail($document['id'], 'medium', ['class' => 'authdocs-card-thumbnail']); ?>
-                        </div>
-                    <?php else: ?>
-                        <span class="card-icon" aria-hidden="true">📄</span>
-                    <?php endif; ?>
-                    <h3 class="card-title"><?php echo esc_html($document['title']); ?></h3>
-                    <?php if (!empty($document['description'])): ?>
-                        <p class="card-desc"><?php echo wp_kses_post(wp_trim_words($document['description'], 15)); ?></p>
-                    <?php endif; ?>
-                    <div class="card-date"><?php echo esc_html($document['date']); ?></div>
+        foreach ($documents as $document): 
+            // Get featured image for background (only if enabled)
+            $featured_image = '';
+            $card_style = '';
+            if ($show_featured_image) {
+                $featured_image = get_the_post_thumbnail_url($document['id'], 'large');
+                if ($featured_image) {
+                    $card_style = 'style="background-image: url(' . esc_url($featured_image) . ');"';
+                }
+            }
+        ?>
+            <!-- Fresh Clean Card -->
+            <article class="authdocs-card" <?php echo $card_style; ?> data-color-palette="<?php echo esc_attr($document['restricted'] ? 'locked' : 'unlocked'); ?>">
+                <!-- Card Content Overlay -->
+                <div class="authdocs-card-content">
+                    <h3 class="authdocs-card-title"><?php echo esc_html($document['title']); ?></h3>
+                    <div class="authdocs-card-date"><?php echo esc_html($document['date']); ?></div>
                 </div>
 
-                <!-- Overlay -->
-                <div class="card-overlay" aria-hidden="true">
-                    <div class="overlay-content">
+                <!-- Status Indicator -->
+                <div class="authdocs-card-status">
+                    <?php if ($document['restricted']): ?>
+                        <div class="authdocs-status-badge authdocs-status-locked">
+                            <svg class="authdocs-lock-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <span><?php _e('Locked', 'protecteddocs'); ?></span>
+                        </div>
+                    <?php else: ?>
+                        <div class="authdocs-status-badge authdocs-status-unlocked">
+                            <svg class="authdocs-unlock-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h4c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
+                            </svg>
+                            <span><?php _e('Unlocked', 'protecteddocs'); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Hover Overlay with Icon -->
+                <div class="authdocs-card-hover-overlay">
+                    <div class="authdocs-overlay-icon">
                         <?php if ($document['restricted']): ?>
-                            <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'authdocs'); ?>">
-                                <svg class="authdocs-lock-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-                                </svg>
-                            </button>
+                            <svg class="authdocs-lock-icon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <span class="authdocs-overlay-text"><?php _e('Request Access', 'protecteddocs'); ?></span>
                         <?php else: ?>
-                            <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" download title="<?php _e('Open Document', 'authdocs'); ?>">
-                                <svg class="authdocs-open-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
-                                </svg>
-                            </a>
+                            <svg class="authdocs-download-icon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            <span class="authdocs-overlay-text"><?php _e('Download', 'protecteddocs'); ?></span>
                         <?php endif; ?>
                     </div>
+                </div>
+                
+                <!-- Action Overlay -->
+                <div class="authdocs-card-action-overlay">
+                    <?php if ($document['restricted']): ?>
+                        <button type="button" class="authdocs-request-access-btn" data-document-id="<?php echo esc_attr($document['id']); ?>" title="<?php _e('Request Access', 'protecteddocs'); ?>">
+                            <svg class="authdocs-lock-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <span><?php _e('Request Access', 'protecteddocs'); ?></span>
+                        </button>
+                    <?php else: ?>
+                        <?php 
+                        $file_type = $document['file_data']['type'] ?? 'file';
+                        $link_behavior = Database::get_file_link_behavior($file_type);
+                        $link_attributes = 'target="' . esc_attr($link_behavior['target']) . '" title="' . esc_attr($link_behavior['title']) . '"';
+                        if ($link_behavior['download']) {
+                            $link_attributes .= ' download';
+                        }
+                        ?>
+                        <a href="<?php echo esc_url($document['file_data']['url']); ?>" class="authdocs-download-btn" <?php echo $link_attributes; ?>>
+                            <svg class="authdocs-download-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            <span><?php _e('Download', 'protecteddocs'); ?></span>
+                        </a>
+                    <?php endif; ?>
                 </div>
             </article>
         <?php endforeach;
@@ -1011,75 +2273,273 @@ class Plugin
     /**
      * Generate pagination HTML without CSS (for AJAX responses)
      */
-    private function generate_pagination_html_clean(int $page, int $total_pages, int $limit, int $total_documents): string
+    private function generate_pagination_html_clean(int $page, int $total_pages, int $limit, int $total_documents, string $pagination_style = 'classic', string $pagination_type = 'ajax'): string
     {
         if ($total_pages <= 1) {
             return '';
         }
         
-        $settings = new Settings();
-        $pagination_style = $settings->get_pagination_style();
-        
         ob_start();
         ?>
-        <div class="authdocs-pagination <?php echo $pagination_style === 'load_more' ? 'authdocs-load-more-pagination' : 'authdocs-classic-pagination'; ?>">
+        <div class="authdocs-pagination <?php echo $pagination_style === 'load_more' ? 'authdocs-load-more-pagination' : 'authdocs-compact-pagination'; ?>" data-pagination-type="<?php echo esc_attr($pagination_type); ?>">
             <div class="authdocs-pagination-info">
                 <?php 
                 $start = (($page - 1) * $limit) + 1;
                 $end = min($page * $limit, $total_documents);
-                printf(__('Showing %d-%d of %d documents', 'authdocs'), $start, $end, $total_documents);
+                printf(__('Showing %d-%d of %d documents', 'protecteddocs'), $start, $end, $total_documents);
                 ?>
             </div>
             
             <?php if ($pagination_style === 'load_more'): ?>
                 <?php if ($page < $total_pages): ?>
-                    <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="all">
-                        <?php _e('Load More Documents', 'authdocs'); ?>
+                    <button type="button" class="authdocs-load-more-btn" data-current-limit="<?php echo esc_attr($limit); ?>" data-restriction="all" data-featured-image="yes">
+                        <?php _e('Load More Documents', 'protecteddocs'); ?>
                     </button>
                 <?php endif; ?>
             <?php else: ?>
-                <div class="authdocs-pagination-links">
-                    <?php if ($page > 1): ?>
-                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-prev" data-page="<?php echo esc_attr($page - 1); ?>">
-                            <?php _e('Previous', 'authdocs'); ?>
-                        </button>
-                    <?php endif; ?>
-                    
-                    <div class="authdocs-pagination-numbers">
-                        <?php
-                        $start_page = max(1, $page - 2);
-                        $end_page = min($total_pages, $page + 2);
+                <div class="authdocs-pagination-numbers">
+                    <?php if ($pagination_type === 'ajax'): ?>
+                        <!-- AJAX Pagination with buttons -->
+                            <?php
+                        // Compact pagination logic: show first 3, current page, last 3
+                        $show_pages = [];
                         
-                        if ($start_page > 1): ?>
-                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="1">1</button>
-                            <?php if ($start_page > 2): ?>
-                                <span class="authdocs-pagination-ellipsis">...</span>
-                            <?php endif; ?>
-                        <?php endif; ?>
+                        // Always show first page
+                        if ($page > 4) {
+                            $show_pages[] = 1;
+                            $show_pages[] = '...';
+                        } else {
+                            for ($i = 1; $i <= min(3, $total_pages); $i++) {
+                                $show_pages[] = $i;
+                            }
+                        }
                         
-                        <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
-                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number <?php echo $i === $page ? 'active' : ''; ?>" data-page="<?php echo esc_attr($i); ?>">
-                                <?php echo $i; ?>
-                            </button>
-                        <?php endfor; ?>
+                        // Show current page and surrounding pages
+                        if ($page > 4 && $page < $total_pages - 3) {
+                            $show_pages[] = $page - 1;
+                            $show_pages[] = $page;
+                            $show_pages[] = $page + 1;
+                        }
                         
-                        <?php if ($end_page < $total_pages): ?>
-                            <?php if ($end_page < $total_pages - 1): ?>
-                                <span class="authdocs-pagination-ellipsis">...</span>
-                            <?php endif; ?>
-                            <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($total_pages); ?>"><?php echo $total_pages; ?></button>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <?php if ($page < $total_pages): ?>
-                        <button type="button" class="authdocs-pagination-btn authdocs-pagination-next" data-page="<?php echo esc_attr($page + 1); ?>">
-                            <?php _e('Next', 'authdocs'); ?>
-                        </button>
+                        // Always show last page
+                        if ($page < $total_pages - 3) {
+                            if (!in_array('...', $show_pages) || end($show_pages) !== '...') {
+                                $show_pages[] = '...';
+                            }
+                            $show_pages[] = $total_pages;
+                        } else {
+                            for ($i = max(1, $total_pages - 2); $i <= $total_pages; $i++) {
+                                if (!in_array($i, $show_pages)) {
+                                    $show_pages[] = $i;
+                                }
+                            }
+                        }
+                        
+                        foreach ($show_pages as $page_num): ?>
+                            <?php if ($page_num === '...'): ?>
+                                    <span class="authdocs-pagination-ellipsis">...</span>
+                            <?php elseif ($page_num === $page): ?>
+                                <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $page_num; ?></span>
+                            <?php else: ?>
+                                <button type="button" class="authdocs-pagination-btn authdocs-pagination-number" data-page="<?php echo esc_attr($page_num); ?>"><?php echo $page_num; ?></button>
+                                <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <!-- Classic Pagination with links -->
+                        <?php 
+                        // Build the base URL for pagination links
+                        $current_url = add_query_arg([
+                            'authdocs_page' => false,
+                            'paged' => false
+                        ]);
+                        
+                        // Compact pagination logic: show first 3, current page, last 3
+                        $show_pages = [];
+                        
+                        // Always show first page
+                        if ($page > 4) {
+                            $show_pages[] = 1;
+                            $show_pages[] = '...';
+                        } else {
+                            for ($i = 1; $i <= min(3, $total_pages); $i++) {
+                                $show_pages[] = $i;
+                            }
+                        }
+                        
+                        // Show current page and surrounding pages
+                        if ($page > 4 && $page < $total_pages - 3) {
+                            $show_pages[] = $page - 1;
+                            $show_pages[] = $page;
+                            $show_pages[] = $page + 1;
+                        }
+                        
+                        // Always show last page
+                        if ($page < $total_pages - 3) {
+                            if (!in_array('...', $show_pages) || end($show_pages) !== '...') {
+                                $show_pages[] = '...';
+                            }
+                            $show_pages[] = $total_pages;
+                        } else {
+                            for ($i = max(1, $total_pages - 2); $i <= $total_pages; $i++) {
+                                if (!in_array($i, $show_pages)) {
+                                    $show_pages[] = $i;
+                                }
+                            }
+                        }
+                        
+                        foreach ($show_pages as $page_num): ?>
+                            <?php if ($page_num === '...'): ?>
+                                    <span class="authdocs-pagination-ellipsis">...</span>
+                            <?php elseif ($page_num === $page): ?>
+                                <span class="authdocs-pagination-btn authdocs-pagination-number active"><?php echo $page_num; ?></span>
+                            <?php else: ?>
+                                <a href="<?php echo esc_url(add_query_arg('authdocs_page', $page_num, $current_url)); ?>" class="authdocs-pagination-btn authdocs-pagination-number"><?php echo $page_num; ?></a>
+                                <?php endif; ?>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
         <?php
         return ob_get_clean();
+    }
+    
+    /**
+     * Debug method to verify admin CSS loading
+     * Call this method to check if admin CSS is properly loaded
+     */
+    public function debug_admin_css_loading(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'protecteddocs'));
+        }
+        
+        $screen = get_current_screen();
+        $css_url = PROTECTEDDOCS_PLUGIN_URL . 'assets/css/protecteddocs-admin.css';
+        $css_path = PROTECTEDDOCS_PLUGIN_DIR . 'assets/css/protecteddocs-admin.css';
+        
+        echo '<div class="wrap">';
+        echo '<h1>ProtectedDocs Admin CSS Debug</h1>';
+        echo '<h2>Current Screen Information</h2>';
+        echo '<p><strong>Screen ID:</strong> ' . ($screen ? $screen->id : 'Not available') . '</p>';
+        echo '<p><strong>Screen Base:</strong> ' . ($screen ? $screen->base : 'Not available') . '</p>';
+        echo '<p><strong>Screen Post Type:</strong> ' . ($screen ? $screen->post_type : 'Not available') . '</p>';
+        
+        echo '<h2>CSS File Information</h2>';
+        echo '<p><strong>CSS URL:</strong> <a href="' . esc_url($css_url) . '" target="_blank">' . esc_html($css_url) . '</a></p>';
+        echo '<p><strong>CSS Path:</strong> ' . esc_html($css_path) . '</p>';
+        echo '<p><strong>CSS File Exists:</strong> ' . (file_exists($css_path) ? 'Yes' : 'No') . '</p>';
+        echo '<p><strong>CSS File Readable:</strong> ' . (is_readable($css_path) ? 'Yes' : 'No') . '</p>';
+        
+        if (file_exists($css_path)) {
+            $file_size = filesize($css_path);
+            echo '<p><strong>CSS File Size:</strong> ' . size_format($file_size) . '</p>';
+        }
+        
+        echo '<h2>Enqueued Styles</h2>';
+        global $wp_styles;
+        $enqueued_styles = [];
+        if (isset($wp_styles->registered)) {
+            foreach ($wp_styles->registered as $handle => $style) {
+                if (strpos($handle, 'protecteddocs') !== false || strpos($handle, 'authdocs') !== false) {
+                    $enqueued_styles[$handle] = $style;
+                }
+            }
+        }
+        
+        if (!empty($enqueued_styles)) {
+            echo '<ul>';
+            foreach ($enqueued_styles as $handle => $style) {
+                echo '<li><strong>' . esc_html($handle) . ':</strong> ' . esc_html($style->src) . '</li>';
+            }
+            echo '</ul>';
+        } else {
+            echo '<p>No ProtectedDocs styles found in enqueued styles.</p>';
+        }
+        
+        echo '<h2>Plugin Constants</h2>';
+        echo '<p><strong>PROTECTEDDOCS_PLUGIN_URL:</strong> ' . PROTECTEDDOCS_PLUGIN_URL . '</p>';
+        echo '<p><strong>PROTECTEDDOCS_PLUGIN_DIR:</strong> ' . PROTECTEDDOCS_PLUGIN_DIR . '</p>';
+        echo '<p><strong>PROTECTEDDOCS_VERSION:</strong> ' . PROTECTEDDOCS_VERSION . '</p>';
+        
+        echo '</div>';
+    }
+    
+    /**
+     * Handle admin PDF viewing requests
+     */
+    public function handle_admin_pdf_view(): void
+    {
+        // Check if this is an admin PDF view request
+        if (!isset($_GET['authdocs_admin_view']) || $_GET['authdocs_admin_view'] !== '1') {
+            return;
+        }
+        
+        // Verify user is logged in and has admin capabilities
+        if (!is_user_logged_in() || !current_user_can('manage_options')) {
+            wp_die(__('Access denied. Admin privileges required.', 'protecteddocs'), __('Access Denied', 'protecteddocs'), ['response' => 403]);
+        }
+        
+        // Get and validate parameters
+        $file_id = intval($_GET['file_id'] ?? 0);
+        $nonce = sanitize_text_field($_GET['nonce'] ?? '');
+        
+        if (!$file_id || !$nonce) {
+            wp_die(__('Invalid request parameters.', 'protecteddocs'), __('Invalid Request', 'protecteddocs'), ['response' => 400]);
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($nonce, 'authdocs_admin_view_' . $file_id)) {
+            wp_die(__('Security check failed.', 'protecteddocs'), __('Security Error', 'protecteddocs'), ['response' => 403]);
+        }
+        
+        // Get file data
+        error_log("AuthDocs Admin PDF View: Attempting to get file data for file_id: {$file_id}");
+        $file_data = Database::get_file_data_by_id($file_id);
+        
+        if (!$file_data) {
+            error_log("AuthDocs Admin PDF View: No file data found for file_id: {$file_id}");
+            wp_die(__('File not found.', 'protecteddocs'), __('File Not Found', 'protecteddocs'), ['response' => 404]);
+        }
+        
+        error_log("AuthDocs Admin PDF View: File data found - Path: {$file_data['path']}, Extension: {$file_data['extension']}");
+        
+        // Check if it's a PDF file
+        if ($file_data['extension'] !== 'pdf') {
+            wp_die(__('This feature is only available for PDF files.', 'protecteddocs'), __('Invalid File Type', 'protecteddocs'), ['response' => 400]);
+        }
+        
+        // Serve the PDF file
+        $this->serve_pdf_file($file_data);
+    }
+    
+    /**
+     * Serve PDF file for admin viewing
+     */
+    private function serve_pdf_file(array $file_data): void
+    {
+        $file_path = $file_data['path'];
+        $filename = $file_data['filename'];
+        
+        // Check if file exists
+        if (!file_exists($file_path)) {
+            wp_die(__('File not found on server.', 'protecteddocs'), __('File Not Found', 'protecteddocs'), ['response' => 404]);
+        }
+        
+        // Set headers for PDF viewing
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($file_path));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        
+        // Clear any output buffers
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Output the file
+        readfile($file_path);
+        exit;
     }
 }

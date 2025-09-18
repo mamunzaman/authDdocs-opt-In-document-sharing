@@ -1,281 +1,122 @@
-# AuthDocs – Opt-In Document Sharing
+# ProtectedDocs Suite
 
-A secure WordPress plugin that allows sharing of document data (PDFs, Word files) with opt-in authentication.
+![Plugin Version](https://img.shields.io/badge/version-1.5.0-blue.svg)
+![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue.svg)
+![PHP](https://img.shields.io/badge/PHP-7.4%2B-green.svg)
+![License](https://img.shields.io/badge/license-GPL%20v2%2B-red.svg)
 
-## Features
+A comprehensive WordPress plugin for secure document sharing with advanced access control, Gutenberg blocks, responsive design, and bot protection.
 
-### Core Functionality
+## 🚀 Features
 
-- **Custom Post Type**: Create and manage documents through WordPress admin
-- **Media Library Integration**: Use native WordPress media uploader for file uploads
-- **Single Document Shortcode**: Automatic shortcode creation for each document
-- **Grid View Shortcode**: Display multiple documents in responsive grid layouts
-- **Responsive Design**: 100% responsive fluid grid display
-- **Secure Access Control**: Optional opt-in authentication for restricted documents
+### 🔐 Security & Access Control
 
-### Document Management
+- **Opt-in Authentication**: Users must request access before downloading documents
+- **Email-based Access**: Secure email verification system
+- **Document Protection**: Files are protected from direct access
+- **Admin Management**: Complete request management system
 
-- Upload PDF, Word documents, and other file types
-- Set documents as restricted (requires opt-in) or public (direct download)
-- Generate shortcodes: `[authdocs id="123" restricted="yes"]`
-- Manage document settings through WordPress admin
+### 🎨 Modern Interface
 
-### Access Control
+- **Gutenberg Block**: Easy-to-use block editor integration
+- **Responsive Design**: Works perfectly on all devices
+- **Customizable Colors**: Multiple color palettes available
+- **Clean UI**: Modern, flat design interface
 
-- **Public Documents**: Direct viewing without authentication
-- **Restricted Documents**: Require opt-in form with name and email
-- **Secure Link Generation**: Unique, hash-based viewing links
-- **PDF Display**: PDFs display directly in browser instead of downloading
-- **Request Management**: Admin interface to approve/decline access requests
+### 📱 Responsive & Mobile-Friendly
 
-### Admin Features
+- **Mobile-First Design**: Optimized for mobile devices
+- **Touch-Friendly**: Easy interaction on touch screens
+- **Adaptive Layout**: Automatically adjusts to screen size
+- **Fast Loading**: Optimized for performance
 
-- **Document Requests Management**: View and manage all access requests
-- **Always-Available Actions**: Accept, Decline, and Deactivate buttons always visible for any status
-- **File Link Display**: View the actual document file links in the requests table
-- **Unique Request Access**: Each request gets a unique, request-specific download link
-- **Secure Link Generation**: Automatic secure link creation for approved requests
-- **Access Revocation**: Revoke access even after approval, invalidating download links
-- **Request History**: Track all requests with timestamps and status
-- **Email Template Settings**: Customize email notifications with dynamic variables
+### 🛠️ Advanced Features
 
-## Installation
+- **Pagination Options**: Classic and AJAX pagination
+- **Load More Functionality**: Smooth content loading
+- **Featured Images**: Support for document thumbnails
+- **Custom Post Types**: Dedicated document management
+- **Email Templates**: Customizable email notifications
 
-1. Upload the plugin files to `/wp-content/plugins/authdocs-opt-in-document-sharing/`
-2. Activate the plugin through the 'Plugins' screen in WordPress
-3. The plugin will automatically create necessary database tables
+## 📋 Requirements
 
-## Usage
+- **WordPress**: 5.0 or higher
+- **PHP**: 7.4 or higher
+- **MySQL**: 5.6 or higher
 
-### Creating Documents
+## 🚀 Installation
 
-1. Go to **Documents** in your WordPress admin
-2. Click **Add New Document**
-3. Enter a title and description
-4. Upload a document file using the **Select Document** button
-5. Check **Require Opt-in** if you want to restrict access
-6. Publish the document
-7. Copy the generated shortcode and use it on any page or post
+### From WordPress Admin
 
-### Grid View Shortcode
+1. Go to **Plugins > Add New**
+2. Search for "ProtectedDocs"
+3. Click **Install Now** and then **Activate**
 
-The `[authdocs_grid]` shortcode displays multiple documents in a responsive grid layout:
+### Manual Installation
 
-**Basic Usage:**
+1. Download the plugin files
+2. Upload to `/wp-content/plugins/authdocs-opt-in-document-sharing/`
+3. Activate the plugin through the **Plugins** menu
 
-```
-[authdocs_grid]
-```
+## 🎯 Quick Start
 
-**With Parameters:**
+### 1. Create Documents
 
-```
-[authdocs_grid limit="12" columns="3" restriction="all" show_description="yes" show_date="yes" orderby="date" order="DESC"]
-```
+1. Go to **Documents > Add New**
+2. Upload your file using the document settings
+3. Configure access restrictions
+4. Publish your document
 
-**Parameters:**
+### 2. Add to Pages/Posts
 
-- `limit` - Number of documents to display per page (default: 12)
-- `columns` - Number of grid columns (1-6, default: 3)
-- `restriction` - Filter by access restriction: `all`, `restricted`, or `unrestricted` (default: `all`)
-- `show_description` - Show document description: `yes` or `no` (default: `yes`)
-- `show_date` - Show document date: `yes` or `no` (default: `yes`)
-- `orderby` - Sort by: `date` or `title` (default: `date`)
-- `order` - Sort order: `ASC` or `DESC` (default: `DESC`)
-- `pagination` - Enable pagination: `yes` or `no` (default: `yes`)
+1. Edit any page or post
+2. Add the **ProtectedDocs Document Grid** block
+3. Configure display settings
+4. Publish your content
 
-**Examples:**
+### 3. Manage Requests
 
-```
-<!-- Display all documents in 4 columns -->
-[authdocs_grid columns="4" limit="20"]
+1. Go to **📄 Documents > 📥 Access Requests**
+2. Review pending requests
+3. Approve or deny access
+4. Send secure download links
 
-<!-- Show only restricted documents in 2 columns -->
-[authdocs_grid restriction="restricted" columns="2" limit="8"]
+## 🎨 Gutenberg Block
 
-<!-- Show unrestricted documents sorted by title -->
-[authdocs_grid restriction="unrestricted" orderby="title" order="ASC"]
-```
+The plugin includes a powerful Gutenberg block with the following settings:
 
-**Features:**
+### Grid Settings
 
-- Responsive grid layout that adapts to screen size
-- AJAX pagination for smooth navigation without page reloads
-- Load more functionality for large document collections
-- Automatic access control based on document settings
-- Request access forms for restricted documents
-- Direct download links for unrestricted documents
-
-**Pagination Features:**
-
-- **AJAX Navigation**: Smooth page transitions without page reloads
-- **Smart Pagination**: Shows page numbers with ellipsis for large document sets
-- **Responsive Design**: Mobile-optimized pagination controls
-- **Loading States**: Visual feedback during page transitions
-- **URL Parameters**: Supports `?authdocs_page=X` for direct page access
-- **Auto-scroll**: Automatically scrolls to grid after page change
-
-### Managing Requests
-
-1. Go to **Documents > Requests** in your WordPress admin
-2. View all access requests with document file links
-3. Use the always-available action buttons to:
-   - **Accept/Re-accept**: Approve the request and generate a unique secure download link
-   - **Decline/Re-decline**: Reject the request
-   - **Deactivate/Keep Inactive**: Deactivate an approved request
-   - **Copy Link**: Copy the unique secure download link for approved requests
-
-**Note**: All action buttons are always visible, allowing you to change request status at any time. Each request gets a unique download link tied to that specific request ID.
-
-### Email Template Settings
-
-1. Go to **Documents > Settings** in your WordPress admin
-2. Configure the email subject and HTML body for access granted notifications
-3. Use dynamic variables in your templates:
-   - `{{name}}` - Requester's name
-   - `{{email}}` - Requester's email address
-   - `{{link}}` - Generated secure download/view link
-4. Preview your email template with sample data
-5. Send test emails to verify your configuration
-6. Save your template settings
-
-**Note**: If a variable is missing (e.g., no name provided), it will be replaced with an empty string rather than showing placeholder text.
-
-### Recipient Email Addresses
-
-1. In **Documents > Settings**, configure recipient email addresses for admin notifications
-2. Enter multiple email addresses separated by commas or semicolons
-3. Invalid email addresses are automatically filtered out
-4. If left empty, notifications are sent to the site admin email
-5. All recipients receive notifications when document access is requested
-
-### Autoresponder Email Template
-
-1. Enable the autoresponder feature with a toggle switch
-2. Configure the autoresponder subject and HTML body
-3. Use dynamic variables in your templates:
-   - `{name}` - Requester's name
-   - `{email}` - Requester's email address
-   - `{document_title}` - Title of the requested document
-   - `{site_name}` - Name of your website
-4. Send test autoresponder emails to verify your configuration
-5. When enabled, users automatically receive confirmation emails upon request submission
-
-**Note**: Unknown placeholders remain unchanged in the email, allowing for custom variable usage.
-
-### Frontend Display
-
-The shortcode renders a responsive document card with:
-
-- Document title and description
-- Request Access button (for restricted documents)
-- Direct Download button (for public documents)
+- **Number of columns**: Control grid layout (1-6 columns)
+- **Documents per page**: Set how many documents to display
+- **Load more limit**: Configure AJAX loading behavior
 
-### User Experience
+### Pagination Settings
 
-**For Restricted Documents:**
+- **Pagination type**: Classic or AJAX pagination
+- **Pagination style**: Choose between different styles
 
-1. User clicks "Request Access"
-2. Popup form appears requesting name and email
-3. User submits the form
-4. Admin receives the request in the admin panel
-5. Admin approves the request
-6. User receives a secure viewing link
-
-**For Public Documents:**
-
-1. User sees the document card
-2. User clicks "Download Document"
-3. File opens in browser (PDFs display inline, other files may download based on browser settings)
-
-## Security Features
-
-- **CSRF Protection**: All forms use WordPress nonces
-- **Input Sanitization**: All user inputs are sanitized and validated
-- **Secure Hash Generation**: Unique hashes for each approved request with request ID, email, document ID, timestamp, and WordPress salt
-- **Email Validation**: Download links are tied to specific email addresses
-- **Permission Checks**: Proper capability checks for admin functions
-- **Direct Access Protection**: Blocks direct file access without valid authorization
-- **Request-Specific Access**: Each request gets a unique hash tied to its specific ID
-- **Media File Protection**: Prevents direct access to uploaded document files
-- **Audit Logging**: Logs all document access attempts for security monitoring
-
-## File Structure
-
-```
-authdocs-opt-in-document-sharing/
-├── authdocs-opt-in-document-sharing.php  # Main plugin file
-├── includes/
-│   ├── Plugin.php                        # Main plugin class
-│   ├── CustomPostType.php               # Document post type
-│   ├── Shortcode.php                    # Shortcode handling
-│   ├── Database.php                     # Database operations
-│   └── Admin.php                        # Admin functionality
-├── templates/
-│   └── admin/
-│       └── requests-page.php            # Admin requests page
-├── assets/
-│   ├── css/
-│   │   ├── frontend.css                 # Frontend styles
-│   │   └── admin.css                    # Admin styles
-│   └── js/
-│       ├── frontend.js                  # Frontend JavaScript
-│       └── admin.js                     # Admin JavaScript
-├── languages/
-│   └── authdocs.pot                     # Translation template
-└── README.md                            # This file
-```
-
-## Database Tables
-
-The plugin creates one custom table:
-
-- `wp_authdocs_requests`: Stores access requests and secure links
-
-## Hooks and Filters
-
-The plugin uses WordPress hooks for extensibility:
-
-- `init`: Plugin initialization
-- `admin_menu`: Admin menu registration
-- `wp_enqueue_scripts`: Frontend asset loading
-- `admin_enqueue_scripts`: Admin asset loading
-- AJAX actions for request handling
-
-## Requirements
-
-- WordPress 5.0 or higher
-- PHP 7.4 or higher
-- MySQL 5.6 or higher
-
-## Browser Support
-
-- Chrome 60+
-- Firefox 55+
-- Safari 12+
-- Edge 79+
-
-## Internationalization
-
-The plugin is fully internationalized and includes:
-
-- Translation-ready strings using `__()` and `_e()`
-- POT file for translators
-- Text domain: `authdocs`
-
-## Support
-
-For support and feature requests, please contact the plugin developer.
-
-## Changelog
-
-### Version 1.0.0
-
-- Initial release
-- Custom post type for documents
-- Shortcode generation
-- Opt-in authentication system
-- Admin request management
-- Secure link generation
-- Responsive design
-- Internationalization support
+### Display Settings
+
+- **Featured image**: Show/hide document thumbnails
+- **Show description**: Display document descriptions
+- **Show date**: Show publication dates
+
+## 📄 License
+
+This plugin is licensed under the **GPL v2 or later**.
+
+## 👨‍💻 Author
+
+**Mamun**
+
+- Website: [https://mamunzaman.itconsultingfirma.com/](https://mamunzaman.itconsultingfirma.com/)
+
+## 📞 Support
+
+- **Documentation**: [Plugin Documentation](https://mamunzaman.itconsultingfirma.com/)
+- **Contact**: [Author Website](https://mamunzaman.itconsultingfirma.com/)
+
+---
+
+**Made with ❤️ for the WordPress community**

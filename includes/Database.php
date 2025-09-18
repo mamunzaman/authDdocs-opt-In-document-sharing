@@ -6,7 +6,7 @@
  */
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class Database
 {
@@ -50,9 +50,9 @@ class Database
         
         $table_name = $wpdb->prefix . self::$table_name;
         
-        // Check if request already exists
-        $existing = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM $table_name WHERE document_id = %d AND requester_email = %s",
+        // Check if request already exists (only non-deleted requests)
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status FROM $table_name WHERE document_id = %d AND requester_email = %s AND status != 'deleted'",
             $document_id,
             $email
         ));
@@ -67,7 +67,7 @@ class Database
                 'document_id' => $document_id,
                 'requester_name' => $name,
                 'requester_email' => $email,
-                'status' => 'inactive'
+                'status' => 'pending'
             ],
             ['%d', '%s', '%s', '%s']
         );
@@ -77,6 +77,40 @@ class Database
         }
         
         return false;
+    }
+
+    /**
+     * Check if a request already exists and return detailed information
+     */
+    public static function check_existing_request(int $document_id, string $email): array
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . self::$table_name;
+        
+        // Check for any existing request (including deleted ones)
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, status, created_at FROM $table_name WHERE document_id = %d AND requester_email = %s ORDER BY created_at DESC LIMIT 1",
+            $document_id,
+            $email
+        ));
+        
+        if (!$existing) {
+            return ['exists' => false];
+        }
+        
+        // Check if document is currently active
+        $document = get_post($document_id);
+        $is_document_active = $document && $document->post_status === 'publish';
+        
+        return [
+            'exists' => true,
+            'request_id' => $existing->id,
+            'status' => $existing->status,
+            'created_at' => $existing->created_at,
+            'is_document_active' => $is_document_active,
+            'is_deleted' => $existing->status === 'deleted'
+        ];
     }
 
     public static function get_all_requests(): array
@@ -136,6 +170,37 @@ class Database
         
         return (int) $count;
     }
+    
+    /**
+     * Get count of pending access requests
+     */
+    public static function get_pending_requests_count(): int
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . self::$table_name;
+        
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_name WHERE status = %s",
+            'pending'
+        ));
+        
+        return (int) $count;
+    }
+    
+    /**
+     * Get count of all access requests
+     */
+    public static function get_all_requests_count(): int
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . self::$table_name;
+        
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+        
+        return (int) $count;
+    }
 
     public static function update_request_status(int $request_id, string $status): bool
     {
@@ -146,11 +211,17 @@ class Database
         $data = ['status' => $status];
         
         if ($status === 'accepted') {
-            // Always generate a new hash when accepting
-            $data['secure_hash'] = self::generate_secure_hash($request_id);
+            // Check if hash already exists, only generate new one if needed
+            $current_request = self::get_request_by_id($request_id);
+            if (!$current_request || empty($current_request->secure_hash)) {
+                // Only generate new hash if one doesn't exist
+                $data['secure_hash'] = self::generate_secure_hash($request_id);
+            }
+            // If hash already exists, preserve it to maintain link validity
         } elseif ($status === 'declined') {
-            // Clear secure hash when declining - this ensures the link is not accessible
-            $data['secure_hash'] = null;
+            // Don't clear the hash when declining - just change status
+            // This allows the same link to work again when reactivated
+            // The validate_secure_access method will check status, not just hash existence
         } elseif ($status === 'inactive') {
             // Store the current status before deactivating
             $current_status = self::get_request_status($request_id);
@@ -454,29 +525,231 @@ class Database
         $document_id = intval($document_id);
         
         if ($document_id <= 0) {
+            error_log("AuthDocs: Invalid document ID: {$document_id}");
             return null;
         }
         
         $file_id = get_post_meta($document_id, '_authdocs_file_id', true);
         
         if (!$file_id) {
+            error_log("AuthDocs: No file ID found for document ID: {$document_id}");
             return null;
         }
+        
+        error_log("AuthDocs: Processing document ID: {$document_id}, File ID: {$file_id}");
         
         $file_url = wp_get_attachment_url($file_id);
         $file_path = get_attached_file($file_id);
         
+        error_log("AuthDocs: File URL: {$file_url}, File Path: {$file_path}");
+        
+        // Debug: Check if this is a migrated file by looking at the _wp_attached_file meta
+        $attached_file_meta = get_post_meta($file_id, '_wp_attached_file', true);
+        error_log("AuthDocs: _wp_attached_file meta: {$attached_file_meta}");
+        
         if (!$file_url || !$file_path) {
+            error_log("AuthDocs: Missing file URL or path for file ID: {$file_id}");
             return null;
         }
+        
+        // Ensure FileStorage class is loaded
+        if (!class_exists('ProtectedDocs\FileStorage')) {
+            require_once PROTECTEDDOCS_PLUGIN_DIR . 'includes/FileStorage.php';
+        }
+        
+        // Check if this is a migrated file (starts with authdocs-files/)
+        if (strpos($file_path, FileStorage::FOLDER_NAME . '/') === 0) {
+            // This is a migrated file, construct the full path
+            $upload_dir = FileStorage::get_dedicated_upload_dir();
+            $full_path = rtrim($upload_dir['path'], '/') . '/' . $file_path;
+            $file_url = rtrim($upload_dir['url'], '/') . '/' . $file_path;
+            
+            if (file_exists($full_path)) {
+                $file_path = $full_path;
+                error_log("AuthDocs: Migrated file found: {$file_path}");
+            } else {
+                error_log("AuthDocs: Migrated file not found: {$full_path}");
+                return null;
+            }
+        } else {
+            // Check if file exists in original location
+            if (!file_exists($file_path)) {
+                // Debug: Log original file path
+                error_log("AuthDocs: Original file path not found: {$file_path}");
+                
+                // Try to find the file in the dedicated folder
+                $upload_dir = FileStorage::get_dedicated_upload_dir();
+                $dedicated_path = rtrim($upload_dir['path'], '/') . '/' . basename($file_path);
+                
+                // Debug: Log dedicated path check
+                error_log("AuthDocs: Checking dedicated path: {$dedicated_path}");
+                
+                if (file_exists($dedicated_path)) {
+                    $file_path = $dedicated_path;
+                    // Update the file URL to point to the dedicated folder
+                    $file_url = rtrim($upload_dir['url'], '/') . '/' . basename($file_path);
+                    error_log("AuthDocs: File found in dedicated folder: {$file_path}");
+                } else {
+                    // If not found in dedicated folder, return null
+                    error_log("AuthDocs: File not found in original location or dedicated folder for file ID: {$file_id}. Original: {$file_path}, Dedicated: {$dedicated_path}");
+                    return null;
+                }
+            }
+        }
+        
+        $filename = basename($file_path);
+        $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         
         return [
             'id' => $file_id,
             'url' => $file_url,
             'path' => $file_path,
-            'filename' => basename($file_path),
-            'title' => get_the_title($document_id) ?: basename($file_path)
+            'filename' => $filename,
+            'title' => get_the_title($document_id) ?: $filename,
+            'extension' => $file_extension,
+            'type' => self::get_file_type($file_extension),
+            'size' => file_exists($file_path) ? filesize($file_path) : 0
         ];
+    }
+
+    /**
+     * Get file type category based on extension
+     */
+    public static function get_file_type(string $extension): string
+    {
+        $extension = strtolower($extension);
+        
+        $file_types = [
+            // Document types
+            'pdf' => 'pdf',
+            'doc' => 'word',
+            'docx' => 'word',
+            'rtf' => 'word',
+            'txt' => 'text',
+            'odt' => 'word',
+            
+            // Spreadsheet types
+            'xls' => 'excel',
+            'xlsx' => 'excel',
+            'csv' => 'excel',
+            'ods' => 'excel',
+            
+            // Presentation types
+            'ppt' => 'powerpoint',
+            'pptx' => 'powerpoint',
+            'odp' => 'powerpoint',
+            
+            // Image types
+            'jpg' => 'image',
+            'jpeg' => 'image',
+            'png' => 'image',
+            'gif' => 'image',
+            'bmp' => 'image',
+            'svg' => 'image',
+            'webp' => 'image',
+            
+            // Archive types
+            'zip' => 'archive',
+            'rar' => 'archive',
+            '7z' => 'archive',
+            'tar' => 'archive',
+            'gz' => 'archive',
+            
+            // Video types
+            'mp4' => 'video',
+            'avi' => 'video',
+            'mov' => 'video',
+            'wmv' => 'video',
+            'flv' => 'video',
+            'webm' => 'video',
+            
+            // Audio types
+            'mp3' => 'audio',
+            'wav' => 'audio',
+            'flac' => 'audio',
+            'aac' => 'audio',
+            'ogg' => 'audio',
+        ];
+        
+        return $file_types[$extension] ?? 'file';
+    }
+
+    /**
+     * Get file type icon based on file type
+     */
+    public static function get_file_type_icon(string $file_type): string
+    {
+        $icons = [
+            'pdf' => '📄',
+            'word' => '📝',
+            'excel' => '📊',
+            'powerpoint' => '📽️',
+            'text' => '📄',
+            'image' => '🖼️',
+            'video' => '🎥',
+            'audio' => '🎵',
+            'archive' => '📦',
+            'file' => '📄'
+        ];
+        
+        return $icons[$file_type] ?? '📄';
+    }
+
+    /**
+     * Get file type icon SVG based on file type
+     */
+    public static function get_file_type_icon_svg(string $file_type): string
+    {
+        $icons = [
+            'pdf' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'word' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'excel' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'powerpoint' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'text' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z M8,12H10V14H8V12M8,16H10V18H8V16M12,12H16V14H12V12M12,16H14V18H12V16Z" /></svg>',
+            'image' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z" /></svg>',
+            'video' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z" /></svg>',
+            'audio' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" /></svg>',
+            'archive' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,17H7V15H14M17,13H7V11H17M17,9H7V7H17M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z" /></svg>',
+            'file' => '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" /></svg>'
+        ];
+        
+        return $icons[$file_type] ?? $icons['file'];
+    }
+
+    /**
+     * Check if a file type can be viewed directly in the browser
+     */
+    public static function can_view_in_browser(string $file_type): bool
+    {
+        $browser_viewable_types = [
+            'pdf',      // PDF files can be viewed in most browsers
+            'image',    // Images can be viewed in browsers
+            'text',     // Text files can be viewed in browsers
+            'video',    // Videos can be played in browsers
+            'audio',    // Audio can be played in browsers
+        ];
+        
+        return in_array($file_type, $browser_viewable_types, true);
+    }
+
+    /**
+     * Get the appropriate link behavior for a file type
+     */
+    public static function get_file_link_behavior(string $file_type): array
+    {
+        if (self::can_view_in_browser($file_type)) {
+            return [
+                'target' => '_blank',
+                'download' => false,
+                'title' => __('View Document', 'protecteddocs')
+            ];
+        } else {
+            return [
+                'target' => '_blank',
+                'download' => true,
+                'title' => __('Download Document', 'protecteddocs')
+            ];
+        }
     }
     
     /**
@@ -512,13 +785,18 @@ class Database
         $query = new \WP_Query($args);
         $documents = [];
         
+        error_log("AuthDocs: WP_Query found {$query->found_posts} total posts, {$query->post_count} posts in this page");
+        
         if ($query->have_posts()) {
             while ($query->have_posts()) {
                 $query->the_post();
                 $post_id = get_the_ID();
+                error_log("AuthDocs: Checking post ID: {$post_id}");
+                
                 $file_data = self::get_document_file($post_id);
                 
                 if ($file_data) {
+                    error_log("AuthDocs: File data found for post ID: {$post_id}");
                     $documents[] = [
                         'id' => $post_id,
                         'title' => get_the_title(),
@@ -527,16 +805,21 @@ class Database
                         'file_data' => $file_data,
                         'restricted' => get_post_meta($post_id, '_authdocs_restricted', true) === 'yes'
                     ];
+                } else {
+                    error_log("AuthDocs: No file data found for post ID: {$post_id}");
                 }
             }
             wp_reset_postdata();
         }
+        
+        error_log("AuthDocs: Final documents array count: " . count($documents));
         
         return $documents;
     }
     
     /**
      * Get total count of published documents with restriction filter
+     * Only counts documents that have attached files
      */
     public static function get_published_documents_count(string $restriction_filter = 'all'): int
     {
@@ -564,7 +847,284 @@ class Database
         }
         
         $query = new \WP_Query($args);
-        return $query->found_posts;
+        $count = 0;
+        
+        error_log("AuthDocs: Count query found {$query->found_posts} total posts");
+        
+        // Only count documents that have attached files
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                $file_data = self::get_document_file($post_id);
+                
+                if ($file_data) {
+                    $count++;
+                    error_log("AuthDocs: Count - File found for post ID: {$post_id}, Count: {$count}");
+                } else {
+                    error_log("AuthDocs: Count - No file found for post ID: {$post_id}");
+                }
+            }
+            wp_reset_postdata();
+        }
+        
+        error_log("AuthDocs: Final count: {$count}");
+        
+        return $count;
+    }
+    
+    /**
+     * Debug method to test file detection for pagination
+     */
+    public static function debug_file_detection(): void
+    {
+        error_log("=== AuthDocs File Detection Debug ===");
+        
+        // Get all document posts
+        $args = [
+            'post_type' => 'document',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids'
+        ];
+        
+        $query = new \WP_Query($args);
+        error_log("AuthDocs Debug: Found {$query->found_posts} document posts");
+        
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                
+                error_log("AuthDocs Debug: Checking document ID: {$post_id}");
+                
+                $file_id = get_post_meta($post_id, '_authdocs_file_id', true);
+                if ($file_id) {
+                    error_log("AuthDocs Debug: Document {$post_id} has file ID: {$file_id}");
+                    
+                    $file_data = self::get_document_file($post_id);
+                    if ($file_data) {
+                        error_log("AuthDocs Debug: Document {$post_id} - File data found: {$file_data['path']}");
+                    } else {
+                        error_log("AuthDocs Debug: Document {$post_id} - No file data found");
+                    }
+                } else {
+                    error_log("AuthDocs Debug: Document {$post_id} - No file ID found");
+                }
+            }
+            wp_reset_postdata();
+        }
+        
+        error_log("=== End AuthDocs File Detection Debug ===");
+    }
+    
+    /**
+     * Repair corrupted file associations
+     */
+    public static function repair_corrupted_file_associations(): array
+    {
+        error_log("=== AuthDocs File Association Repair ===");
+        
+        $results = [
+            'repaired' => 0,
+            'failed' => 0,
+            'skipped' => 0,
+            'details' => []
+        ];
+        
+        // Get all document posts
+        $args = [
+            'post_type' => 'document',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids'
+        ];
+        
+        $query = new \WP_Query($args);
+        error_log("AuthDocs Repair: Found {$query->found_posts} document posts");
+        
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $post_id = get_the_ID();
+                
+                $file_id = get_post_meta($post_id, '_authdocs_file_id', true);
+                if (!$file_id) {
+                    error_log("AuthDocs Repair: Document {$post_id} - No file ID, skipping");
+                    $results['skipped']++;
+                    continue;
+                }
+                
+                // Check if this file ID has valid attachment data
+                $file_url = wp_get_attachment_url($file_id);
+                $file_path = get_attached_file($file_id);
+                
+                if (!$file_url || !$file_path) {
+                    error_log("AuthDocs Repair: Document {$post_id} - File ID {$file_id} has corrupted metadata");
+                    
+                    // Try to find a working file ID for this document
+                    $working_file_id = self::find_working_file_for_document($post_id);
+                    
+                    if ($working_file_id) {
+                        // Update the document to use the working file ID
+                        update_post_meta($post_id, '_authdocs_file_id', $working_file_id);
+                        error_log("AuthDocs Repair: Document {$post_id} - Updated to use file ID {$working_file_id}");
+                        $results['repaired']++;
+                        $results['details'][] = "Document {$post_id}: Updated from file ID {$file_id} to {$working_file_id}";
+                    } else {
+                        error_log("AuthDocs Repair: Document {$post_id} - No working file found, removing file association");
+                        delete_post_meta($post_id, '_authdocs_file_id');
+                        $results['failed']++;
+                        $results['details'][] = "Document {$post_id}: Removed corrupted file ID {$file_id}";
+                    }
+                } else {
+                    error_log("AuthDocs Repair: Document {$post_id} - File ID {$file_id} is working correctly");
+                    $results['skipped']++;
+                }
+            }
+            wp_reset_postdata();
+        }
+        
+        error_log("AuthDocs Repair: Completed - Repaired: {$results['repaired']}, Failed: {$results['failed']}, Skipped: {$results['skipped']}");
+        error_log("=== End AuthDocs File Association Repair ===");
+        
+        return $results;
+    }
+    
+    /**
+     * Find a working file ID for a document by checking other documents
+     */
+    private static function find_working_file_for_document(int $document_id): ?int
+    {
+        // Get all other documents with the same title or similar content
+        $post = get_post($document_id);
+        if (!$post) {
+            return null;
+        }
+        
+        $title = $post->post_title;
+        
+        // Look for other documents with similar titles that have working files
+        $args = [
+            'post_type' => 'document',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'post__not_in' => [$document_id],
+            'meta_query' => [
+                [
+                    'key' => '_authdocs_file_id',
+                    'compare' => 'EXISTS'
+                ]
+            ]
+        ];
+        
+        $query = new \WP_Query($args);
+        
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $other_post_id = get_the_ID();
+                $other_file_id = get_post_meta($other_post_id, '_authdocs_file_id', true);
+                
+                // Check if this file ID is working
+                $file_url = wp_get_attachment_url($other_file_id);
+                $file_path = get_attached_file($other_file_id);
+                
+                if ($file_url && $file_path) {
+                    // This file ID is working, use it
+                    wp_reset_postdata();
+                    return intval($other_file_id);
+                }
+            }
+            wp_reset_postdata();
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get file data directly from file ID (for admin access)
+     */
+    public static function get_file_data_by_id(int $file_id): ?array
+    {
+        // Ensure we have a valid integer
+        $file_id = intval($file_id);
+        
+        if ($file_id <= 0) {
+            error_log("AuthDocs: Invalid file ID: {$file_id}");
+            return null;
+        }
+        
+        error_log("AuthDocs: Getting file data for file ID: {$file_id}");
+        
+        $file_url = wp_get_attachment_url($file_id);
+        $file_path = get_attached_file($file_id);
+        
+        error_log("AuthDocs: File URL: {$file_url}, File Path: {$file_path}");
+        
+        if (!$file_url || !$file_path) {
+            error_log("AuthDocs: Missing file URL or path for file ID: {$file_id}");
+            return null;
+        }
+        
+        // Ensure FileStorage class is loaded
+        if (!class_exists('ProtectedDocs\FileStorage')) {
+            require_once PROTECTEDDOCS_PLUGIN_DIR . 'includes/FileStorage.php';
+        }
+        
+        // Check if this is a migrated file (starts with authdocs-files/)
+        if (strpos($file_path, FileStorage::FOLDER_NAME . '/') === 0) {
+            // This is a migrated file, construct the full path
+            $upload_dir = FileStorage::get_dedicated_upload_dir();
+            $full_path = rtrim($upload_dir['path'], '/') . '/' . $file_path;
+            $file_url = rtrim($upload_dir['url'], '/') . '/' . $file_path;
+            
+            if (file_exists($full_path)) {
+                $file_path = $full_path;
+                error_log("AuthDocs: Migrated file found: {$file_path}");
+            } else {
+                error_log("AuthDocs: Migrated file not found: {$full_path}");
+                return null;
+            }
+        } else {
+            // Check if file exists in original location
+            if (!file_exists($file_path)) {
+                // Debug: Log original file path
+                error_log("AuthDocs: Original file path not found: {$file_path}");
+                
+                // Try to find the file in the dedicated folder
+                $upload_dir = FileStorage::get_dedicated_upload_dir();
+                $dedicated_path = rtrim($upload_dir['path'], '/') . '/' . basename($file_path);
+                
+                // Debug: Log dedicated path check
+                error_log("AuthDocs: Checking dedicated path: {$dedicated_path}");
+                
+                if (file_exists($dedicated_path)) {
+                    $file_path = $dedicated_path;
+                    // Update the file URL to point to the dedicated folder
+                    $file_url = rtrim($upload_dir['url'], '/') . '/' . basename($file_path);
+                    error_log("AuthDocs: File found in dedicated folder: {$file_path}");
+                } else {
+                    // If not found in dedicated folder, return null
+                    error_log("AuthDocs: File not found in original location or dedicated folder for file ID: {$file_id}. Original: {$file_path}, Dedicated: {$dedicated_path}");
+                    return null;
+                }
+            }
+        }
+        
+        $filename = basename($file_path);
+        $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        return [
+            'id' => $file_id,
+            'url' => $file_url,
+            'path' => $file_path,
+            'filename' => $filename,
+            'title' => get_the_title($file_id) ?: $filename,
+            'extension' => $file_extension,
+            'type' => self::get_file_type($file_extension),
+            'size' => file_exists($file_path) ? filesize($file_path) : 0
+        ];
     }
 
     /**

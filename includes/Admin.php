@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace AuthDocs;
+namespace ProtectedDocs;
 
 class Admin
 {
